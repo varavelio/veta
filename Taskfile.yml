@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+tasks:
+  default:
+    desc: List all available commands
+    cmd: task --list-all
+
+  deps:
+    desc: Install dependencies the project
+    cmd: go mod download
+
+  ci:
+    desc: Run full CI pipeline (deps, format, test, lint, build)
+    cmds:
+      - task: deps
+      - task: format
+      - task: test
+      - task: lint
+      - task: build
+
+  build:
+    desc: Build the project locally
+    cmd: go build -o ./dist/veta ./cmd/veta/.
+
+  format:
+    desc: Run formatters
+    cmds:
+      - golangci-lint fmt ./...
+      - dprint fmt --config ./dprint.json --log-level warn
+
+  lint:
+    desc: Run linters
+    cmds:
+      - golangci-lint run ./...
+      - dprint check --config ./dprint.json --log-level warn
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+      - go test -race ./...
