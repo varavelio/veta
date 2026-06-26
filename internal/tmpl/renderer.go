@@ -57,7 +57,16 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 	set.Debug = config.debug
 
 	for name, filter := range config.filters {
-		if err := set.RegisterFilter(name, wrapFilter(filter)); err != nil {
+		wrappedFilter := wrapFilter(filter)
+		if set.FilterExists(name) {
+			if err := set.ReplaceFilter(name, wrappedFilter); err != nil {
+				return nil, fmt.Errorf("replace template filter %s: %w", name, err)
+			}
+
+			continue
+		}
+
+		if err := set.RegisterFilter(name, wrappedFilter); err != nil {
 			return nil, fmt.Errorf("register template filter %s: %w", name, err)
 		}
 	}
