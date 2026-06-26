@@ -68,6 +68,28 @@ func TestRunnerExecute(t *testing.T) {
 	})
 }
 
+// TestRunnerCall verifies explicit default export arguments.
+func TestRunnerCall(t *testing.T) {
+	runner := New(WithRuntime(Runtime{"siteName": "Veta"}))
+
+	result, err := runner.Call(Source{Name: "filter.js", Code: `
+		export default function(input, parameter) {
+			return {
+				input,
+				parameter,
+				globalAvailable: Veta.siteName === "Veta"
+			};
+		}
+	`}, "hello", map[string]any{"suffix": "world"})
+	require.NoError(t, err)
+
+	var got map[string]any
+	require.NoError(t, result.ExportTo(&got))
+	require.Equal(t, "hello", got["input"])
+	require.Equal(t, map[string]any{"suffix": "world"}, got["parameter"])
+	require.Equal(t, true, got["globalAvailable"])
+}
+
 // TestRunnerExecutionTimeout verifies that runaway JavaScript is interrupted.
 func TestRunnerExecutionTimeout(t *testing.T) {
 	tests := []struct {

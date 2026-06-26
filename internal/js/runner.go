@@ -88,6 +88,28 @@ func (r *Runner) ExecuteString(name, code string) (Result, error) {
 
 // Execute runs a Veta JavaScript source synchronously.
 func (r *Runner) Execute(source Source) (Result, error) {
+	return r.execute(source, func(vm *goja.Runtime, runtimeValue *goja.Object) []goja.Value {
+		return []goja.Value{runtimeValue}
+	})
+}
+
+// Call runs a Veta JavaScript source and invokes its default export with args.
+func (r *Runner) Call(source Source, args ...any) (Result, error) {
+	return r.execute(source, func(vm *goja.Runtime, _ *goja.Object) []goja.Value {
+		values := make([]goja.Value, len(args))
+		for index, arg := range args {
+			values[index] = vm.ToValue(arg)
+		}
+
+		return values
+	})
+}
+
+// execute runs source and invokes the default export with caller-provided arguments.
+func (r *Runner) execute(
+	source Source,
+	arguments func(*goja.Runtime, *goja.Object) []goja.Value,
+) (Result, error) {
 	name := source.name()
 	programSource := buildProgramSource(source)
 
@@ -112,7 +134,7 @@ func (r *Runner) Execute(source Source) (Result, error) {
 		return Result{}, fmt.Errorf("%s: %w", name, err)
 	}
 
-	value, err := defaultFunction(goja.Undefined(), runtimeValue)
+	value, err := defaultFunction(goja.Undefined(), arguments(vm, runtimeValue)...)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: execute default export: %w", name, err)
 	}
