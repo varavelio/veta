@@ -4,7 +4,10 @@
   "nestedAnswer": 42,
   "runtimeKeys": [
     "join",
+    "listFiles",
     "nested",
+    "readFile",
+    "readFiles",
     "siteName",
     "value"
   ]

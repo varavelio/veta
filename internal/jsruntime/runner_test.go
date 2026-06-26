@@ -1,6 +1,7 @@
 package jsruntime
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -33,7 +34,7 @@ func TestRunnerExecute(t *testing.T) {
 		require.NoError(t, result.ExportTo(&got))
 		require.Equal(t, "Hello, Veta", got["title"])
 		require.Equal(t, true, got["globalAvailable"])
-		require.Equal(t, []any{"siteName"}, got["keys"])
+		require.Equal(t, []any{"listFiles", "readFile", "readFiles", "siteName"}, got["keys"])
 	})
 
 	t.Run("supports destructuring the runtime argument", func(t *testing.T) {
@@ -104,6 +105,122 @@ func TestRunnerRuntimeSnapshot(t *testing.T) {
 	`)
 	require.NoError(t, err)
 	require.Equal(t, "before", result.Export())
+}
+
+// TestRunnerConsole verifies JavaScript console debugging output.
+func TestRunnerConsole(t *testing.T) {
+	var output bytes.Buffer
+	runner := New(WithConsoleOutput(&output))
+
+	result, err := runner.ExecuteString("console.js", `
+		export default function() {
+			console.log("hello", 123);
+			console.info("ready");
+			console.warn("careful");
+			console.error("broken");
+			console.debug("details", undefined, null);
+			return "ok";
+		}
+	`)
+	require.NoError(t, err)
+	require.Equal(t, "ok", result.Export())
+	require.Equal(t, strings.Join([]string{
+		"[js log] hello 123",
+		"[js info] ready",
+		"[js warn] careful",
+		"[js error] broken",
+		"[js debug] details undefined null",
+		"",
+	}, "\n"), output.String())
+}
+
+// TestRunnerConsoleNilOutput verifies that disabled console output is safe.
+func TestRunnerConsoleNilOutput(t *testing.T) {
+	runner := New(WithConsoleOutput(nil))
+
+	result, err := runner.ExecuteString("console.js", `
+		export default function() {
+			console.log("ignored");
+			return true;
+		}
+	`)
+	require.NoError(t, err)
+	require.Equal(t, true, result.Export())
+}
+
+// TestRunnerFileAPIErrors verifies path safety and read/list error handling.
+func TestRunnerFileAPIErrors(t *testing.T) {
+	root := filepath.Join("testdata", "project")
+	tests := []struct {
+		name string
+		code string
+		want string
+	}{
+		{
+			name: "read outside root",
+			code: `
+				export default function({ readFile }) {
+					return readFile("../page.js");
+				}
+			`,
+			want: ErrPathOutsideRoot.Error(),
+		},
+		{
+			name: "absolute read path",
+			code: `
+				export default function({ readFile }) {
+					return readFile("/content/index.md");
+				}
+			`,
+			want: ErrPathOutsideRoot.Error(),
+		},
+		{
+			name: "missing file",
+			code: `
+				export default function({ readFile }) {
+					return readFile("content/missing.md");
+				}
+			`,
+			want: "read file content/missing.md",
+		},
+		{
+			name: "empty glob",
+			code: `
+				export default function({ listFiles }) {
+					return listFiles("");
+				}
+			`,
+			want: ErrEmptyPath.Error(),
+		},
+		{
+			name: "bad glob",
+			code: `
+				export default function({ listFiles }) {
+					return listFiles("content/[");
+				}
+			`,
+			want: "list files matching content/[:",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := New(WithRoot(root)).ExecuteString(test.name+".js", test.code)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), test.want)
+		})
+	}
+}
+
+// TestRunnerInvalidRoot verifies that invalid roots fail before JavaScript runs.
+func TestRunnerInvalidRoot(t *testing.T) {
+	_, err := New(WithRoot(filepath.Join("testdata", "project", "missing"))).ExecuteString("root.js", `
+		export default function() {
+			return true;
+		}
+	`)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "stat root directory")
 }
 
 // TestResult verifies Result conversion helpers and zero-value behavior.
@@ -239,6 +356,7 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 		name    string
 		script  string
 		golden  string
+		root    string
 		runtime Runtime
 	}{
 		{
@@ -276,11 +394,22 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 			script: "edge.js",
 			golden: "edge.golden.json",
 		},
+		{
+			name:   "file api",
+			script: "files.js",
+			golden: "files.golden.json",
+			root:   filepath.Join("testdata", "project"),
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assertGoldenExecution(t, New(WithRuntime(test.runtime)), test.script, test.golden)
+			runner := New(WithRuntime(test.runtime))
+			if test.root != "" {
+				runner = New(WithRuntime(test.runtime), WithRoot(test.root))
+			}
+
+			assertGoldenExecution(t, runner, test.script, test.golden)
 		})
 	}
 }

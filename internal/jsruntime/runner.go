@@ -2,14 +2,19 @@ package jsruntime
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/dop251/goja"
 )
 
-const defaultSourceName = "anonymous.js"
+const (
+	defaultRootDir    = "."
+	defaultSourceName = "anonymous.js"
+)
 
 // Source is an in-memory JavaScript file.
 type Source struct {
@@ -37,12 +42,19 @@ type Option func(*Runner)
 //
 // Runner is safe to reuse because each execution receives a fresh Goja runtime.
 type Runner struct {
-	runtime Runtime
+	runtime       Runtime
+	root          string
+	consoleOutput io.Writer
+	consoleMu     sync.Mutex
 }
 
 // New creates a Runner with the provided options.
 func New(options ...Option) *Runner {
-	runner := &Runner{runtime: defaultRuntime()}
+	runner := &Runner{
+		runtime:       defaultRuntime(),
+		root:          defaultRootDir,
+		consoleOutput: os.Stdout,
+	}
 	for _, option := range options {
 		option(runner)
 	}

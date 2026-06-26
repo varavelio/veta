@@ -1,0 +1,21 @@
+{
+  "allFiles": [
+    "assets/logo.svg",
+    "content/blog/hello.md",
+    "content/blog/nested/deep.md",
+    "content/drafts/ignore.txt",
+    "content/index.md"
+  ],
+  "indexContent": "# Home\n\nWelcome to Veta.\n",
+  "markdownFiles": [
+    "content/blog/hello.md",
+    "content/blog/nested/deep.md",
+    "content/index.md"
+  ],
+  "textFiles": [
+    {
+      "content": "draft content\n",
+      "path": "content/drafts/ignore.txt"
+    }
+  ]
+}

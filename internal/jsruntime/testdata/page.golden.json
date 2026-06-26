@@ -1,6 +1,9 @@
 {
   "globalAvailable": true,
   "keys": [
+    "listFiles",
+    "readFile",
+    "readFiles",
     "siteName"
   ],
   "title": "Hello, Veta"

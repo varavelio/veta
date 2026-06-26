@@ -2,6 +2,7 @@ package jsruntime
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/dop251/goja"
 )
@@ -24,6 +25,20 @@ func WithRuntime(runtime Runtime) Option {
 	}
 }
 
+// WithRoot configures the filesystem root used by Veta file APIs.
+func WithRoot(root string) Option {
+	return func(runner *Runner) {
+		runner.root = root
+	}
+}
+
+// WithConsoleOutput configures where JavaScript console messages are written.
+func WithConsoleOutput(output io.Writer) Option {
+	return func(runner *Runner) {
+		runner.consoleOutput = output
+	}
+}
+
 // defaultRuntime returns the built-in JavaScript runtime API exposed by Veta.
 func defaultRuntime() Runtime {
 	return Runtime{}
@@ -32,6 +47,10 @@ func defaultRuntime() Runtime {
 // newVM creates an isolated JavaScript runtime for one source execution.
 func (r *Runner) newVM() (*goja.Runtime, *goja.Object, error) {
 	vm := goja.New()
+	if err := r.installConsole(vm); err != nil {
+		return nil, nil, err
+	}
+
 	runtimeValue, err := r.newRuntimeObject(vm)
 	if err != nil {
 		return nil, nil, err
@@ -52,6 +71,17 @@ func (r *Runner) newVM() (*goja.Runtime, *goja.Object, error) {
 func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
 	runtimeValue := vm.NewObject()
 	for name, value := range r.runtimeSnapshot() {
+		if err := runtimeValue.Set(name, value); err != nil {
+			return nil, fmt.Errorf("set %s.%s: %w", GlobalName, name, err)
+		}
+	}
+
+	fileAPI, err := r.newFileAPI(vm)
+	if err != nil {
+		return nil, err
+	}
+
+	for name, value := range fileAPI {
 		if err := runtimeValue.Set(name, value); err != nil {
 			return nil, fmt.Errorf("set %s.%s: %w", GlobalName, name, err)
 		}
