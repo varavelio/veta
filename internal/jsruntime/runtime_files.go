@@ -21,20 +21,27 @@ var (
 	ErrPathOutsideRoot = errors.New("path must stay inside the configured root")
 )
 
-// newFileAPI returns the synchronous file APIs exposed through Veta.
-func (r *Runner) newFileAPI(vm *goja.Runtime) (Runtime, error) {
+// newFileAPI returns the synchronous file APIs exposed through Veta.files.
+func (r *Runner) newFileAPI(vm *goja.Runtime) (*goja.Object, error) {
 	root, err := r.rootDir()
 	if err != nil {
 		return nil, err
 	}
 
 	api := &fileAPI{root: root, vm: vm}
-
-	return Runtime{
+	files := vm.NewObject()
+	fileMethods := Runtime{
 		"listFiles": api.listFiles,
 		"readFile":  api.readFile,
 		"readFiles": api.readFiles,
-	}, nil
+	}
+	for name, value := range fileMethods {
+		if err := files.Set(name, value); err != nil {
+			return nil, fmt.Errorf("set %s.files.%s: %w", GlobalName, name, err)
+		}
+	}
+
+	return files, nil
 }
 
 // rootDir returns the absolute root used by Veta file APIs.
@@ -61,6 +68,7 @@ func (r *Runner) rootDir() (string, error) {
 	return absRoot, nil
 }
 
+// fileAPI owns synchronous file callbacks exposed to JavaScript.
 type fileAPI struct {
 	root string
 	vm   *goja.Runtime

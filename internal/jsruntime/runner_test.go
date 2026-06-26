@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +38,7 @@ func TestRunnerExecute(t *testing.T) {
 		require.NoError(t, result.ExportTo(&got))
 		require.Equal(t, "Hello, Veta", got["title"])
 		require.Equal(t, true, got["globalAvailable"])
-		require.Equal(t, []any{"listFiles", "readFile", "readFiles", "siteName"}, got["keys"])
+		require.Equal(t, []any{"files", "httpClient", "siteName"}, got["keys"])
 	})
 
 	t.Run("supports destructuring the runtime argument", func(t *testing.T) {
@@ -159,8 +163,8 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 		{
 			name: "read outside root",
 			code: `
-				export default function({ readFile }) {
-					return readFile("../page.js");
+				export default function({ files }) {
+					return files.readFile("../page.js");
 				}
 			`,
 			want: ErrPathOutsideRoot.Error(),
@@ -168,8 +172,8 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 		{
 			name: "absolute read path",
 			code: `
-				export default function({ readFile }) {
-					return readFile("/content/index.md");
+				export default function({ files }) {
+					return files.readFile("/content/index.md");
 				}
 			`,
 			want: ErrPathOutsideRoot.Error(),
@@ -177,8 +181,8 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 		{
 			name: "missing file",
 			code: `
-				export default function({ readFile }) {
-					return readFile("content/missing.md");
+				export default function({ files }) {
+					return files.readFile("content/missing.md");
 				}
 			`,
 			want: "read file content/missing.md",
@@ -186,8 +190,8 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 		{
 			name: "empty glob",
 			code: `
-				export default function({ listFiles }) {
-					return listFiles("");
+				export default function({ files }) {
+					return files.listFiles("");
 				}
 			`,
 			want: ErrEmptyPath.Error(),
@@ -195,8 +199,8 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 		{
 			name: "bad glob",
 			code: `
-				export default function({ listFiles }) {
-					return listFiles("content/[");
+				export default function({ files }) {
+					return files.listFiles("content/[");
 				}
 			`,
 			want: "list files matching content/[:",
@@ -221,6 +225,109 @@ func TestRunnerInvalidRoot(t *testing.T) {
 	`)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "stat root directory")
+}
+
+// TestRunnerHTTPClient verifies the synchronous HTTP client against a real HTTP
+// server.
+func TestRunnerHTTPClient(t *testing.T) {
+	server := newTestHTTPServer(t)
+	defer server.Close()
+
+	assertGoldenExecution(t, New(WithRuntime(Runtime{"baseURL": server.URL})), "http.js", "http.golden.json")
+}
+
+// TestRunnerHTTPClientErrors verifies request validation and HTTP option
+// errors.
+func TestRunnerHTTPClientErrors(t *testing.T) {
+	server := newTestHTTPServer(t)
+	defer server.Close()
+
+	tests := []struct {
+		name string
+		code string
+		want string
+	}{
+		{
+			name: "unsupported url scheme",
+			code: `
+				export default function({ httpClient }) {
+					return httpClient.get("ftp://example.com/file.txt");
+				}
+			`,
+			want: ErrHTTPURLUnsupported.Error(),
+		},
+		{
+			name: "invalid method",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.request("", baseURL + "/get");
+				}
+			`,
+			want: ErrHTTPMethodInvalid.Error(),
+		},
+		{
+			name: "invalid options",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.get(baseURL + "/get", "bad");
+				}
+			`,
+			want: ErrHTTPOptionsUnsupported.Error(),
+		},
+		{
+			name: "headers must be object",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.get(baseURL + "/get", { headers: "bad" });
+				}
+			`,
+			want: ErrHTTPHeadersUnsupported.Error(),
+		},
+		{
+			name: "empty header name",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.get(baseURL + "/get", { headers: { "": "bad" } });
+				}
+			`,
+			want: "http header name cannot be empty",
+		},
+		{
+			name: "body json conflict",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.post(baseURL + "/post", { body: "raw", json: { ok: true } });
+				}
+			`,
+			want: ErrHTTPBodyConflict.Error(),
+		},
+		{
+			name: "unsupported body type",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.post(baseURL + "/post", { body: { ok: true } });
+				}
+			`,
+			want: ErrHTTPBodyUnsupported.Error(),
+		},
+		{
+			name: "invalid timeout",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.get(baseURL + "/get", { timeoutMs: 0 });
+				}
+			`,
+			want: ErrHTTPTimeoutInvalid.Error(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := New(WithRuntime(Runtime{"baseURL": server.URL})).ExecuteString(test.name+".js", test.code)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), test.want)
+		})
+	}
 }
 
 // TestResult verifies Result conversion helpers and zero-value behavior.
@@ -429,4 +536,44 @@ func assertGoldenExecution(t *testing.T, runner *Runner, scriptName string, gold
 	require.NoError(t, err)
 
 	require.Equal(t, strings.TrimSpace(string(want)), string(got))
+}
+
+// newTestHTTPServer returns an HTTP server for runtime client tests.
+func newTestHTTPServer(t *testing.T) *httptest.Server {
+	t.Helper()
+
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/echo":
+			body, err := io.ReadAll(request.Body)
+			require.NoError(t, err)
+			writer.Header().Set("X-Response", "echo")
+			_, _ = fmt.Fprintf(writer, `{"method":%q,"body":%q,"contentType":%q}`, request.Method, string(body), request.Header.Get("Content-Type"))
+		case "/get":
+			writer.Header().Set("Content-Type", "application/json")
+			writer.Header().Set("X-Response", "get")
+			_, _ = fmt.Fprintf(writer, `{"method":%q,"query":%q,"testHeader":%q}`, request.Method, request.URL.RawQuery, request.Header.Get("X-Test"))
+		case "/head":
+			writer.Header().Set("X-Head", "true")
+			writer.WriteHeader(http.StatusNoContent)
+		case "/post":
+			body, err := io.ReadAll(request.Body)
+			require.NoError(t, err)
+			writer.Header().Set("Content-Type", "application/json")
+			writer.Header().Set("X-Response", "post")
+			writer.WriteHeader(http.StatusCreated)
+			response := map[string]any{
+				"body":        string(body),
+				"contentType": request.Header.Get("Content-Type"),
+				"method":      request.Method,
+				"traces":      request.Header.Values("X-Trace"),
+			}
+			require.NoError(t, json.NewEncoder(writer).Encode(response))
+		case "/teapot":
+			writer.WriteHeader(http.StatusTeapot)
+			_, _ = writer.Write([]byte("short and stout"))
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
 }

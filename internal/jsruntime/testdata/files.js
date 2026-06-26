@@ -1,8 +1,8 @@
-export default function({ listFiles, readFile, readFiles }) {
+export default function({ files }) {
   return {
-    allFiles: listFiles("."),
-    indexContent: readFile("./content/index.md"),
-    markdownFiles: listFiles("content/**/*.md"),
-    textFiles: readFiles("content/**/*.txt"),
+    allFiles: files.listFiles("."),
+    indexContent: files.readFile("./content/index.md"),
+    markdownFiles: files.listFiles("content/**/*.md"),
+    textFiles: files.readFiles("content/**/*.txt"),
   };
 }

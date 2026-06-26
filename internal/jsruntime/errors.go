@@ -21,4 +21,29 @@ var (
 
 	// ErrNoResult indicates that a zero Result was used.
 	ErrNoResult = errors.New("javascript result is empty")
+
+	// ErrHTTPBodyConflict indicates that an HTTP request received both body and
+	// json options.
+	ErrHTTPBodyConflict = errors.New("http request options cannot define both body and json")
+
+	// ErrHTTPBodyUnsupported indicates that an HTTP request body has an
+	// unsupported type.
+	ErrHTTPBodyUnsupported = errors.New("http request body must be a string; use json for JSON bodies")
+
+	// ErrHTTPHeadersUnsupported indicates that HTTP headers were not provided as
+	// an object.
+	ErrHTTPHeadersUnsupported = errors.New("http request headers must be an object")
+
+	// ErrHTTPMethodInvalid indicates that an HTTP method is empty or malformed.
+	ErrHTTPMethodInvalid = errors.New("http method is invalid")
+
+	// ErrHTTPOptionsUnsupported indicates that HTTP options were not provided as
+	// an object.
+	ErrHTTPOptionsUnsupported = errors.New("http request options must be an object")
+
+	// ErrHTTPTimeoutInvalid indicates that a timeout option is not positive.
+	ErrHTTPTimeoutInvalid = errors.New("http timeout must be greater than zero")
+
+	// ErrHTTPURLUnsupported indicates that a URL is not an absolute HTTP(S) URL.
+	ErrHTTPURLUnsupported = errors.New("http client only supports absolute http and https URLs")
 )

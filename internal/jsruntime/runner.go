@@ -7,13 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dop251/goja"
 )
 
 const (
-	defaultRootDir    = "."
-	defaultSourceName = "anonymous.js"
+	defaultHTTPTimeout = 30 * time.Second
+	defaultRootDir     = "."
+	defaultSourceName  = "anonymous.js"
 )
 
 // Source is an in-memory JavaScript file.
@@ -46,6 +48,7 @@ type Runner struct {
 	root          string
 	consoleOutput io.Writer
 	consoleMu     sync.Mutex
+	httpTimeout   time.Duration
 }
 
 // New creates a Runner with the provided options.
@@ -54,6 +57,7 @@ func New(options ...Option) *Runner {
 		runtime:       defaultRuntime(),
 		root:          defaultRootDir,
 		consoleOutput: os.Stdout,
+		httpTimeout:   defaultHTTPTimeout,
 	}
 	for _, option := range options {
 		option(runner)

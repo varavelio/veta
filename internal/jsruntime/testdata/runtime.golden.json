@@ -3,11 +3,10 @@
   "globalResult": "Veta:global",
   "nestedAnswer": 42,
   "runtimeKeys": [
+    "files",
+    "httpClient",
     "join",
-    "listFiles",
     "nested",
-    "readFile",
-    "readFiles",
     "siteName",
     "value"
   ]

@@ -3,6 +3,7 @@ package jsruntime
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/dop251/goja"
 )
@@ -36,6 +37,13 @@ func WithRoot(root string) Option {
 func WithConsoleOutput(output io.Writer) Option {
 	return func(runner *Runner) {
 		runner.consoleOutput = output
+	}
+}
+
+// WithHTTPTimeout configures the default timeout for Veta HTTP requests.
+func WithHTTPTimeout(timeout time.Duration) Option {
+	return func(runner *Runner) {
+		runner.httpTimeout = timeout
 	}
 }
 
@@ -81,10 +89,16 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
 		return nil, err
 	}
 
-	for name, value := range fileAPI {
-		if err := runtimeValue.Set(name, value); err != nil {
-			return nil, fmt.Errorf("set %s.%s: %w", GlobalName, name, err)
-		}
+	if err := runtimeValue.Set("files", fileAPI); err != nil {
+		return nil, fmt.Errorf("set %s.files: %w", GlobalName, err)
+	}
+
+	httpClientAPI, err := r.newHTTPClientAPI(vm)
+	if err != nil {
+		return nil, err
+	}
+	if err := runtimeValue.Set("httpClient", httpClientAPI); err != nil {
+		return nil, fmt.Errorf("set %s.httpClient: %w", GlobalName, err)
 	}
 
 	return runtimeValue, nil

@@ -1,0 +1,43 @@
+{
+  "delete": {
+    "body": "short and stout",
+    "ok": false,
+    "status": 418
+  },
+  "get": {
+    "body": {
+      "method": "GET",
+      "query": "name=veta",
+      "testHeader": "yes"
+    },
+    "header": "get",
+    "ok": true,
+    "status": 200,
+    "urlEndsWith": true
+  },
+  "head": {
+    "body": "",
+    "header": "true",
+    "ok": true,
+    "status": 204
+  },
+  "post": {
+    "body": {
+      "count": 2,
+      "name": "Veta"
+    },
+    "contentType": "application/json",
+    "ok": true,
+    "status": 201,
+    "traces": [
+      "one",
+      "two"
+    ]
+  },
+  "put": {
+    "body": "plain body",
+    "contentType": "text/plain",
+    "method": "PUT",
+    "statusText": "200 OK"
+  }
+}
