@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/varavelio/veta/internal/cli"
 )
 
 // main owns process-level concerns: signal handling, final error logging, and
@@ -30,6 +32,6 @@ func main() {
 // concerns. Keeping this logic outside main makes fatal failures explicit through
 // returned errors and keeps process shutdown behavior separate from application
 // startup behavior.
-func run(_ context.Context) (err error) {
-	return nil
+func run(ctx context.Context) (err error) {
+	return cli.Run(ctx, os.Args[1:], os.Stdout, os.Stderr)
 }
