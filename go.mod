@@ -3,6 +3,7 @@ module github.com/varavelio/veta
 go 1.26
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
 	github.com/stretchr/testify v1.11.1
 )
