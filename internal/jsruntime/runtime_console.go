@@ -1,6 +1,7 @@
 package jsruntime
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -72,8 +73,27 @@ func formatConsoleArguments(arguments []goja.Value) string {
 			continue
 		}
 
-		formatted = append(formatted, fmt.Sprint(argument.Export()))
+		formatted = append(formatted, formatConsoleArgument(argument))
 	}
 
 	return strings.Join(formatted, " ")
+}
+
+// formatConsoleArgument keeps primitive output concise and renders structured
+// values in a familiar JSON shape.
+func formatConsoleArgument(argument goja.Value) string {
+	exported := argument.Export()
+	switch value := exported.(type) {
+	case string:
+		return value
+	case bool, int64, float64:
+		return fmt.Sprint(value)
+	default:
+		encoded, err := json.Marshal(exported)
+		if err == nil {
+			return string(encoded)
+		}
+
+		return fmt.Sprint(exported)
+	}
 }

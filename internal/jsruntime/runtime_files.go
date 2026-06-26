@@ -76,7 +76,11 @@ type fileAPI struct {
 
 // listFiles returns sorted files matching a glob pattern inside the root.
 func (api *fileAPI) listFiles(call goja.FunctionCall) goja.Value {
-	pattern := call.Argument(0).String()
+	pattern, err := requiredStringArgument(call.Argument(0), "Veta.files.listFiles pattern")
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+
 	matches, err := api.matchFiles(pattern)
 	if err != nil {
 		panic(api.vm.NewGoError(err))
@@ -87,12 +91,25 @@ func (api *fileAPI) listFiles(call goja.FunctionCall) goja.Value {
 
 // readFile returns one file as a UTF-8 string.
 func (api *fileAPI) readFile(call goja.FunctionCall) goja.Value {
-	filePath, err := cleanRelativeFilePath(call.Argument(0).String())
+	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.readFile path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
 
-	content, err := os.ReadFile(filepath.Join(api.root, filepath.FromSlash(filePath)))
+	filePath, err := cleanRelativeFilePath(rawPath)
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+
+	root, err := api.openRoot()
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+
+	content, err := root.ReadFile(filepath.FromSlash(filePath))
 	if err != nil {
 		panic(api.vm.NewGoError(fmt.Errorf("read file %s: %w", filePath, err)))
 	}
@@ -102,14 +119,27 @@ func (api *fileAPI) readFile(call goja.FunctionCall) goja.Value {
 
 // readFiles returns sorted file paths and contents matching a glob pattern.
 func (api *fileAPI) readFiles(call goja.FunctionCall) goja.Value {
-	matches, err := api.matchFiles(call.Argument(0).String())
+	pattern, err := requiredStringArgument(call.Argument(0), "Veta.files.readFiles pattern")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
 
+	matches, err := api.matchFiles(pattern)
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+
+	root, err := api.openRoot()
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+
 	files := make([]map[string]string, 0, len(matches))
 	for _, match := range matches {
-		content, err := os.ReadFile(filepath.Join(api.root, filepath.FromSlash(match)))
+		content, err := root.ReadFile(filepath.FromSlash(match))
 		if err != nil {
 			panic(api.vm.NewGoError(fmt.Errorf("read file %s: %w", match, err)))
 		}
@@ -123,6 +153,17 @@ func (api *fileAPI) readFiles(call goja.FunctionCall) goja.Value {
 	return api.vm.ToValue(files)
 }
 
+// openRoot opens the configured root with the standard-library confinement
+// guard, including symlink escape protection.
+func (api *fileAPI) openRoot() (*os.Root, error) {
+	root, err := os.OpenRoot(api.root)
+	if err != nil {
+		return nil, fmt.Errorf("open root directory %s: %w", api.root, err)
+	}
+
+	return root, nil
+}
+
 // matchFiles returns sorted file matches for a sanitized glob pattern.
 func (api *fileAPI) matchFiles(pattern string) ([]string, error) {
 	cleanPattern, err := cleanRelativeGlobPattern(pattern)
@@ -130,8 +171,16 @@ func (api *fileAPI) matchFiles(pattern string) ([]string, error) {
 		return nil, err
 	}
 
+	root, err := api.openRoot()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = root.Close()
+	}()
+
 	matches, err := doublestar.Glob(
-		os.DirFS(api.root),
+		root.FS(),
 		cleanPattern,
 		doublestar.WithFilesOnly(),
 		doublestar.WithFailOnIOErrors(),

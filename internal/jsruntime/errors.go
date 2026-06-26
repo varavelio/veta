@@ -19,6 +19,10 @@ var (
 	// Promise-like value.
 	ErrPromiseUnsupported = errors.New("javascript promises are not supported")
 
+	// ErrExecutionTimeout indicates that JavaScript execution exceeded the
+	// configured timeout.
+	ErrExecutionTimeout = errors.New("javascript execution timed out")
+
 	// ErrNoResult indicates that a zero Result was used.
 	ErrNoResult = errors.New("javascript result is empty")
 

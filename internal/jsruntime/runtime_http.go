@@ -64,12 +64,22 @@ func (api *httpClientAPI) method(method string) func(goja.FunctionCall) goja.Val
 
 // request executes an HTTP request with an explicit method argument.
 func (api *httpClientAPI) request(call goja.FunctionCall) goja.Value {
-	return api.do(call.Argument(0).String(), call.Argument(1), call.Argument(2))
+	method, err := requiredStringArgument(call.Argument(0), "Veta.httpClient.request method")
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+
+	return api.do(method, call.Argument(1), call.Argument(2))
 }
 
 // do executes one synchronous HTTP request and returns a JavaScript object.
 func (api *httpClientAPI) do(method string, rawURL goja.Value, rawOptions goja.Value) goja.Value {
-	response, err := api.fetch(method, rawURL.String(), rawOptions)
+	requestURL, err := requiredStringArgument(rawURL, "Veta.httpClient URL")
+	if err != nil {
+		panic(api.vm.NewGoError(err))
+	}
+
+	response, err := api.fetch(method, requestURL, rawOptions)
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -119,7 +129,7 @@ func (api *httpClientAPI) fetch(method string, rawURL string, rawOptions goja.Va
 		"headers":    mapHTTPHeaders(response.Header),
 		"ok":         200 <= response.StatusCode && response.StatusCode <= 299,
 		"status":     response.StatusCode,
-		"statusText": response.Status,
+		"statusText": http.StatusText(response.StatusCode),
 		"url":        response.Request.URL.String(),
 	}, nil
 }
@@ -180,9 +190,9 @@ func (api *httpClientAPI) requestOptions(value goja.Value) (httpRequestOptions, 
 
 	timeoutValue := object.Get("timeoutMs")
 	if !isJavaScriptNullish(timeoutValue) {
-		timeout := time.Duration(timeoutValue.ToInteger()) * time.Millisecond
-		if timeout <= 0 {
-			return httpRequestOptions{}, ErrHTTPTimeoutInvalid
+		timeout, err := positiveMilliseconds(timeoutValue, "http timeoutMs")
+		if err != nil {
+			return httpRequestOptions{}, fmt.Errorf("%w: %w", ErrHTTPTimeoutInvalid, err)
 		}
 		options.timeout = timeout
 	}
@@ -279,10 +289,4 @@ func mapHTTPHeaders(headers http.Header) map[string][]string {
 	}
 
 	return mapped
-}
-
-// isJavaScriptNullish reports whether a Goja value is absent, undefined, or
-// null.
-func isJavaScriptNullish(value goja.Value) bool {
-	return value == nil || goja.IsUndefined(value) || goja.IsNull(value)
 }

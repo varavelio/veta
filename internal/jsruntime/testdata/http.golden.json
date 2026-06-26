@@ -38,6 +38,6 @@
     "body": "plain body",
     "contentType": "text/plain",
     "method": "PUT",
-    "statusText": "200 OK"
+    "statusText": "OK"
   }
 }

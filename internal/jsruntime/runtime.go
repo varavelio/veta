@@ -48,6 +48,14 @@ func WithConsoleOutput(output io.Writer) Option {
 	}
 }
 
+// WithExecutionTimeout configures the safety timeout for one JavaScript
+// execution. A non-positive timeout disables execution interruption.
+func WithExecutionTimeout(timeout time.Duration) Option {
+	return func(runner *Runner) {
+		runner.executionTimeout = timeout
+	}
+}
+
 // WithHTTPTimeout configures the default timeout for Veta HTTP requests.
 func WithHTTPTimeout(timeout time.Duration) Option {
 	return func(runner *Runner) {
@@ -134,8 +142,40 @@ func (r *Runner) runtimeSnapshot() Runtime {
 func cloneRuntime(runtime Runtime) Runtime {
 	clone := make(Runtime, len(runtime))
 	for name, value := range runtime {
-		clone[name] = value
+		clone[name] = cloneRuntimeValue(value)
 	}
 
 	return clone
+}
+
+func cloneRuntimeValue(value any) any {
+	switch typedValue := value.(type) {
+	case Runtime:
+		return cloneRuntime(typedValue)
+	case map[string]any:
+		clone := make(map[string]any, len(typedValue))
+		for key, item := range typedValue {
+			clone[key] = cloneRuntimeValue(item)
+		}
+
+		return clone
+	case map[string]string:
+		clone := make(map[string]string, len(typedValue))
+		for key, item := range typedValue {
+			clone[key] = item
+		}
+
+		return clone
+	case []any:
+		clone := make([]any, len(typedValue))
+		for index, item := range typedValue {
+			clone[index] = cloneRuntimeValue(item)
+		}
+
+		return clone
+	case []string:
+		return append([]string(nil), typedValue...)
+	default:
+		return value
+	}
 }

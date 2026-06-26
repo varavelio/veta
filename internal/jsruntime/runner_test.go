@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -53,7 +54,7 @@ func TestRunnerExecute(t *testing.T) {
 		require.Equal(t, int64(42), result.Export())
 	})
 
-	t.Run("ignores module words in strings and comments", func(t *testing.T) {
+	t.Run("ignores unsupported module words in strings and comments", func(t *testing.T) {
 		result, err := New().ExecuteString("strings.js", `
 			// import value from "elsewhere";
 			const text = "export const hidden = true";
@@ -65,6 +66,39 @@ func TestRunnerExecute(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "export const hidden = true", result.Export())
 	})
+}
+
+// TestRunnerExecutionTimeout verifies that runaway JavaScript is interrupted.
+func TestRunnerExecutionTimeout(t *testing.T) {
+	tests := []struct {
+		name string
+		code string
+	}{
+		{
+			name: "top-level loop",
+			code: `
+				while (true) {}
+				export default function() { return true; }
+			`,
+		},
+		{
+			name: "default export loop",
+			code: `
+				export default function() {
+					while (true) {}
+				}
+			`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			started := time.Now()
+			_, err := New(WithExecutionTimeout(10*time.Millisecond)).ExecuteString(test.name+".js", test.code)
+			require.ErrorIs(t, err, ErrExecutionTimeout)
+			require.Less(t, time.Since(started), time.Second)
+		})
+	}
 }
 
 // TestRunnerExecuteFileReadError verifies that file read failures are wrapped
@@ -111,6 +145,33 @@ func TestRunnerRuntimeSnapshot(t *testing.T) {
 	require.Equal(t, "before", result.Export())
 }
 
+// TestRunnerNestedRuntimeSnapshot verifies that nested runtime data is isolated
+// between executions.
+func TestRunnerNestedRuntimeSnapshot(t *testing.T) {
+	runner := New(WithRuntime(Runtime{
+		"nested": map[string]any{
+			"items": []any{"before"},
+		},
+	}))
+
+	first, err := runner.ExecuteString("nested-snapshot.js", `
+		export default function({ nested }) {
+			nested.items[0] = "after";
+			return nested.items[0];
+		}
+	`)
+	require.NoError(t, err)
+	require.Equal(t, "after", first.Export())
+
+	second, err := runner.ExecuteString("nested-snapshot.js", `
+		export default function({ nested }) {
+			return nested.items[0];
+		}
+	`)
+	require.NoError(t, err)
+	require.Equal(t, "before", second.Export())
+}
+
 // TestRunnerEnvironmentSnapshot verifies that environment configuration is
 // copied before execution.
 func TestRunnerEnvironmentSnapshot(t *testing.T) {
@@ -139,6 +200,7 @@ func TestRunnerConsole(t *testing.T) {
 			console.warn("careful");
 			console.error("broken");
 			console.debug("details", undefined, null);
+			console.log({ name: "Veta", count: 2 }, [1, 2]);
 			return "ok";
 		}
 	`)
@@ -150,6 +212,7 @@ func TestRunnerConsole(t *testing.T) {
 		"[js warn] careful",
 		"[js error] broken",
 		"[js debug] details undefined null",
+		"[js log] {\"count\":2,\"name\":\"Veta\"} [1,2]",
 		"",
 	}, "\n"), output.String())
 }
@@ -176,6 +239,24 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 		code string
 		want string
 	}{
+		{
+			name: "missing read path",
+			code: `
+				export default function({ files }) {
+					return files.readFile();
+				}
+			`,
+			want: "Veta.files.readFile path is required",
+		},
+		{
+			name: "non-string read path",
+			code: `
+				export default function({ files }) {
+					return files.readFile(123);
+				}
+			`,
+			want: "Veta.files.readFile path must be a string",
+		},
 		{
 			name: "read outside root",
 			code: `
@@ -204,6 +285,15 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 			want: "read file content/missing.md",
 		},
 		{
+			name: "missing glob",
+			code: `
+				export default function({ files }) {
+					return files.listFiles();
+				}
+			`,
+			want: "Veta.files.listFiles pattern is required",
+		},
+		{
 			name: "empty glob",
 			code: `
 				export default function({ files }) {
@@ -230,6 +320,27 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 			require.Contains(t, err.Error(), test.want)
 		})
 	}
+}
+
+// TestRunnerFileAPISymlinkEscape verifies that symlinks cannot escape the
+// configured root.
+func TestRunnerFileAPISymlinkEscape(t *testing.T) {
+	tempDir := t.TempDir()
+	root := filepath.Join(tempDir, "root")
+	require.NoError(t, os.Mkdir(root, 0o755))
+	outside := filepath.Join(tempDir, "secret.txt")
+	require.NoError(t, os.WriteFile(outside, []byte("secret"), 0o644))
+	if err := os.Symlink(outside, filepath.Join(root, "leak.txt")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	_, err := New(WithRoot(root)).ExecuteString("symlink.js", `
+		export default function({ files }) {
+			return files.readFile("leak.txt");
+		}
+	`)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "read file leak.txt")
 }
 
 // TestRunnerInvalidRoot verifies that invalid roots fail before JavaScript runs.
@@ -264,6 +375,24 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 		want string
 	}{
 		{
+			name: "missing url",
+			code: `
+				export default function({ httpClient }) {
+					return httpClient.get();
+				}
+			`,
+			want: "Veta.httpClient URL is required",
+		},
+		{
+			name: "non-string url",
+			code: `
+				export default function({ httpClient }) {
+					return httpClient.get(123);
+				}
+			`,
+			want: "Veta.httpClient URL must be a string",
+		},
+		{
 			name: "unsupported url scheme",
 			code: `
 				export default function({ httpClient }) {
@@ -271,6 +400,15 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 				}
 			`,
 			want: ErrHTTPURLUnsupported.Error(),
+		},
+		{
+			name: "missing explicit method",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.request(undefined, baseURL + "/get");
+				}
+			`,
+			want: "Veta.httpClient.request method is required",
 		},
 		{
 			name: "invalid method",
@@ -327,6 +465,15 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 			want: ErrHTTPBodyUnsupported.Error(),
 		},
 		{
+			name: "invalid timeout type",
+			code: `
+				export default function({ baseURL, httpClient }) {
+					return httpClient.get(baseURL + "/get", { timeoutMs: "bad" });
+				}
+			`,
+			want: ErrHTTPTimeoutInvalid.Error(),
+		},
+		{
 			name: "invalid timeout",
 			code: `
 				export default function({ baseURL, httpClient }) {
@@ -344,6 +491,23 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 			require.Contains(t, err.Error(), test.want)
 		})
 	}
+}
+
+// TestRunnerPromiseInspectionError verifies that a throwing then getter is
+// reported as a normal execution error.
+func TestRunnerPromiseInspectionError(t *testing.T) {
+	_, err := New().ExecuteString("then-getter.js", `
+		export default function() {
+			return {
+				get then() {
+					throw new Error("boom");
+				}
+			};
+		}
+	`)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "inspect default export result")
+	require.Contains(t, err.Error(), "boom")
 }
 
 // TestResult verifies Result conversion helpers and zero-value behavior.
