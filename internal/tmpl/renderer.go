@@ -1,4 +1,4 @@
-package view
+package tmpl
 
 import (
 	"fmt"
