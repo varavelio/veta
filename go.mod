@@ -3,6 +3,7 @@ module github.com/varavelio/veta
 go 1.26
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
 	github.com/flosch/pongo2/v7 v7.0.0-alpha.1
