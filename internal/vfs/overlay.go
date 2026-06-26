@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"slices"
 	"sort"
 )
 
@@ -175,7 +176,7 @@ func (overlay *Overlay) Stat(name string) (fs.FileInfo, error) {
 }
 
 func (overlay *Overlay) find(name string) (int, fs.FileInfo, bool, error) {
-	for index := len(overlay.layers) - 1; index >= 0; index-- {
+	for index := range slices.Backward(overlay.layers) {
 		info, err := fs.Stat(overlay.layers[index].FS, name)
 		if err == nil {
 			return index, info, true, nil

@@ -2,6 +2,7 @@ package js
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 
@@ -53,9 +54,7 @@ func (r *Runner) environmentSnapshot() Environment {
 // configuration accidentally.
 func cloneEnvironment(environment Environment) Environment {
 	clone := make(Environment, len(environment))
-	for name, value := range environment {
-		clone[name] = value
-	}
+	maps.Copy(clone, environment)
 
 	return clone
 }

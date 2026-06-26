@@ -3,6 +3,7 @@ package js
 import (
 	"fmt"
 	"io"
+	"maps"
 	"time"
 
 	"github.com/dop251/goja"
@@ -19,9 +20,7 @@ type Runtime map[string]any
 func WithRuntime(runtime Runtime) Option {
 	return func(runner *Runner) {
 		merged := runner.runtimeSnapshot()
-		for name, value := range runtime {
-			merged[name] = value
-		}
+		maps.Copy(merged, runtime)
 		runner.runtime = merged
 	}
 }
@@ -161,9 +160,7 @@ func cloneRuntimeValue(value any) any {
 		return clone
 	case map[string]string:
 		clone := make(map[string]string, len(typedValue))
-		for key, item := range typedValue {
-			clone[key] = item
-		}
+		maps.Copy(clone, typedValue)
 
 		return clone
 	case []any:

@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -20,10 +21,8 @@ func cleanPath(name string) (string, error) {
 		return "", ErrPathInvalid
 	}
 
-	for _, segment := range strings.Split(rawName, "/") {
-		if segment == ".." {
-			return "", ErrPathInvalid
-		}
+	if slices.Contains(strings.Split(rawName, "/"), "..") {
+		return "", ErrPathInvalid
 	}
 
 	cleanName := path.Clean(rawName)

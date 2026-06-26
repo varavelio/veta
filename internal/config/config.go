@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -126,7 +127,7 @@ func Parse(content []byte) (Config, error) {
 	}
 
 	var extra any
-	if err := decoder.Decode(&extra); err != io.EOF {
+	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		if err == nil {
 			return Config{}, fmt.Errorf("%w: multiple yaml documents are not supported", ErrInvalid)
 		}
@@ -204,10 +205,8 @@ func cleanConfigPath(name string) (string, error) {
 		return "", ErrPathInvalid
 	}
 
-	for _, segment := range strings.Split(rawName, "/") {
-		if segment == ".." {
-			return "", ErrPathInvalid
-		}
+	if slices.Contains(strings.Split(rawName, "/"), "..") {
+		return "", ErrPathInvalid
 	}
 
 	cleanName := path.Clean(rawName)

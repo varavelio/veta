@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -99,10 +100,8 @@ func cleanTemplateName(name string) (string, error) {
 		return "", ErrTemplateNameInvalid
 	}
 
-	for _, segment := range strings.Split(rawName, "/") {
-		if segment == ".." {
-			return "", ErrTemplateNameInvalid
-		}
+	if slices.Contains(strings.Split(rawName, "/"), "..") {
+		return "", ErrTemplateNameInvalid
 	}
 
 	cleanName := path.Clean(rawName)

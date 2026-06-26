@@ -2,6 +2,7 @@ package js
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -107,7 +108,13 @@ func (api *httpClientAPI) fetch(
 		return nil, err
 	}
 
-	request, err := http.NewRequest(method, requestURL, bytes.NewReader(options.body))
+	ctx := context.Background()
+	request, err := http.NewRequestWithContext(
+		ctx,
+		method,
+		requestURL,
+		bytes.NewReader(options.body),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("create http request: %w", err)
 	}

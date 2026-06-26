@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -237,10 +238,8 @@ func cleanRelativePath(rawPath string) (string, error) {
 		rawPath = strings.TrimPrefix(rawPath, "./")
 	}
 
-	for _, segment := range strings.Split(rawPath, "/") {
-		if segment == ".." {
-			return "", ErrPathOutsideRoot
-		}
+	if slices.Contains(strings.Split(rawPath, "/"), "..") {
+		return "", ErrPathOutsideRoot
 	}
 
 	cleanPath := path.Clean(rawPath)
