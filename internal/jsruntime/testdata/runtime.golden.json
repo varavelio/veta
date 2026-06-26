@@ -1,0 +1,11 @@
+{
+  "functionResult": "Veta:7",
+  "globalResult": "Veta:global",
+  "nestedAnswer": 42,
+  "runtimeKeys": [
+    "join",
+    "nested",
+    "siteName",
+    "value"
+  ]
+}

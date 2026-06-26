@@ -1,0 +1,13 @@
+{
+  "bool": true,
+  "nullValue": null,
+  "number": 12.5,
+  "promiseType": "undefined",
+  "samples": [
+    "import value from elsewhere",
+    "export const hidden = true"
+  ],
+  "thenableButNotPromise": {
+    "then": "not a function"
+  }
+}
