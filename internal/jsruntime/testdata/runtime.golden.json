@@ -3,6 +3,7 @@
   "globalResult": "Veta:global",
   "nestedAnswer": 42,
   "runtimeKeys": [
+    "env",
     "files",
     "httpClient",
     "join",

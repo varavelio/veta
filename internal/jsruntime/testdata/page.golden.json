@@ -1,6 +1,7 @@
 {
   "globalAvailable": true,
   "keys": [
+    "env",
     "files",
     "httpClient",
     "siteName"

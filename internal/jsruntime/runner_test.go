@@ -38,7 +38,7 @@ func TestRunnerExecute(t *testing.T) {
 		require.NoError(t, result.ExportTo(&got))
 		require.Equal(t, "Hello, Veta", got["title"])
 		require.Equal(t, true, got["globalAvailable"])
-		require.Equal(t, []any{"files", "httpClient", "siteName"}, got["keys"])
+		require.Equal(t, []any{"env", "files", "httpClient", "siteName"}, got["keys"])
 	})
 
 	t.Run("supports destructuring the runtime argument", func(t *testing.T) {
@@ -105,6 +105,22 @@ func TestRunnerRuntimeSnapshot(t *testing.T) {
 	result, err := runner.ExecuteString("snapshot.js", `
 		export default function() {
 			return Veta.value;
+		}
+	`)
+	require.NoError(t, err)
+	require.Equal(t, "before", result.Export())
+}
+
+// TestRunnerEnvironmentSnapshot verifies that environment configuration is
+// copied before execution.
+func TestRunnerEnvironmentSnapshot(t *testing.T) {
+	environment := Environment{"VETA_MODE": "before"}
+	runner := New(WithEnvironment(environment))
+	environment["VETA_MODE"] = "after"
+
+	result, err := runner.ExecuteString("env-snapshot.js", `
+		export default function({ env }) {
+			return env.VETA_MODE;
 		}
 	`)
 	require.NoError(t, err)
@@ -460,11 +476,12 @@ func TestRunnerExecuteUnsupportedModuleSyntax(t *testing.T) {
 // output fixtures.
 func TestRunnerExecuteGoldenFiles(t *testing.T) {
 	tests := []struct {
-		name    string
-		script  string
-		golden  string
-		root    string
-		runtime Runtime
+		name        string
+		script      string
+		golden      string
+		root        string
+		environment Environment
+		runtime     Runtime
 	}{
 		{
 			name:   "page",
@@ -502,6 +519,16 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 			golden: "edge.golden.json",
 		},
 		{
+			name:   "environment",
+			script: "env.js",
+			golden: "env.golden.json",
+			environment: Environment{
+				"EMPTY":       "",
+				"VETA_MODE":   "test",
+				"VETA_NUMBER": "42",
+			},
+		},
+		{
 			name:   "file api",
 			script: "files.js",
 			golden: "files.golden.json",
@@ -511,11 +538,15 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runner := New(WithRuntime(test.runtime))
+			options := []Option{WithRuntime(test.runtime)}
 			if test.root != "" {
-				runner = New(WithRuntime(test.runtime), WithRoot(test.root))
+				options = append(options, WithRoot(test.root))
+			}
+			if test.environment != nil {
+				options = append(options, WithEnvironment(test.environment))
 			}
 
+			runner := New(options...)
 			assertGoldenExecution(t, runner, test.script, test.golden)
 		})
 	}

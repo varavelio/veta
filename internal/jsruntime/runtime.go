@@ -26,6 +26,14 @@ func WithRuntime(runtime Runtime) Option {
 	}
 }
 
+// WithEnvironment configures the environment variables exposed through
+// Veta.env.
+func WithEnvironment(environment Environment) Option {
+	return func(runner *Runner) {
+		runner.environment = cloneEnvironment(environment)
+	}
+}
+
 // WithRoot configures the filesystem root used by Veta file APIs.
 func WithRoot(root string) Option {
 	return func(runner *Runner) {
@@ -91,6 +99,14 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
 
 	if err := runtimeValue.Set("files", fileAPI); err != nil {
 		return nil, fmt.Errorf("set %s.files: %w", GlobalName, err)
+	}
+
+	environment, err := r.newEnvironmentObject(vm)
+	if err != nil {
+		return nil, err
+	}
+	if err := runtimeValue.Set("env", environment); err != nil {
+		return nil, fmt.Errorf("set %s.env: %w", GlobalName, err)
 	}
 
 	httpClientAPI, err := r.newHTTPClientAPI(vm)

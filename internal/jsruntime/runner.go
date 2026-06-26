@@ -46,6 +46,7 @@ type Option func(*Runner)
 type Runner struct {
 	runtime       Runtime
 	root          string
+	environment   Environment
 	consoleOutput io.Writer
 	consoleMu     sync.Mutex
 	httpTimeout   time.Duration
@@ -56,6 +57,7 @@ func New(options ...Option) *Runner {
 	runner := &Runner{
 		runtime:       defaultRuntime(),
 		root:          defaultRootDir,
+		environment:   defaultEnvironment(),
 		consoleOutput: os.Stdout,
 		httpTimeout:   defaultHTTPTimeout,
 	}
