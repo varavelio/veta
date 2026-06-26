@@ -7,6 +7,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
 	github.com/flosch/pongo2/v7 v7.0.0-alpha.1
 	github.com/stretchr/testify v1.11.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -17,5 +18,4 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
