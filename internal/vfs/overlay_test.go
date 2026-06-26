@@ -56,7 +56,11 @@ func TestOverlayReadDirMergesDirectories(t *testing.T) {
 
 	entries, err := fs.ReadDir(overlay, "templates")
 	require.NoError(t, err)
-	require.Equal(t, []string{"base.pongo", "project-only.pongo", "shared.pongo", "theme-only.pongo"}, entryNames(entries))
+	require.Equal(
+		t,
+		[]string{"base.pongo", "project-only.pongo", "shared.pongo", "theme-only.pongo"},
+		entryNames(entries),
+	)
 
 	content, err := fs.ReadFile(overlay, "templates/shared.pongo")
 	require.NoError(t, err)
@@ -118,7 +122,18 @@ func TestOverlayWalkDir(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
-	require.Equal(t, []string{".", "components", "components/ui", "components/ui/button.pongo", "templates", "templates/base.pongo"}, paths)
+	require.Equal(
+		t,
+		[]string{
+			".",
+			"components",
+			"components/ui",
+			"components/ui/button.pongo",
+			"templates",
+			"templates/base.pongo",
+		},
+		paths,
+	)
 }
 
 func TestOverlayErrors(t *testing.T) {
@@ -144,7 +159,7 @@ func TestOverlayErrors(t *testing.T) {
 	require.False(t, ok)
 }
 
-func newTestOverlay(t *testing.T, theme fs.FS, project fs.FS) *Overlay {
+func newTestOverlay(t *testing.T, theme, project fs.FS) *Overlay {
 	t.Helper()
 
 	overlay, err := NewOverlay(

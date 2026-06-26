@@ -73,7 +73,7 @@ func (api *httpClientAPI) request(call goja.FunctionCall) goja.Value {
 }
 
 // do executes one synchronous HTTP request and returns a JavaScript object.
-func (api *httpClientAPI) do(method string, rawURL goja.Value, rawOptions goja.Value) goja.Value {
+func (api *httpClientAPI) do(method string, rawURL, rawOptions goja.Value) goja.Value {
 	requestURL, err := requiredStringArgument(rawURL, "Veta.httpClient URL")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
@@ -88,7 +88,10 @@ func (api *httpClientAPI) do(method string, rawURL goja.Value, rawOptions goja.V
 }
 
 // fetch executes one HTTP request and returns the Veta response shape.
-func (api *httpClientAPI) fetch(method string, rawURL string, rawOptions goja.Value) (map[string]any, error) {
+func (api *httpClientAPI) fetch(
+	method, rawURL string,
+	rawOptions goja.Value,
+) (map[string]any, error) {
 	method, err := cleanHTTPMethod(method)
 	if err != nil {
 		return nil, err

@@ -15,7 +15,7 @@ type templateLoader struct {
 	files      fs.FS
 }
 
-func (loader *templateLoader) Abs(base string, name string) string {
+func (loader *templateLoader) Abs(base, name string) string {
 	name = normalizePathSeparators(name)
 	if strings.HasPrefix(name, "./") || strings.HasPrefix(name, "../") {
 		base = normalizePathSeparators(base)
@@ -84,7 +84,12 @@ func (loader *templateLoader) resolve(name string) (string, error) {
 	case 1:
 		return matches[0], nil
 	default:
-		return "", fmt.Errorf("%w: %s matches %s", ErrTemplateAmbiguous, cleanName, strings.Join(matches, ", "))
+		return "", fmt.Errorf(
+			"%w: %s matches %s",
+			ErrTemplateAmbiguous,
+			cleanName,
+			strings.Join(matches, ", "),
+		)
 	}
 }
 

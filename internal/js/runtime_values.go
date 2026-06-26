@@ -36,7 +36,8 @@ func positiveMilliseconds(value goja.Value, label string) (time.Duration, error)
 	}
 
 	maxMilliseconds := float64(int64(1<<63-1) / int64(time.Millisecond))
-	if milliseconds <= 0 || math.IsNaN(milliseconds) || math.IsInf(milliseconds, 0) || milliseconds > maxMilliseconds {
+	if milliseconds <= 0 || math.IsNaN(milliseconds) || math.IsInf(milliseconds, 0) ||
+		milliseconds > maxMilliseconds {
 		return 0, fmt.Errorf("%s must be a positive number", label)
 	}
 

@@ -68,7 +68,12 @@ func (overlay *Overlay) Open(name string) (fs.File, error) {
 	if !info.IsDir() {
 		file, err := overlay.layers[layerIndex].FS.Open(cleanName)
 		if err != nil {
-			return nil, fmt.Errorf("open %s from layer %s: %w", cleanName, overlay.layers[layerIndex].Name, err)
+			return nil, fmt.Errorf(
+				"open %s from layer %s: %w",
+				cleanName,
+				overlay.layers[layerIndex].Name,
+				err,
+			)
 		}
 
 		return file, nil
@@ -102,7 +107,12 @@ func (overlay *Overlay) ReadFile(name string) ([]byte, error) {
 
 	content, err := fs.ReadFile(overlay.layers[layerIndex].FS, cleanName)
 	if err != nil {
-		return nil, fmt.Errorf("read %s from layer %s: %w", cleanName, overlay.layers[layerIndex].Name, err)
+		return nil, fmt.Errorf(
+			"read %s from layer %s: %w",
+			cleanName,
+			overlay.layers[layerIndex].Name,
+			err,
+		)
 	}
 
 	return content, nil
@@ -171,7 +181,12 @@ func (overlay *Overlay) find(name string) (int, fs.FileInfo, bool, error) {
 			return index, info, true, nil
 		}
 		if !isNotExist(err) {
-			return 0, nil, false, fmt.Errorf("stat %s from layer %s: %w", name, overlay.layers[index].Name, err)
+			return 0, nil, false, fmt.Errorf(
+				"stat %s from layer %s: %w",
+				name,
+				overlay.layers[index].Name,
+				err,
+			)
 		}
 	}
 

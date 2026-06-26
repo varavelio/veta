@@ -88,7 +88,11 @@ func TestRendererLayoutsAndIncludes(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, "<html><head><title>Home</title></head><body><main>Hello</main><footer>Veta</footer></body></html>", got)
+	require.Equal(
+		t,
+		"<html><head><title>Home</title></head><body><main>Hello</main><footer>Veta</footer></body></html>",
+		got,
+	)
 }
 
 func TestRendererFilters(t *testing.T) {
@@ -96,10 +100,10 @@ func TestRendererFilters(t *testing.T) {
 		"page.pongo": {Data: []byte(`{{ page.title|surround:"!" }} {{ page.content|trusted }}`)},
 	}
 	renderer, err := New(files,
-		WithFilter("surround", func(input any, parameter any) (any, error) {
+		WithFilter("surround", func(input, parameter any) (any, error) {
 			return fmt.Sprintf("%s%s%s", parameter, input, parameter), nil
 		}),
-		WithFilter("trusted", func(input any, _ any) (any, error) {
+		WithFilter("trusted", func(input, _ any) (any, error) {
 			return SafeString(fmt.Sprint(input)), nil
 		}),
 	)
@@ -191,7 +195,7 @@ func TestRendererOptionErrors(t *testing.T) {
 	_, err = New(files, WithExtensions())
 	require.ErrorIs(t, err, ErrTemplateNameInvalid)
 
-	_, err = New(files, WithFilter("", func(input any, parameter any) (any, error) {
+	_, err = New(files, WithFilter("", func(input, parameter any) (any, error) {
 		return input, nil
 	}))
 	require.ErrorIs(t, err, ErrFilterNameInvalid)

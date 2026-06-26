@@ -32,7 +32,9 @@ var (
 
 	// ErrHTTPBodyUnsupported indicates that an HTTP request body has an
 	// unsupported type.
-	ErrHTTPBodyUnsupported = errors.New("http request body must be a string; use json for JSON bodies")
+	ErrHTTPBodyUnsupported = errors.New(
+		"http request body must be a string; use json for JSON bodies",
+	)
 
 	// ErrHTTPHeadersUnsupported indicates that HTTP headers were not provided as
 	// an object.

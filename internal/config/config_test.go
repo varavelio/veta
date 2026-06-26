@@ -126,7 +126,9 @@ tailwindcss:
   input: public/css/app.css
   output: dist/css/app.css
 `,
-			want: Config{TailwindCSS: TailwindCSS{Input: "public/css/app.css", Output: "dist/css/app.css"}},
+			want: Config{
+				TailwindCSS: TailwindCSS{Input: "public/css/app.css", Output: "dist/css/app.css"},
+			},
 		},
 	}
 

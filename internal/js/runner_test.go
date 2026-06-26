@@ -94,7 +94,9 @@ func TestRunnerExecutionTimeout(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			started := time.Now()
-			_, err := New(WithExecutionTimeout(10*time.Millisecond)).ExecuteString(test.name+".js", test.code)
+			_, err := New(
+				WithExecutionTimeout(10*time.Millisecond),
+			).ExecuteString(test.name+".js", test.code)
 			require.ErrorIs(t, err, ErrExecutionTimeout)
 			require.Less(t, time.Since(started), time.Second)
 		})
@@ -345,7 +347,9 @@ func TestRunnerFileAPISymlinkEscape(t *testing.T) {
 
 // TestRunnerInvalidRoot verifies that invalid roots fail before JavaScript runs.
 func TestRunnerInvalidRoot(t *testing.T) {
-	_, err := New(WithRoot(filepath.Join("testdata", "project", "missing"))).ExecuteString("root.js", `
+	_, err := New(
+		WithRoot(filepath.Join("testdata", "project", "missing")),
+	).ExecuteString("root.js", `
 		export default function() {
 			return true;
 		}
@@ -360,7 +364,12 @@ func TestRunnerHTTPClient(t *testing.T) {
 	server := newTestHTTPServer(t)
 	defer server.Close()
 
-	assertGoldenExecution(t, New(WithRuntime(Runtime{"baseURL": server.URL})), "http.js", "http.golden.json")
+	assertGoldenExecution(
+		t,
+		New(WithRuntime(Runtime{"baseURL": server.URL})),
+		"http.js",
+		"http.golden.json",
+	)
 }
 
 // TestRunnerHTTPClientErrors verifies request validation and HTTP option
@@ -486,7 +495,9 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := New(WithRuntime(Runtime{"baseURL": server.URL})).ExecuteString(test.name+".js", test.code)
+			_, err := New(
+				WithRuntime(Runtime{"baseURL": server.URL}),
+			).ExecuteString(test.name+".js", test.code)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), test.want)
 		})
@@ -660,7 +671,7 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 			script: "runtime.js",
 			golden: "runtime.golden.json",
 			runtime: Runtime{
-				"join": func(left string, right string) string {
+				"join": func(left, right string) string {
 					return left + ":" + right
 				},
 				"nested":   map[string]any{"answer": 42},
@@ -718,7 +729,7 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 
 // assertGoldenExecution executes a testdata script and compares its exported
 // value with a golden JSON file.
-func assertGoldenExecution(t *testing.T, runner *Runner, scriptName string, goldenName string) {
+func assertGoldenExecution(t *testing.T, runner *Runner, scriptName, goldenName string) {
 	t.Helper()
 
 	result, err := runner.ExecuteFile(filepath.Join("testdata", scriptName))
@@ -737,38 +748,52 @@ func assertGoldenExecution(t *testing.T, runner *Runner, scriptName string, gold
 func newTestHTTPServer(t *testing.T) *httptest.Server {
 	t.Helper()
 
-	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		switch request.URL.Path {
-		case "/echo":
-			body, err := io.ReadAll(request.Body)
-			require.NoError(t, err)
-			writer.Header().Set("X-Response", "echo")
-			_, _ = fmt.Fprintf(writer, `{"method":%q,"body":%q,"contentType":%q}`, request.Method, string(body), request.Header.Get("Content-Type"))
-		case "/get":
-			writer.Header().Set("Content-Type", "application/json")
-			writer.Header().Set("X-Response", "get")
-			_, _ = fmt.Fprintf(writer, `{"method":%q,"query":%q,"testHeader":%q}`, request.Method, request.URL.RawQuery, request.Header.Get("X-Test"))
-		case "/head":
-			writer.Header().Set("X-Head", "true")
-			writer.WriteHeader(http.StatusNoContent)
-		case "/post":
-			body, err := io.ReadAll(request.Body)
-			require.NoError(t, err)
-			writer.Header().Set("Content-Type", "application/json")
-			writer.Header().Set("X-Response", "post")
-			writer.WriteHeader(http.StatusCreated)
-			response := map[string]any{
-				"body":        string(body),
-				"contentType": request.Header.Get("Content-Type"),
-				"method":      request.Method,
-				"traces":      request.Header.Values("X-Trace"),
+	return httptest.NewServer(
+		http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			switch request.URL.Path {
+			case "/echo":
+				body, err := io.ReadAll(request.Body)
+				require.NoError(t, err)
+				writer.Header().Set("X-Response", "echo")
+				_, _ = fmt.Fprintf(
+					writer,
+					`{"method":%q,"body":%q,"contentType":%q}`,
+					request.Method,
+					string(body),
+					request.Header.Get("Content-Type"),
+				)
+			case "/get":
+				writer.Header().Set("Content-Type", "application/json")
+				writer.Header().Set("X-Response", "get")
+				_, _ = fmt.Fprintf(
+					writer,
+					`{"method":%q,"query":%q,"testHeader":%q}`,
+					request.Method,
+					request.URL.RawQuery,
+					request.Header.Get("X-Test"),
+				)
+			case "/head":
+				writer.Header().Set("X-Head", "true")
+				writer.WriteHeader(http.StatusNoContent)
+			case "/post":
+				body, err := io.ReadAll(request.Body)
+				require.NoError(t, err)
+				writer.Header().Set("Content-Type", "application/json")
+				writer.Header().Set("X-Response", "post")
+				writer.WriteHeader(http.StatusCreated)
+				response := map[string]any{
+					"body":        string(body),
+					"contentType": request.Header.Get("Content-Type"),
+					"method":      request.Method,
+					"traces":      request.Header.Values("X-Trace"),
+				}
+				require.NoError(t, json.NewEncoder(writer).Encode(response))
+			case "/teapot":
+				writer.WriteHeader(http.StatusTeapot)
+				_, _ = writer.Write([]byte("short and stout"))
+			default:
+				http.NotFound(writer, request)
 			}
-			require.NoError(t, json.NewEncoder(writer).Encode(response))
-		case "/teapot":
-			writer.WriteHeader(http.StatusTeapot)
-			_, _ = writer.Write([]byte("short and stout"))
-		default:
-			http.NotFound(writer, request)
-		}
-	}))
+		}),
+	)
 }

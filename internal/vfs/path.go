@@ -9,7 +9,9 @@ import (
 
 func cleanPath(name string) (string, error) {
 	rawName := strings.TrimSpace(name)
-	if rawName == "" || strings.ContainsRune(rawName, 0) || filepath.VolumeName(rawName) != "" || hasWindowsVolumeName(rawName) || filepath.IsAbs(rawName) {
+	if rawName == "" || strings.ContainsRune(rawName, 0) || filepath.VolumeName(rawName) != "" ||
+		hasWindowsVolumeName(rawName) ||
+		filepath.IsAbs(rawName) {
 		return "", ErrPathInvalid
 	}
 
@@ -33,7 +35,8 @@ func cleanPath(name string) (string, error) {
 }
 
 func hasWindowsVolumeName(name string) bool {
-	return len(name) >= 2 && name[1] == ':' && ('A' <= name[0] && name[0] <= 'Z' || 'a' <= name[0] && name[0] <= 'z')
+	return len(name) >= 2 && name[1] == ':' &&
+		('A' <= name[0] && name[0] <= 'Z' || 'a' <= name[0] && name[0] <= 'z')
 }
 
 func cleanTopName(name string) (string, error) {
@@ -48,6 +51,6 @@ func cleanTopName(name string) (string, error) {
 	return cleanName, nil
 }
 
-func pathError(op string, name string, err error) error {
+func pathError(op, name string, err error) error {
 	return &fs.PathError{Op: op, Path: name, Err: err}
 }

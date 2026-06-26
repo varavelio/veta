@@ -90,7 +90,6 @@ func LoadFile(files fs.FS, name string) (Config, error) {
 }
 
 func loadExistingFile(files fs.FS, name string) (Config, bool, error) {
-
 	cleanName, err := cleanConfigPath(name)
 	if err != nil {
 		return Config{}, false, err
@@ -158,11 +157,17 @@ func validateTailwindCSS(tailwind TailwindCSS) error {
 	inputSet := tailwind.Input != ""
 	outputSet := tailwind.Output != ""
 	if inputSet != outputSet {
-		return fmt.Errorf("%w: tailwindcss.input and tailwindcss.output must be configured together", ErrInvalid)
+		return fmt.Errorf(
+			"%w: tailwindcss.input and tailwindcss.output must be configured together",
+			ErrInvalid,
+		)
 	}
 	if !inputSet {
 		if tailwind.Minify {
-			return fmt.Errorf("%w: tailwindcss.minify requires tailwindcss.input and tailwindcss.output", ErrInvalid)
+			return fmt.Errorf(
+				"%w: tailwindcss.minify requires tailwindcss.input and tailwindcss.output",
+				ErrInvalid,
+			)
 		}
 
 		return nil
@@ -178,7 +183,7 @@ func validateTailwindCSS(tailwind TailwindCSS) error {
 	return nil
 }
 
-func validateProjectPath(field string, value string) error {
+func validateProjectPath(field, value string) error {
 	if _, err := cleanConfigPath(value); err != nil {
 		return fmt.Errorf("%w: %s must be a relative project path: %w", ErrInvalid, field, err)
 	}
@@ -188,7 +193,9 @@ func validateProjectPath(field string, value string) error {
 
 func cleanConfigPath(name string) (string, error) {
 	rawName := strings.TrimSpace(name)
-	if rawName == "" || strings.ContainsRune(rawName, 0) || filepath.VolumeName(rawName) != "" || hasWindowsVolumeName(rawName) || filepath.IsAbs(rawName) {
+	if rawName == "" || strings.ContainsRune(rawName, 0) || filepath.VolumeName(rawName) != "" ||
+		hasWindowsVolumeName(rawName) ||
+		filepath.IsAbs(rawName) {
 		return "", ErrPathInvalid
 	}
 
@@ -212,5 +219,6 @@ func cleanConfigPath(name string) (string, error) {
 }
 
 func hasWindowsVolumeName(name string) bool {
-	return len(name) >= 2 && name[1] == ':' && ('A' <= name[0] && name[0] <= 'Z' || 'a' <= name[0] && name[0] <= 'z')
+	return len(name) >= 2 && name[1] == ':' &&
+		('A' <= name[0] && name[0] <= 'Z' || 'a' <= name[0] && name[0] <= 'z')
 }

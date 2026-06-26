@@ -132,7 +132,10 @@ func (renderer *Renderer) Render(name string, context any) (string, error) {
 
 func normalizeExtensions(extensions []string) ([]string, error) {
 	if len(extensions) == 0 {
-		return nil, fmt.Errorf("%w: at least one template extension is required", ErrTemplateNameInvalid)
+		return nil, fmt.Errorf(
+			"%w: at least one template extension is required",
+			ErrTemplateNameInvalid,
+		)
 	}
 
 	normalized := make([]string, 0, len(extensions))
@@ -144,8 +147,13 @@ func normalizeExtensions(extensions []string) ([]string, error) {
 		if !strings.HasPrefix(extension, ".") {
 			extension = "." + extension
 		}
-		if strings.ContainsAny(extension, "/\\") || strings.ContainsRune(extension, 0) || extension == "." {
-			return nil, fmt.Errorf("%w: invalid template extension %q", ErrTemplateNameInvalid, extension)
+		if strings.ContainsAny(extension, "/\\") || strings.ContainsRune(extension, 0) ||
+			extension == "." {
+			return nil, fmt.Errorf(
+				"%w: invalid template extension %q",
+				ErrTemplateNameInvalid,
+				extension,
+			)
 		}
 
 		normalized = append(normalized, extension)
@@ -170,7 +178,10 @@ func normalizeContext(context any) (pongo2.Context, error) {
 
 	value := reflect.ValueOf(context)
 	if value.Kind() != reflect.Map || value.Type().Key().Kind() != reflect.String {
-		return nil, fmt.Errorf("%w: root context must be a map with string keys", ErrContextUnsupported)
+		return nil, fmt.Errorf(
+			"%w: root context must be a map with string keys",
+			ErrContextUnsupported,
+		)
 	}
 
 	normalized := make(pongo2.Context, value.Len())
