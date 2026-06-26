@@ -14,6 +14,12 @@ type FilterFunc func(input, parameter any) (any, error)
 // SafeString marks trusted HTML as safe for Pongo2 output.
 type SafeString string
 
+// safeHTML marks structurally compatible trusted HTML values.
+type safeHTML interface {
+	SafeHTML() string
+}
+
+// cleanFilterName validates a template filter name.
 func cleanFilterName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || strings.ContainsAny(name, " \t\r\n|:()") {
@@ -23,6 +29,7 @@ func cleanFilterName(name string) (string, error) {
 	return name, nil
 }
 
+// wrapFilter converts a Veta filter into a Pongo2 filter function.
 func wrapFilter(filter FilterFunc) pongo2.FilterFunction {
 	return func(input, parameter *pongo2.Value) (*pongo2.Value, error) {
 		output, err := filter(pongoValue(input), pongoValue(parameter))
@@ -34,6 +41,7 @@ func wrapFilter(filter FilterFunc) pongo2.FilterFunction {
 	}
 }
 
+// pongoValue converts an optional Pongo2 value into a Go value.
 func pongoValue(value *pongo2.Value) any {
 	if value == nil || value.IsNil() {
 		return nil
@@ -42,10 +50,13 @@ func pongoValue(value *pongo2.Value) any {
 	return value.Interface()
 }
 
+// asPongoValue converts a Go value into a Pongo2 value.
 func asPongoValue(value any) *pongo2.Value {
 	switch typedValue := value.(type) {
 	case SafeString:
 		return pongo2.AsSafeValue(string(typedValue))
+	case safeHTML:
+		return pongo2.AsSafeValue(typedValue.SafeHTML())
 	case fmt.Stringer:
 		return pongo2.AsValue(typedValue.String())
 	default:

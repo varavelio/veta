@@ -130,6 +130,7 @@ func (renderer *Renderer) Render(name string, context any) (string, error) {
 	return output, nil
 }
 
+// normalizeExtensions validates extension fallback values.
 func normalizeExtensions(extensions []string) ([]string, error) {
 	if len(extensions) == 0 {
 		return nil, fmt.Errorf(
@@ -162,6 +163,7 @@ func normalizeExtensions(extensions []string) ([]string, error) {
 	return normalized, nil
 }
 
+// normalizeContext converts supported root context maps into Pongo2 context.
 func normalizeContext(context any) (pongo2.Context, error) {
 	if context == nil {
 		return pongo2.Context{}, nil
@@ -169,11 +171,11 @@ func normalizeContext(context any) (pongo2.Context, error) {
 
 	switch typedContext := context.(type) {
 	case Context:
-		return pongo2.Context(typedContext), nil
+		return normalizeContextMap(map[string]any(typedContext)), nil
 	case pongo2.Context:
-		return typedContext, nil
+		return normalizeContextMap(map[string]any(typedContext)), nil
 	case map[string]any:
-		return pongo2.Context(typedContext), nil
+		return normalizeContextMap(typedContext), nil
 	}
 
 	value := reflect.ValueOf(context)
@@ -187,8 +189,34 @@ func normalizeContext(context any) (pongo2.Context, error) {
 	normalized := make(pongo2.Context, value.Len())
 	iterator := value.MapRange()
 	for iterator.Next() {
-		normalized[iterator.Key().String()] = iterator.Value().Interface()
+		normalized[iterator.Key().String()] = normalizeContextValue(iterator.Value().Interface())
 	}
 
 	return normalized, nil
+}
+
+// normalizeContextMap converts map values into Pongo2-compatible values.
+func normalizeContextMap(context map[string]any) pongo2.Context {
+	normalized := make(pongo2.Context, len(context))
+	for key, value := range context {
+		normalized[key] = normalizeContextValue(value)
+	}
+
+	return normalized
+}
+
+// normalizeContextValue preserves trusted HTML markers inside context values.
+func normalizeContextValue(value any) any {
+	switch typedValue := value.(type) {
+	case safeHTML:
+		return pongo2.AsSafeValue(typedValue.SafeHTML())
+	case map[string]any:
+		return normalizeContextMap(typedValue)
+	case Context:
+		return normalizeContextMap(map[string]any(typedValue))
+	case pongo2.Context:
+		return normalizeContextMap(map[string]any(typedValue))
+	default:
+		return value
+	}
 }

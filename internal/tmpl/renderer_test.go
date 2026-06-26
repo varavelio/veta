@@ -119,6 +119,24 @@ func TestRendererFilters(t *testing.T) {
 	require.Equal(t, "!Veta! <strong>safe</strong>", got)
 }
 
+type testSafeHTML string
+
+func (html testSafeHTML) SafeHTML() string {
+	return string(html)
+}
+
+func TestRendererStructuralSafeHTML(t *testing.T) {
+	files := fstest.MapFS{
+		"page.pongo": {Data: []byte(`{{ content }}`)},
+	}
+	renderer, err := New(files)
+	require.NoError(t, err)
+
+	got, err := renderer.Render("page", Context{"content": testSafeHTML("<strong>safe</strong>")})
+	require.NoError(t, err)
+	require.Equal(t, "<strong>safe</strong>", got)
+}
+
 func TestRendererAutoescapesByDefault(t *testing.T) {
 	files := fstest.MapFS{
 		"page.pongo": {Data: []byte(`{{ page.content }}`)},
