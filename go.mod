@@ -8,6 +8,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
 	github.com/flosch/pongo2/v7 v7.0.0-alpha.1
 	github.com/stretchr/testify v1.11.1
+	github.com/yuin/goldmark v1.8.2
 	gopkg.in/yaml.v3 v3.0.1
 )
 
