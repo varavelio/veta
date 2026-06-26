@@ -1,4 +1,4 @@
-package jsruntime
+package js
 
 import (
 	"bytes"
