@@ -33,13 +33,15 @@ func (failingMarkdownRenderer) Render(string) (string, error) {
 }
 
 type testTemplateRenderer struct {
-	context any
-	name    string
+	context  any
+	contexts []any
+	name     string
 }
 
 func (renderer *testTemplateRenderer) Render(name string, context any) (string, error) {
 	renderer.name = name
 	renderer.context = context
+	renderer.contexts = append(renderer.contexts, context)
 	contextMap := context.(map[string]any)
 	page := contextMap["page"].(map[string]any)
 	return fmt.Sprintf("%s:%s:%s", name, page["title"], page["content"]), nil
@@ -95,6 +97,15 @@ func TestRenderWithLayout(t *testing.T) {
 		"permalink":  "/blog/",
 		"title":      "Blog",
 	}, context["page"])
+	require.Equal(t, []map[string]any{{
+		"content":    SafeHTML("markdown(processed(hello))"),
+		"date":       "2026-06-26",
+		"kind":       "post",
+		"layout":     "layouts/base",
+		"outputPath": "blog/index.html",
+		"permalink":  "/blog/",
+		"title":      "Blog",
+	}}, context["pages"])
 }
 
 // TestRenderWithoutLayoutReturnsRawContent verifies raw output pages.
@@ -123,7 +134,8 @@ func TestRenderWithoutLayoutReturnsRawContent(t *testing.T) {
 
 // TestRenderPages verifies rendering multiple pages.
 func TestRenderPages(t *testing.T) {
-	renderer, err := New(WithTemplateRenderer(&testTemplateRenderer{}))
+	templateRenderer := &testTemplateRenderer{}
+	renderer, err := New(WithTemplateRenderer(templateRenderer))
 	require.NoError(t, err)
 
 	documents, err := renderer.RenderPages([]Page{
@@ -137,6 +149,24 @@ func TestRenderPages(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 	require.Len(t, documents, 2)
+	require.Len(t, templateRenderer.contexts, 1)
+
+	context := templateRenderer.contexts[0].(map[string]any)
+	require.Equal(t, []map[string]any{
+		{
+			"content":    SafeHTML("one"),
+			"layout":     "page",
+			"outputPath": "one/index.html",
+			"permalink":  "/one/",
+			"title":      "One",
+		},
+		{
+			"content":    "two",
+			"layout":     "",
+			"outputPath": "two.txt",
+			"permalink":  "/two.txt",
+		},
+	}, context["pages"])
 }
 
 // TestRenderErrors verifies dependency and render failures.
