@@ -3,27 +3,32 @@ package data
 import (
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 )
 
-// dataFileKey derives the global data key and normalized extension from a file
-// name.
-func dataFileKey(fileName string) (string, string, error) {
-	if fileName == "" || strings.ContainsAny(fileName, "/\\") || strings.ContainsRune(fileName, 0) {
-		return "", "", fmt.Errorf("%w: %q", ErrKeyInvalid, fileName)
+// dataFileKey derives the nested global data key path and normalized extension
+// from a data-relative file path.
+func dataFileKey(filePath string) ([]string, string, error) {
+	if filePath == "" || strings.ContainsRune(filePath, 0) || path.IsAbs(filePath) ||
+		strings.Contains(filePath, "\\") || slices.Contains(strings.Split(filePath, "/"), "..") {
+		return nil, "", fmt.Errorf("%w: %q", ErrKeyInvalid, filePath)
 	}
 
-	extension := strings.ToLower(path.Ext(fileName))
+	extension := strings.ToLower(path.Ext(filePath))
 	if !isSupportedExtension(extension) {
-		return "", "", fmt.Errorf("%w: %s", ErrFormatUnsupported, fileName)
+		return nil, "", fmt.Errorf("%w: %s", ErrFormatUnsupported, filePath)
 	}
 
-	key := strings.TrimSuffix(fileName, path.Ext(fileName))
-	if err := validateKey(key); err != nil {
-		return "", "", err
+	keyPath := strings.TrimSuffix(filePath, path.Ext(filePath))
+	keys := strings.Split(path.Clean(keyPath), "/")
+	for _, key := range keys {
+		if err := validateKey(key); err != nil {
+			return nil, "", err
+		}
 	}
 
-	return key, extension, nil
+	return keys, extension, nil
 }
 
 // isSupportedExtension reports whether an extension maps to a data parser.

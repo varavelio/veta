@@ -33,6 +33,9 @@ main:
 			"name": "Veta",
 			"stars": 42
 		}`)},
+		"data/shop/products.json": {Data: []byte(`[
+			{"name":"Tinta"}
+		]`)},
 		"data/theme.toml": {Data: []byte(`
 name = "Clean"
 published = 2026-06-26T12:34:56Z
@@ -57,6 +60,9 @@ primary = "blue"
 		},
 		"settings": map[string]any{"enabled": true},
 		"site":     map[string]any{"name": "Veta", "stars": int64(42)},
+		"shop": map[string]any{
+			"products": []any{map[string]any{"name": "Tinta"}},
+		},
 		"theme": map[string]any{
 			"colors":    map[string]any{"primary": "blue"},
 			"name":      "Clean",
@@ -101,11 +107,6 @@ func TestLoadErrors(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "nested directory",
-			files:   fstest.MapFS{"data/nested/site.json": {Data: []byte(`{}`)}},
-			wantErr: ErrNestedUnsupported,
-		},
-		{
 			name:    "unsupported extension",
 			files:   fstest.MapFS{"data/readme.md": {Data: []byte(`# data`)}},
 			wantErr: ErrFormatUnsupported,
@@ -122,6 +123,14 @@ func TestLoadErrors(t *testing.T) {
 			name:    "invalid key",
 			files:   fstest.MapFS{"data/site-name.json": {Data: []byte(`{}`)}},
 			wantErr: ErrKeyInvalid,
+		},
+		{
+			name: "file conflicts with nested namespace",
+			files: fstest.MapFS{
+				"data/shop.json":          {Data: []byte(`{}`)},
+				"data/shop/products.json": {Data: []byte(`[]`)},
+			},
+			wantErr: ErrKeyDuplicate,
 		},
 		{
 			name:    "malformed json",

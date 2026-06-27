@@ -17,10 +17,6 @@ var (
 	// ErrKeyInvalid indicates that a data file name cannot be used as a global key.
 	ErrKeyInvalid = errors.New("data key is invalid")
 
-	// ErrNestedUnsupported indicates that the data directory contains a nested
-	// directory.
-	ErrNestedUnsupported = errors.New("data directory must be flat")
-
 	// ErrFormatUnsupported indicates that a data file has an unsupported extension.
 	ErrFormatUnsupported = errors.New("data file format is unsupported")
 

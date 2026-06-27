@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path"
+	"strings"
 
 	"github.com/varavelio/veta/internal/js"
 )
@@ -49,40 +51,65 @@ func Load(files fs.FS, options ...Option) (Values, error) {
 		return nil, err
 	}
 
-	entries, err := fs.ReadDir(files, DirName)
-	if err != nil {
+	runner := js.New(config.jsOptions...)
+	values := Values{}
+	if err := fs.WalkDir(files, DirName, func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if name == DirName || entry.IsDir() {
+			return nil
+		}
+
+		relativeName := strings.TrimPrefix(name, DirName+"/")
+		keys, extension, err := dataFileKey(relativeName)
+		if err != nil {
+			return err
+		}
+
+		value, err := loadDataFile(files, runner, relativeName, extension)
+		if err != nil {
+			return err
+		}
+
+		return setNestedValue(values, keys, value)
+	}); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return Values{}, nil
 		}
 
-		return nil, fmt.Errorf("read data directory %s: %w", DirName, err)
-	}
-
-	runner := js.New(config.jsOptions...)
-	values := Values{}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			return nil, fmt.Errorf("%w: %s/%s", ErrNestedUnsupported, DirName, entry.Name())
-		}
-
-		key, extension, err := dataFileKey(entry.Name())
-		if err != nil {
-			return nil, err
-		}
-
-		if _, exists := values[key]; exists {
-			return nil, fmt.Errorf("%w: %s", ErrKeyDuplicate, key)
-		}
-
-		value, err := loadDataFile(files, runner, entry.Name(), extension)
-		if err != nil {
-			return nil, err
-		}
-
-		values[key] = value
+		return nil, fmt.Errorf("walk data directory %s: %w", DirName, err)
 	}
 
 	return values, nil
+}
+
+// setNestedValue inserts a parsed data value into a nested data namespace.
+func setNestedValue(values Values, keys []string, value any) error {
+	current := map[string]any(values)
+	for _, key := range keys[:len(keys)-1] {
+		next, exists := current[key]
+		if !exists {
+			nested := map[string]any{}
+			current[key] = nested
+			current = nested
+			continue
+		}
+
+		nested, ok := next.(map[string]any)
+		if !ok {
+			return fmt.Errorf("%w: %s", ErrKeyDuplicate, path.Join(keys...))
+		}
+		current = nested
+	}
+
+	key := keys[len(keys)-1]
+	if _, exists := current[key]; exists {
+		return fmt.Errorf("%w: %s", ErrKeyDuplicate, path.Join(keys...))
+	}
+
+	current[key] = value
+	return nil
 }
 
 // newLoadConfig applies loader options into a configuration value.
