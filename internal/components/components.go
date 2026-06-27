@@ -202,6 +202,7 @@ func componentContext(base any, props map[string]string, content string) map[str
 
 	return map[string]any{
 		"data":  contextValue(base, "data"),
+		"pages": contextValue(base, "pages"),
 		"page":  contextValue(base, "page"),
 		"props": componentProps,
 	}

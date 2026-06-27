@@ -50,9 +50,11 @@ func TestProcessorRender(t *testing.T) {
 
 	got, err := processor.Render(
 		`<ui-card title="Sale">Hello <ui-button text="Buy" /></ui-card>`,
+		// The base context mirrors the root template context passed by render.
 		map[string]any{
-			"data": map[string]any{"site": map[string]any{"name": "Veta"}},
-			"page": map[string]any{"title": "Home"},
+			"data":  map[string]any{"site": map[string]any{"name": "Veta"}},
+			"pages": []map[string]any{{"title": "Home", "permalink": "/"}},
+			"page":  map[string]any{"title": "Home"},
 		},
 	)
 	require.NoError(t, err)
@@ -78,6 +80,11 @@ func TestProcessorRender(t *testing.T) {
 		t,
 		map[string]any{"site": map[string]any{"name": "Veta"}},
 		renderer.calls[1].context["data"],
+	)
+	require.Equal(
+		t,
+		[]map[string]any{{"title": "Home", "permalink": "/"}},
+		renderer.calls[1].context["pages"],
 	)
 }
 
