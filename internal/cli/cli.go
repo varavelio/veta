@@ -8,33 +8,57 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
+	"github.com/varavelio/tinta"
 	"github.com/varavelio/veta/internal/build"
+	"github.com/varavelio/veta/internal/components"
+	"github.com/varavelio/veta/internal/config"
+	"github.com/varavelio/veta/internal/data"
+	"github.com/varavelio/veta/internal/output"
+	"github.com/varavelio/veta/internal/pages"
 	"github.com/varavelio/veta/internal/scaffold"
+	"github.com/varavelio/veta/internal/tailwindcss"
 	"github.com/varavelio/veta/internal/theme"
+	"github.com/varavelio/veta/internal/tmpl"
+	"github.com/varavelio/veta/internal/version"
 )
 
 const programName = "veta"
 
-// Version is the CLI version printed by version commands and flags.
-var Version = "dev"
-
 type arguments struct {
-	Build       *buildCommand   `arg:"subcommand:build"   help:"Build the site"`
-	Init        *initCommand    `arg:"subcommand:init"    help:"Create a starter Veta project"`
-	Version     *versionCommand `arg:"subcommand:version" help:"Print version information"`
-	VersionFlag bool            `arg:"-v,--version"       help:"Print version information"`
+	Build       *buildCommand   `arg:"subcommand:build"   help:"build the site"`
+	Init        *initCommand    `arg:"subcommand:init"    help:"create a starter Veta project"`
+	VersionCmd  *versionCommand `arg:"subcommand:version" help:"print version information"`
+	VersionFlag bool            `arg:"-v,--"              help:"display version and exit"`
 }
 
 type buildCommand struct {
-	ConfigFile string `arg:"-c,--config" help:"Configuration file to use" placeholder:"FILE"`
+	ConfigFile string `arg:"-c,--config" help:"configuration file to use" placeholder:"FILE"`
 }
 
 type initCommand struct {
-	Force bool   `arg:"--force"    help:"Overwrite starter files that already exist"`
-	Path  string `arg:"positional" help:"Project directory (default: current directory)" placeholder:"PATH"`
+	Force bool   `arg:"--force"    help:"overwrite starter files that already exist"`
+	Path  string `arg:"positional" help:"project directory (default: current directory)" placeholder:"PATH"`
 }
 
 type versionCommand struct{}
+
+// Description returns the top-level help description.
+func (arguments) Description() string {
+	return "Veta static site generator"
+}
+
+// Version returns the metadata block used by top-level help.
+func (arguments) Version() string {
+	return helpMetadataBlock()
+}
+
+// Epilogue returns concise examples for top-level help.
+func (arguments) Epilogue() string {
+	return strings.TrimSpace(`Examples:
+  veta init my-site
+  veta build
+  veta build --config ./veta.yaml`)
+}
 
 // Run parses args and executes the requested Veta command.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
@@ -47,10 +71,14 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return writeError(stderr, fmt.Errorf("create command parser: %w", err))
 	}
 
-	if err := parser.Parse(normalizeArgs(args)); err != nil {
+	if len(args) == 0 {
+		parser.WriteHelp(stdout)
+		return nil
+	}
+	if err := parser.Parse(args); err != nil {
 		return handleParseError(parser, stdout, stderr, err)
 	}
-	if parsed.VersionFlag || parsed.Version != nil {
+	if parsed.VersionFlag || parsed.VersionCmd != nil {
 		return writeVersion(stdout)
 	}
 	if parsed.Init != nil {
@@ -60,7 +88,8 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return runBuild(ctx, parsed.Build, stdout, stderr)
 	}
 
-	return runBuild(ctx, &buildCommand{}, stdout, stderr)
+	parser.WriteHelp(stdout)
+	return nil
 }
 
 // handleParseError writes help, version, or a usage error for parser failures.
@@ -73,7 +102,7 @@ func handleParseError(parser *arg.Parser, stdout, stderr io.Writer, err error) e
 	}
 
 	wrapped := fmt.Errorf("%w: %w", ErrUsage, err)
-	_, writeErr := fmt.Fprintf(stderr, "error: %s\n\n", humanError(wrapped))
+	_, writeErr := fmt.Fprintf(stderr, "%s: %s\n\n", errorLabel(), humanError(wrapped))
 	if writeErr != nil {
 		return writeErr
 	}
@@ -106,13 +135,20 @@ func runInit(command *initCommand, stdout, stderr io.Writer) error {
 		return writeError(stderr, err)
 	}
 
-	_, err = fmt.Fprintf(stdout, "Initialized Veta project in %s\n", result.Root)
+	_, err = fmt.Fprintf(stdout, strings.TrimLeft(`Initialized Veta project in %s
+
+Next steps:
+  cd %s
+  veta build
+
+Build settings live in veta.yaml.
+`, "\n"), result.Root, result.Root)
 	return err
 }
 
 // writeVersion writes the current CLI version.
 func writeVersion(output io.Writer) error {
-	_, err := fmt.Fprintf(output, "%s %s\n", programName, Version)
+	_, err := fmt.Fprintln(output, version.Detailed())
 	return err
 }
 
@@ -121,7 +157,12 @@ func writeError(output io.Writer, err error) error {
 	if err == nil {
 		return nil
 	}
-	if _, writeErr := fmt.Fprintf(output, "error: %s\n", humanError(err)); writeErr != nil {
+	if _, writeErr := fmt.Fprintf(
+		output,
+		"%s: %s\n",
+		errorLabel(),
+		humanError(err),
+	); writeErr != nil {
 		return writeErr
 	}
 
@@ -130,9 +171,64 @@ func writeError(output io.Writer, err error) error {
 
 // humanError converts internal errors into CLI-facing messages.
 func humanError(err error) string {
+	if errors.Is(err, context.Canceled) {
+		return "Operation canceled."
+	}
+	if errors.Is(err, build.ErrConfigNotFound) {
+		return strings.TrimSpace(`Could not find a Veta config file.
+
+Veta looks for veta.yaml, veta.yml, .veta.yaml, or .veta.yml in the current directory and then walks up through its ancestors.
+
+Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` from inside an existing project, or pass an explicit config file with ` + "`veta build --config ./veta.yaml`" + `.`)
+	}
+	if errors.Is(err, build.ErrConfigFileInvalid) {
+		return "The config file passed with --config could not be used. Check that the file exists and is not a directory.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, build.ErrRootInvalid) {
+		return "The config search directory is invalid. Run Veta from an existing directory or pass an explicit config file with `veta build --config ./veta.yaml`.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, config.ErrInvalid) || errors.Is(err, config.ErrPathInvalid) {
+		return "The Veta configuration is invalid. Fix veta.yaml and run the command again.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, pages.ErrPageInvalid) || errors.Is(err, pages.ErrGeneratorInvalid) ||
+		errors.Is(err, pages.ErrOutputPathDuplicate) || errors.Is(err, pages.ErrPermalinkInvalid) ||
+		errors.Is(err, pages.ErrNestedUnsupported) || errors.Is(err, pages.ErrFormatUnsupported) {
+		return "Page generation failed. Check the files in pages/ and the page objects they return.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, tmpl.ErrTemplateNotFound) || errors.Is(err, tmpl.ErrTemplateNameInvalid) ||
+		errors.Is(err, tmpl.ErrTemplateAmbiguous) {
+		return "Template rendering failed. Check that the page layout points to an existing template.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, tailwindcss.ErrConfigInvalid) || errors.Is(err, tailwindcss.ErrRunFailed) ||
+		errors.Is(
+			err,
+			tailwindcss.ErrPlatformUnsupported,
+		) || errors.Is(err, tailwindcss.ErrBinaryUnavailable) {
+		return "Tailwind CSS failed. Check tailwindcss.input and tailwindcss.output in veta.yaml.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, output.ErrDirInvalid) || errors.Is(err, output.ErrPathInvalid) ||
+		errors.Is(err, output.ErrPathDuplicate) {
+		return "Writing output failed. Check build.output in veta.yaml and any generated output paths.\n\nDetails: " + err.Error()
+	}
+
 	var integrityError *theme.IntegrityError
 	if errors.As(err, &integrityError) {
 		return themeIntegrityMessage(integrityError)
+	}
+	if errors.Is(err, theme.ErrSourceInvalid) || errors.Is(err, theme.ErrDownloadFailed) ||
+		errors.Is(err, theme.ErrRemoteUnsupported) {
+		return "Theme resolution failed. Check theme.source and theme.sha256 in veta.yaml.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, data.ErrInvalid) || errors.Is(err, data.ErrKeyDuplicate) ||
+		errors.Is(err, data.ErrKeyInvalid) || errors.Is(err, data.ErrFormatUnsupported) ||
+		errors.Is(err, data.ErrValueUnsupported) {
+		return "Data loading failed. Check the files in data/ and make sure they produce JSON-compatible values.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, components.ErrComponentNameInvalid) ||
+		errors.Is(err, components.ErrFormatUnsupported) ||
+		errors.Is(err, components.ErrSyntax) ||
+		errors.Is(err, components.ErrAttributeInvalid) {
+		return "Component processing failed. Check component filenames and component tags in your content.\n\nDetails: " + err.Error()
 	}
 
 	var existingFiles scaffold.ExistingFilesError
@@ -182,33 +278,26 @@ func existingFilesMessage(err scaffold.ExistingFilesError) string {
 		"\n\nRun `veta init --force` only if you want Veta to overwrite those starter files."
 }
 
-// normalizeArgs applies Veta's build-by-default command behavior.
-func normalizeArgs(args []string) []string {
-	if len(args) == 0 {
-		return []string{"build"}
+// helpMetadataBlock returns the top-level help metadata shown after the description.
+func helpMetadataBlock() string {
+	lines := []string{
+		metadataLine("Version", version.Number()),
+		metadataLine("Commit", version.CommitHash()),
 	}
-	if buildAlias(args[0]) {
-		normalized := make([]string, 0, len(args)+1)
-		normalized = append(normalized, "build")
-		normalized = append(normalized, args...)
-		return normalized
-	}
+	lines = append(lines, metadataLine("Repository", version.Repository))
 
-	return args
+	return "\n" + strings.Join(lines, "\n") + "\n"
 }
 
-// buildAlias reports whether args use the historical implicit build command.
-func buildAlias(firstArg string) bool {
-	if !strings.HasPrefix(firstArg, "-") {
-		return false
-	}
+// metadataLine returns one aligned top-level help metadata line.
+func metadataLine(label, value string) string {
+	label += ":"
+	return label + strings.Repeat(" ", max(1, 12-len(label))) + value
+}
 
-	switch firstArg {
-	case "-h", "--help", "-v", "--version":
-		return false
-	default:
-		return true
-	}
+// errorLabel returns the styled CLI error prefix.
+func errorLabel() string {
+	return tinta.Text().Red().Bold().String("error")
 }
 
 // defaultWriter returns io.Discard when writer is nil.

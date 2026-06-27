@@ -29,19 +29,17 @@ func TestRunBuildCommand(t *testing.T) {
 	require.Empty(t, stderr.String())
 }
 
-func TestRunBuildAliasFlags(t *testing.T) {
-	root := newCLISite(t)
+func TestRunDefaultShowsHelp(t *testing.T) {
 	var stdout bytes.Buffer
 
-	err := Run(
-		context.Background(),
-		[]string{"--config", filepath.Join(root, "veta.yaml")},
-		&stdout,
-		nil,
-	)
+	err := Run(context.Background(), nil, &stdout, nil)
 	require.NoError(t, err)
-	require.Contains(t, stdout.String(), "Built 1 page(s)")
-	require.FileExists(t, filepath.Join(root, "dist", "index.html"))
+	require.Contains(t, stdout.String(), "Version:")
+	require.Contains(t, stdout.String(), "Commit:")
+	require.Contains(t, stdout.String(), "Repository:")
+	require.Contains(t, stdout.String(), "https://github.com/varavelio/veta")
+	require.Contains(t, stdout.String(), "Usage:")
+	require.Contains(t, stdout.String(), "veta build")
 }
 
 func TestRunBuildDiscoversConfig(t *testing.T) {
@@ -62,6 +60,9 @@ func TestRunHelp(t *testing.T) {
 
 	err := Run(context.Background(), []string{"--help"}, &stdout, nil)
 	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "Version:")
+	require.Contains(t, stdout.String(), "Commit:")
+	require.Contains(t, stdout.String(), "Repository:")
 	require.Contains(t, stdout.String(), "Usage:")
 	require.Contains(t, stdout.String(), "build")
 	require.Contains(t, stdout.String(), "init")
@@ -100,6 +101,9 @@ func TestRunInitCommand(t *testing.T) {
 	err := Run(context.Background(), []string{"init", root}, &stdout, nil)
 	require.NoError(t, err)
 	require.Contains(t, stdout.String(), "Initialized Veta project")
+	require.Contains(t, stdout.String(), "Next steps:")
+	require.Contains(t, stdout.String(), "veta build")
+	require.Contains(t, stdout.String(), "Build settings live in veta.yaml")
 
 	for _, directory := range []string{
 		"components",
@@ -141,14 +145,30 @@ func TestRunErrors(t *testing.T) {
 	var stderr bytes.Buffer
 	err := Run(context.Background(), []string{"serve"}, nil, &stderr)
 	require.ErrorIs(t, err, ErrUsage)
-	require.Contains(t, stderr.String(), "error:")
+	require.Contains(t, stderr.String(), "error")
 	require.Contains(t, stderr.String(), "Usage:")
 
 	stderr.Reset()
 	err = Run(context.Background(), []string{"build", "unexpected"}, nil, &stderr)
 	require.ErrorIs(t, err, ErrUsage)
-	require.Contains(t, stderr.String(), "error:")
+	require.Contains(t, stderr.String(), "error")
 	require.Contains(t, stderr.String(), "veta build")
+
+	stderr.Reset()
+	err = Run(context.Background(), []string{"--config", "veta.yaml"}, nil, &stderr)
+	require.ErrorIs(t, err, ErrUsage)
+	require.Contains(t, stderr.String(), "unknown argument")
+}
+
+func TestRunConfigNotFoundError(t *testing.T) {
+	t.Chdir(t.TempDir())
+	var stderr bytes.Buffer
+
+	err := Run(context.Background(), []string{"build"}, nil, &stderr)
+	require.Error(t, err)
+	require.Contains(t, stderr.String(), "Could not find a Veta config file")
+	require.Contains(t, stderr.String(), "veta init")
+	require.Contains(t, stderr.String(), "veta build --config ./veta.yaml")
 }
 
 func TestRunContextCanceled(t *testing.T) {
