@@ -6,6 +6,12 @@ var (
 	// ErrProjectFSRequired indicates that a project filesystem was not provided.
 	ErrProjectFSRequired = errors.New("project filesystem is required")
 
+	// ErrCacheDirInvalid indicates that the remote theme cache directory is invalid.
+	ErrCacheDirInvalid = errors.New("theme cache directory is invalid")
+
+	// ErrDownloadFailed indicates that a remote theme download failed.
+	ErrDownloadFailed = errors.New("theme download failed")
+
 	// ErrRootInvalid indicates that the project root path is invalid.
 	ErrRootInvalid = errors.New("theme root is invalid")
 
