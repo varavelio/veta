@@ -23,6 +23,11 @@ import (
 
 func TestRunBuildsSite(t *testing.T) {
 	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  output: dist
+  clean: true
+`)
 	writeProjectFile(t, root, "data/site.json", `{"title":"Veta"}`)
 	writeProjectFile(t, root, "filters/shout.js", `
 export default function(input) {
@@ -62,7 +67,7 @@ export default function({ data }) {
 `)
 	writeProjectFile(t, root, "public/app.css", `body { color: black; }`)
 
-	result, err := Run(context.Background(), WithRoot(root), WithClean(true))
+	result, err := Run(context.Background(), WithRoot(root))
 	require.NoError(t, err)
 	require.Equal(t, 2, result.Pages)
 	require.Equal(t, 2, result.Documents)
@@ -84,7 +89,12 @@ export default function({ data }) {
 
 func TestRunUsesLocalTheme(t *testing.T) {
 	root := t.TempDir()
-	writeProjectFile(t, root, "veta.yaml", `theme: { source: "./theme" }`)
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  clean: true
+theme:
+  source: "./theme"
+`)
 	writeProjectFile(
 		t,
 		root,
@@ -100,12 +110,54 @@ export default function() {
 }
 `)
 
-	_, err := Run(context.Background(), WithRoot(root), WithClean(true))
+	_, err := Run(context.Background(), WithRoot(root))
 	require.NoError(t, err)
 	index := readOutputFile(t, root, "dist/index.html")
 	require.Contains(t, index, "<p>Hello</p>")
 	require.Contains(t, index, "Theme")
 	require.Equal(t, "theme", readOutputFile(t, root, "dist/theme.css"))
+}
+
+func TestRunDiscoversConfigFromAncestors(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "content", "docs")
+	require.NoError(t, os.MkdirAll(child, 0o755))
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  output: public-build
+  clean: true
+`)
+	writeProjectFile(t, root, "templates/base.pongo", `{{ page.content }}`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+}
+`)
+
+	result, err := Run(context.Background(), WithRoot(child))
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(root, "public-build"), result.OutputDir)
+	require.FileExists(t, filepath.Join(root, "public-build", "index.html"))
+}
+
+func TestRunUsesExplicitConfigFile(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "custom.yaml", `
+build:
+  output: custom-dist
+  clean: true
+`)
+	writeProjectFile(t, root, "templates/base.pongo", `{{ page.content }}`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+}
+`)
+
+	result, err := Run(context.Background(), WithConfigFile(filepath.Join(root, "custom.yaml")))
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join(root, "custom-dist"), result.OutputDir)
+	require.FileExists(t, filepath.Join(root, "custom-dist", "index.html"))
 }
 
 func TestRunUsesRemoteTheme(t *testing.T) {
@@ -130,7 +182,11 @@ func TestRunUsesRemoteTheme(t *testing.T) {
 		t,
 		root,
 		"veta.yaml",
-		`theme: { source: "varavelio/veta-theme-remote@main", sha256: "`+bytesSHA256(archive)+`" }`,
+		`build:
+  clean: true
+theme:
+  source: "varavelio/veta-theme-remote@main"
+  sha256: "`+bytesSHA256(archive)+`"`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
@@ -141,7 +197,6 @@ export default function() {
 	_, err := Run(
 		context.Background(),
 		WithRoot(root),
-		WithClean(true),
 		WithThemeOptions(
 			theme.WithCacheDir(cacheDir),
 			theme.WithGitHubBaseURL(server.URL),
@@ -155,7 +210,6 @@ export default function() {
 	_, err = Run(
 		context.Background(),
 		WithRoot(root),
-		WithClean(true),
 		WithThemeOptions(
 			theme.WithCacheDir(cacheDir),
 			theme.WithGitHubBaseURL(server.URL),
@@ -169,6 +223,8 @@ export default function() {
 func TestRunBuildsTailwindCSS(t *testing.T) {
 	root := t.TempDir()
 	writeProjectFile(t, root, "veta.yaml", `
+build:
+  clean: true
 tailwindcss:
   input: styles/app.css
   output: app.css
@@ -191,7 +247,6 @@ export default function() {
 	_, err := Run(
 		context.Background(),
 		WithRoot(root),
-		WithClean(true),
 		WithTailwindOptions(
 			tailwindcss.WithBinary(fakeTailwindBinary()),
 			tailwindcss.WithCacheDir(t.TempDir()),
@@ -205,11 +260,11 @@ func TestRunErrors(t *testing.T) {
 	_, err := Run(context.Background(), WithRoot(""))
 	require.ErrorIs(t, err, ErrRootInvalid)
 
-	_, err = Run(context.Background(), WithOutputDir(""))
-	require.ErrorIs(t, err, ErrOutputDirInvalid)
-
 	_, err = Run(context.Background(), WithConfigFile("bad\x00file"))
 	require.ErrorIs(t, err, ErrConfigFileInvalid)
+
+	_, err = Run(context.Background(), WithRoot(t.TempDir()))
+	require.ErrorIs(t, err, ErrConfigNotFound)
 
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()

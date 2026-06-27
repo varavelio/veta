@@ -25,7 +25,7 @@ import (
 
 const (
 	// DefaultOutputDir is the default directory used for build output.
-	DefaultOutputDir = "dist"
+	DefaultOutputDir = config.DefaultBuildOutput
 
 	defaultRoot = "."
 )
@@ -42,11 +42,8 @@ type Result struct {
 type Option func(*runConfig) error
 
 type runConfig struct {
-	clean           bool
 	configFile      string
 	consoleOutput   io.Writer
-	debug           bool
-	outputDir       string
 	root            string
 	tailwindOptions []tailwindcss.Option
 	themeOptions    []theme.Option
@@ -56,7 +53,7 @@ type filterScriptRunner struct {
 	runner *js.Runner
 }
 
-// WithRoot configures the project root directory.
+// WithRoot configures the directory where config discovery starts.
 func WithRoot(root string) Option {
 	return func(config *runConfig) error {
 		root = strings.TrimSpace(root)
@@ -69,20 +66,7 @@ func WithRoot(root string) Option {
 	}
 }
 
-// WithOutputDir configures the output directory.
-func WithOutputDir(outputDir string) Option {
-	return func(config *runConfig) error {
-		outputDir = strings.TrimSpace(outputDir)
-		if outputDir == "" || strings.ContainsRune(outputDir, 0) {
-			return ErrOutputDirInvalid
-		}
-
-		config.outputDir = outputDir
-		return nil
-	}
-}
-
-// WithConfigFile configures an explicit configuration file path inside root.
+// WithConfigFile configures an explicit configuration file path.
 func WithConfigFile(name string) Option {
 	return func(config *runConfig) error {
 		name = strings.TrimSpace(name)
@@ -91,22 +75,6 @@ func WithConfigFile(name string) Option {
 		}
 
 		config.configFile = name
-		return nil
-	}
-}
-
-// WithClean configures whether output is removed before writing.
-func WithClean(clean bool) Option {
-	return func(config *runConfig) error {
-		config.clean = clean
-		return nil
-	}
-}
-
-// WithDebug configures debug mode for template rendering.
-func WithDebug(debug bool) Option {
-	return func(config *runConfig) error {
-		config.debug = debug
 		return nil
 	}
 }
@@ -158,23 +126,24 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		return Result{}, err
 	}
 
-	config, err := newRunConfig(options)
+	runConfig, err := newRunConfig(options)
 	if err != nil {
 		return Result{}, err
 	}
 
-	projectFiles := os.DirFS(config.root)
-	toolConfig, err := loadToolConfig(projectFiles, config.configFile)
+	projectRoot, toolConfig, err := loadToolConfig(runConfig)
 	if err != nil {
 		return Result{}, err
 	}
+	runConfig.root = projectRoot
+	projectFiles := os.DirFS(projectRoot)
 	themeOptions := append(
 		[]theme.Option{
-			theme.WithRoot(config.root),
+			theme.WithRoot(projectRoot),
 			theme.WithContext(ctx),
 			theme.WithSHA256(toolConfig.Theme.SHA256),
 		},
-		config.themeOptions...,
+		runConfig.themeOptions...,
 	)
 	site, err := theme.Resolve(projectFiles, toolConfig.Theme.Source, themeOptions...)
 	if err != nil {
@@ -182,14 +151,17 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	}
 
 	markdownRenderer := markdown.New()
-	siteData, err := data.Load(site.Files, data.WithJSOptions(baseJSOptions(config, nil)...))
+	siteData, err := data.Load(site.Files, data.WithJSOptions(baseJSOptions(runConfig, nil)...))
 	if err != nil {
 		return Result{}, fmt.Errorf("load data: %w", err)
 	}
 	dataContext := map[string]any(siteData)
 	runtime := js.Runtime{"data": dataContext}
 
-	manifest, err := pages.Load(site.Files, pages.WithJSOptions(baseJSOptions(config, runtime)...))
+	manifest, err := pages.Load(
+		site.Files,
+		pages.WithJSOptions(baseJSOptions(runConfig, runtime)...),
+	)
 	if err != nil {
 		return Result{}, fmt.Errorf("load pages: %w", err)
 	}
@@ -197,7 +169,13 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		return Result{}, err
 	}
 
-	templateRenderer, err := newTemplateRenderer(site.Files, markdownRenderer, config, runtime)
+	templateRenderer, err := newTemplateRenderer(
+		site.Files,
+		markdownRenderer,
+		runConfig,
+		runtime,
+		toolConfig.Build.Debug,
+	)
 	if err != nil {
 		return Result{}, err
 	}
@@ -234,14 +212,14 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		site.Files,
 		documents,
 		toolConfig,
-		config,
+		runConfig,
 	)
 	if err != nil {
 		return Result{}, err
 	}
 
-	outputDir := outputRoot(config.root, config.outputDir)
-	writer, err := output.New(outputDir, output.WithClean(config.clean))
+	outputDir := outputRoot(projectRoot, toolConfig.Build.Output)
+	writer, err := output.New(outputDir, output.WithClean(toolConfig.Build.Clean))
 	if err != nil {
 		return Result{}, fmt.Errorf("create output writer: %w", err)
 	}
@@ -312,7 +290,7 @@ func (runner filterScriptRunner) Run(source filters.Source, input, parameter any
 
 // newRunConfig applies build options and defaults.
 func newRunConfig(options []Option) (runConfig, error) {
-	config := runConfig{outputDir: DefaultOutputDir, root: defaultRoot}
+	config := runConfig{root: defaultRoot}
 	for _, option := range options {
 		if option == nil {
 			continue
@@ -325,13 +303,118 @@ func newRunConfig(options []Option) (runConfig, error) {
 	return config, nil
 }
 
-// loadToolConfig loads the default or explicit Veta config file.
-func loadToolConfig(files fs.FS, configFile string) (config.Config, error) {
-	if strings.TrimSpace(configFile) == "" {
-		return config.Load(files)
+// loadToolConfig discovers and loads the Veta config file for a build.
+func loadToolConfig(runConfig runConfig) (string, config.Config, error) {
+	configPath, err := resolveConfigPath(runConfig.root, runConfig.configFile)
+	if err != nil {
+		return "", config.Config{}, err
 	}
 
-	return config.LoadFile(files, configFile)
+	root := filepath.Dir(configPath)
+	toolConfig, err := config.LoadRequiredFile(os.DirFS(root), filepath.Base(configPath))
+	if err != nil {
+		return "", config.Config{}, err
+	}
+
+	return root, toolConfig, nil
+}
+
+// resolveConfigPath returns the explicit or discovered configuration file path.
+func resolveConfigPath(root, configFile string) (string, error) {
+	root, err := normalizeRoot(root)
+	if err != nil {
+		return "", err
+	}
+	configFile = strings.TrimSpace(configFile)
+	if configFile != "" {
+		return explicitConfigPath(root, configFile)
+	}
+
+	return discoverConfigPath(root)
+}
+
+// explicitConfigPath resolves a caller-provided configuration file path.
+func explicitConfigPath(root, configFile string) (string, error) {
+	if strings.ContainsRune(configFile, 0) {
+		return "", ErrConfigFileInvalid
+	}
+	if !filepath.IsAbs(configFile) {
+		configFile = filepath.Join(root, configFile)
+	}
+	configFile = filepath.Clean(configFile)
+
+	info, err := os.Stat(configFile)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s: %w", ErrConfigFileInvalid, configFile, err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("%w: %s is a directory", ErrConfigFileInvalid, configFile)
+	}
+
+	return configFile, nil
+}
+
+// discoverConfigPath searches root and its ancestors for a Veta config file.
+func discoverConfigPath(root string) (string, error) {
+	directory := root
+	for {
+		configPath, found, err := configInDirectory(directory)
+		if err != nil {
+			return "", err
+		}
+		if found {
+			return configPath, nil
+		}
+
+		parent := filepath.Dir(directory)
+		if parent == directory {
+			return "", fmt.Errorf("%w: searched from %s", ErrConfigNotFound, root)
+		}
+		directory = parent
+	}
+}
+
+// configInDirectory returns the highest-priority Veta config file in directory.
+func configInDirectory(directory string) (string, bool, error) {
+	for _, name := range config.FileNames() {
+		path := filepath.Join(directory, name)
+		info, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+
+			return "", false, fmt.Errorf("inspect configuration %s: %w", path, err)
+		}
+		if info.IsDir() {
+			continue
+		}
+
+		return path, true, nil
+	}
+
+	return "", false, nil
+}
+
+// normalizeRoot returns the absolute config search root.
+func normalizeRoot(root string) (string, error) {
+	root = strings.TrimSpace(root)
+	if root == "" || strings.ContainsRune(root, 0) {
+		return "", ErrRootInvalid
+	}
+	root, err := filepath.Abs(root)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrRootInvalid, err)
+	}
+	info, err := os.Stat(root)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s: %w", ErrRootInvalid, root, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%w: %s is not a directory", ErrRootInvalid, root)
+	}
+
+	return filepath.Clean(root), nil
 }
 
 // baseJSOptions returns JavaScript runtime options shared by build loaders.
@@ -350,6 +433,7 @@ func newTemplateRenderer(
 	markdownRenderer *markdown.Renderer,
 	config runConfig,
 	runtime js.Runtime,
+	debug bool,
 ) (*tmpl.Renderer, error) {
 	filterRunner := filterScriptRunner{runner: js.New(baseJSOptions(config, runtime)...)}
 	filterSet, err := filters.Load(
@@ -361,7 +445,7 @@ func newTemplateRenderer(
 		return nil, fmt.Errorf("load filters: %w", err)
 	}
 
-	templateOptions := []tmpl.Option{tmpl.WithDebug(config.debug)}
+	templateOptions := []tmpl.Option{tmpl.WithDebug(debug)}
 	for name, filter := range filterSet.Functions() {
 		templateOptions = append(templateOptions, tmpl.WithFilter(name, tmpl.FilterFunc(filter)))
 	}
