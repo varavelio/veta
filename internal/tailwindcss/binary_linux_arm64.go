@@ -4,11 +4,11 @@ package tailwindcss
 
 import _ "embed"
 
-//go:embed bin/tailwindcss-linux-arm64-musl
+//go:embed bin/tailwindcss-linux-arm64
 var embeddedBinary []byte
 
 const (
-	embeddedBinaryName        = "tailwindcss-linux-arm64-musl"
-	embeddedBinarySHA256      = "7ed72712429166d869dc8472e0cd8c61cd46e565a5bc1ba8810612bedfe61e7b"
+	embeddedBinaryName        = "tailwindcss-linux-arm64"
+	embeddedBinarySHA256      = "3d662377a86d71c43b549dc06b90db4586b4acd412bf827a3268e951661e5adf"
 	embeddedBinaryUnsupported = false
 )
