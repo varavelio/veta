@@ -30,6 +30,12 @@ tasks:
     desc: Build the project locally
     cmd: go build -o ./dist/veta ./cmd/veta/.
 
+  release:
+    desc: Build all production release artifacts
+    cmds:
+      - task: ci
+      - go run ./scripts/release
+
   format:
     desc: Run formatters
     cmds:
