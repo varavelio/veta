@@ -19,13 +19,13 @@ func TestRunBuildCommand(t *testing.T) {
 
 	err := Run(
 		context.Background(),
-		[]string{"build", "--root", root, "--out", "public-build", "--clean"},
+		[]string{"build", "--config", filepath.Join(root, "veta.yaml")},
 		&stdout,
 		&stderr,
 	)
 	require.NoError(t, err)
 	require.Contains(t, stdout.String(), "Built 1 page(s)")
-	require.FileExists(t, filepath.Join(root, "public-build", "index.html"))
+	require.FileExists(t, filepath.Join(root, "dist", "index.html"))
 	require.Empty(t, stderr.String())
 }
 
@@ -33,7 +33,25 @@ func TestRunBuildAliasFlags(t *testing.T) {
 	root := newCLISite(t)
 	var stdout bytes.Buffer
 
-	err := Run(context.Background(), []string{"--root", root, "--out", "dist"}, &stdout, nil)
+	err := Run(
+		context.Background(),
+		[]string{"--config", filepath.Join(root, "veta.yaml")},
+		&stdout,
+		nil,
+	)
+	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "Built 1 page(s)")
+	require.FileExists(t, filepath.Join(root, "dist", "index.html"))
+}
+
+func TestRunBuildDiscoversConfig(t *testing.T) {
+	root := newCLISite(t)
+	child := filepath.Join(root, "content", "docs")
+	require.NoError(t, os.MkdirAll(child, 0o755))
+	t.Chdir(child)
+	var stdout bytes.Buffer
+
+	err := Run(context.Background(), []string{"build"}, &stdout, nil)
 	require.NoError(t, err)
 	require.Contains(t, stdout.String(), "Built 1 page(s)")
 	require.FileExists(t, filepath.Join(root, "dist", "index.html"))
@@ -56,7 +74,11 @@ func TestRunBuildHelp(t *testing.T) {
 	err := Run(context.Background(), []string{"build", "--help"}, &stdout, nil)
 	require.NoError(t, err)
 	require.Contains(t, stdout.String(), "veta build")
-	require.Contains(t, stdout.String(), "--root")
+	require.Contains(t, stdout.String(), "--config")
+	require.NotContains(t, stdout.String(), "--root")
+	require.NotContains(t, stdout.String(), "--out")
+	require.NotContains(t, stdout.String(), "--clean")
+	require.NotContains(t, stdout.String(), "--debug")
 }
 
 func TestRunVersion(t *testing.T) {
@@ -141,6 +163,11 @@ func newCLISite(t *testing.T) string {
 	t.Helper()
 
 	root := t.TempDir()
+	writeCLIFile(t, root, "veta.yaml", `
+build:
+  output: dist
+  clean: true
+`)
 	writeCLIFile(t, root, "templates/base.pongo", `{{ page.content }}`)
 	writeCLIFile(t, root, "pages/site.js", `
 export default function() {

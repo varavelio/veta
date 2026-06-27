@@ -22,20 +22,16 @@ type arguments struct {
 	Build       *buildCommand   `arg:"subcommand:build"   help:"Build the site"`
 	Init        *initCommand    `arg:"subcommand:init"    help:"Create a starter Veta project"`
 	Version     *versionCommand `arg:"subcommand:version" help:"Print version information"`
-	VersionFlag bool            `arg:"-v,--version"       help:"print version information and exit"`
+	VersionFlag bool            `arg:"-v,--version"       help:"Print version information"`
 }
 
 type buildCommand struct {
-	Clean      bool   `arg:"--clean"  help:"clean output before writing"`
-	ConfigFile string `arg:"--config" help:"configuration file inside the project root" placeholder:"FILE"`
-	Debug      bool   `arg:"--debug"  help:"disable template caching"`
-	OutputDir  string `arg:"--out"    help:"output directory"                           placeholder:"DIR"  default:"dist"`
-	Root       string `arg:"--root"   help:"project root directory"                     placeholder:"DIR"  default:"."`
+	ConfigFile string `arg:"-c,--config" help:"Configuration file to use" placeholder:"FILE"`
 }
 
 type initCommand struct {
-	Force bool   `arg:"--force"    help:"overwrite starter files that already exist"`
-	Path  string `arg:"positional" help:"project directory (default: current directory)" placeholder:"PATH"`
+	Force bool   `arg:"--force"    help:"Overwrite starter files that already exist"`
+	Path  string `arg:"positional" help:"Project directory (default: current directory)" placeholder:"PATH"`
 }
 
 type versionCommand struct{}
@@ -64,12 +60,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return runBuild(ctx, parsed.Build, stdout, stderr)
 	}
 
-	return runBuild(
-		ctx,
-		&buildCommand{OutputDir: build.DefaultOutputDir, Root: "."},
-		stdout,
-		stderr,
-	)
+	return runBuild(ctx, &buildCommand{}, stdout, stderr)
 }
 
 // handleParseError writes help, version, or a usage error for parser failures.
@@ -97,11 +88,7 @@ func handleParseError(parser *arg.Parser, stdout, stderr io.Writer, err error) e
 func runBuild(ctx context.Context, command *buildCommand, stdout, stderr io.Writer) error {
 	result, err := build.Run(
 		ctx,
-		build.WithRoot(command.Root),
-		build.WithOutputDir(command.OutputDir),
 		build.WithConfigFile(command.ConfigFile),
-		build.WithClean(command.Clean),
-		build.WithDebug(command.Debug),
 		build.WithConsoleOutput(stderr),
 	)
 	if err != nil {
