@@ -25,22 +25,21 @@ Veta is a static site generator for small, scriptable sites. It combines flat
 JavaScript page generators, Pongo2 templates, project data files, components,
 filters, Markdown rendering, themes, and embedded Tailwind CSS into a single CLI.
 
-## Install
+## Installation
 
-Download binaries from GitHub Releases, or use one of the package installers once
-they are published:
+Select the method that best fits your workflow.
 
-```sh
-npm install --global @varavel/veta
-brew install varavelio/tap/veta
-docker run --rm ghcr.io/varavelio/veta --help
-```
+| Platform          | Method       | Command                                                         |
+| ----------------- | ------------ | --------------------------------------------------------------- |
+| **Linux / macOS** | Shell        | <code>curl -fsSL https://get.varavel.com/veta &#124; sh</code>  |
+| **Linux / macOS** | Homebrew     | `brew install varavelio/tap/veta`                               |
+| **Windows**       | PowerShell   | <code>irm https://get.varavel.com/veta.ps1 &#124; iex</code>    |
+| **Any**           | NPM (local)  | `npm install --save-dev @varavel/veta`                          |
+| **Any**           | NPM (global) | `npm install --global @varavel/veta`                            |
+| **Any**           | Docker       | `docker run --rm varavel/veta`                                  |
+| **Any**           | Manual       | [Download binaries](https://github.com/varavelio/veta/releases) |
 
-From source:
-
-```sh
-go install github.com/varavelio/veta/cmd/veta@latest
-```
+For version pinning, prereleases, npm usage, and manual installs, see the [complete installation guide](https://veta.varavel.com/installation).
 
 ## Usage
 
