@@ -38,6 +38,7 @@ export default function(input) {
 	writeProjectFile(t, root, "templates/base.pongo", strings.Join([]string{
 		`<!doctype html>`,
 		`<title>{{ page.title }}</title>`,
+		`<nav>{% for item in pages %}{{ item.permalink }};{% endfor %}</nav>`,
 		`<main>{{ page.content }}</main>`,
 		`<footer>{{ data.site.title }} {{ "ok"|shout }}</footer>`,
 	}, ""))
@@ -69,6 +70,7 @@ export default function({ data }) {
 
 	index := readOutputFile(t, root, "dist/index.html")
 	require.Contains(t, index, `<title>Veta</title>`)
+	require.Contains(t, index, `<nav>/;/raw/;</nav>`)
 	require.Contains(t, index, `<section class="card">`)
 	require.Contains(t, index, `<strong>Hello</strong>`)
 	require.Contains(t, index, `<footer>Veta OK</footer>`)
