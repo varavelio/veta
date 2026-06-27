@@ -309,6 +309,42 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 			want: "read file content/missing.md",
 		},
 		{
+			name: "missing markdown path",
+			code: `
+				export default function({ files }) {
+					return files.readMarkdownFile();
+				}
+			`,
+			want: "Veta.files.readMarkdownFile path is required",
+		},
+		{
+			name: "missing json path",
+			code: `
+				export default function({ files }) {
+					return files.readJsonFile();
+				}
+			`,
+			want: "Veta.files.readJsonFile path is required",
+		},
+		{
+			name: "missing yaml path",
+			code: `
+				export default function({ files }) {
+					return files.readYamlFile();
+				}
+			`,
+			want: "Veta.files.readYamlFile path is required",
+		},
+		{
+			name: "missing toml path",
+			code: `
+				export default function({ files }) {
+					return files.readTomlFile();
+				}
+			`,
+			want: "Veta.files.readTomlFile path is required",
+		},
+		{
 			name: "missing glob",
 			code: `
 				export default function({ files }) {
@@ -334,6 +370,24 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 				}
 			`,
 			want: "list files matching content/[:",
+		},
+		{
+			name: "bad permalink options",
+			code: `
+				export default function({ files }) {
+					return files.toPermalink("content/index.md", "bad");
+				}
+			`,
+			want: "Veta.files.toPermalink options must be an object",
+		},
+		{
+			name: "permalink outside base path",
+			code: `
+				export default function({ files }) {
+					return files.toPermalink("posts/index.md", { basePath: "content" });
+				}
+			`,
+			want: "permalink is invalid",
 		},
 	}
 

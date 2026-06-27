@@ -4,18 +4,64 @@
     "content/blog/hello.md",
     "content/blog/nested/deep.md",
     "content/drafts/ignore.txt",
-    "content/index.md"
+    "content/index.md",
+    "data/navigation.yaml",
+    "data/site.json",
+    "data/theme.toml"
   ],
   "indexContent": "# Home\n\nWelcome to Veta.\n",
+  "json": {
+    "stars": 42,
+    "title": "Veta"
+  },
   "markdownFiles": [
     "content/blog/hello.md",
     "content/blog/nested/deep.md",
     "content/index.md"
   ],
-  "textFiles": [
+  "markdownPages": [
     {
-      "content": "draft content\n",
-      "path": "content/drafts/ignore.txt"
+      "content": "# Hello\n\nFirst post.\n",
+      "frontmatter": {
+        "tags": [
+          "go",
+          "ssg"
+        ],
+        "title": "Hello"
+      },
+      "path": "content/blog/hello.md",
+      "permalink": "/blog/hello/"
+    },
+    {
+      "content": "# Deep\n\nNested post.\n",
+      "frontmatter": {},
+      "path": "content/blog/nested/deep.md",
+      "permalink": "/blog/nested/deep/"
+    },
+    {
+      "content": "# Home\n\nWelcome to Veta.\n",
+      "frontmatter": {},
+      "path": "content/index.md",
+      "permalink": "/"
     }
-  ]
+  ],
+  "textContent": "draft content\n",
+  "toml": {
+    "colors": {
+      "primary": "blue"
+    },
+    "name": "Clean"
+  },
+  "yaml": {
+    "main": [
+      {
+        "href": "/",
+        "label": "Home"
+      },
+      {
+        "href": "/blog/",
+        "label": "Blog"
+      }
+    ]
+  }
 }
