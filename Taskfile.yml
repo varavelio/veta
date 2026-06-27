@@ -9,7 +9,13 @@ tasks:
 
   deps:
     desc: Install dependencies the project
-    cmd: go mod download
+    cmds:
+      - go mod download
+      - task: deps:tailwind
+
+  deps:tailwind:
+    desc: Download Tailwind CSS standalone binaries
+    cmd: go run ./scripts/download-tailwind
 
   ci:
     desc: Run full CI pipeline (deps, format, test, lint, build)

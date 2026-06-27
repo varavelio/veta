@@ -5,3 +5,7 @@ tmp/
 # Build outputs
 dist/
 out/
+
+# Downloaded Tailwind standalone binaries
+internal/tailwindcss/bin/*
+!internal/tailwindcss/bin/.gitkeep
