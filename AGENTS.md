@@ -22,7 +22,7 @@ You MUST follow the following instructions:
 ## Architecture Notes
 
 - Keep `internal` packages narrow and composable. They should own one concern and avoid becoming build orchestrators.
-- `internal/config` owns loading Veta tool configuration only. Site content, theme data, SEO metadata, navigation, and other user-facing values belong outside `veta.yaml`.
+- `internal/config` owns loading Veta tool configuration only, including build behavior such as output directory, clean mode, debug mode, Tailwind settings, and theme source/integrity. Site content, theme data, SEO metadata, navigation, and other user-facing values belong outside `veta.yaml`.
 - `internal/data` owns loading global files from `data/` only. It supports nested directories, JSON/YAML/TOML/JS inputs, returns JSON-compatible values keyed by the directory/file stem path, and must not render templates, discover pages, parse Markdown, or write output files.
 - `internal/pages` owns loading generator scripts from `pages/` only. It keeps the directory flat, validates the page contract, normalizes permalinks, detects output path collisions, and must not render templates, parse Markdown, process components, resolve themes, copy assets, or write output files.
 - `internal/js` owns synchronous execution of self-contained Veta JavaScript files and the `Veta` runtime object. It must not become a module loader, template engine, page loader, or output writer.
@@ -32,13 +32,14 @@ You MUST follow the following instructions:
 - `internal/theme` owns resolving configured local and GitHub theme sources into filesystems, using `internal/dirs` cache paths for remote themes, and composing themes with project files. It must not load data, discover pages, render templates, execute JavaScript, process Markdown, or write output files.
 - `internal/components` owns component discovery and source rewriting only. It discovers component templates from `components/`, parses registered tags in content, supports slots through injected renderers, and must not parse Markdown, own template engines, discover pages, load data, or write output files.
 - `internal/filters` owns native filter definitions and loading JavaScript filter sources from `filters/` only. It keeps the directory flat, exposes filters through package-local interfaces, and must not import JavaScript runtimes, template engines, Markdown renderers, page loaders, or output writers directly.
+- `internal/scaffold` owns writing starter project files for `veta init` only. It must not parse CLI arguments, run builds, resolve themes, render pages, or load project data.
 - `internal/tmpl` owns Pongo2 template loading, template-name resolution, rendering, and filter registration. It must not know about pages, data loading, themes, Markdown, components, or output files.
 - `internal/render` owns composing one page into one output document. It exposes the root template context `{ data, pages, page, props }`, where `pages` is the flat normalized page list and `page` is the current page. It depends on injected interfaces for templates, content processors, and Markdown rendering, and must not discover files, load data, load filters, process themes, copy assets, or write output files.
 - `internal/output` owns writing rendered files and copying `public/` assets to the output directory only. It validates relative output paths, detects collisions, and must not render templates, process Markdown, execute JavaScript, discover pages, load data, or resolve themes.
 - `internal/tailwindcss` owns running the embedded Tailwind CSS standalone CLI against a temporary materialized filesystem and returning generated CSS. It must not load Veta config, resolve themes, render pages, or write final build output directly.
 - `internal/vfs` owns virtual filesystem overlay and filtering helpers. It must not know about configuration, themes, templates, JavaScript, Markdown, Tailwind, or output writing.
-- `internal/build` owns orchestrating one full build by wiring internal packages together through adapters. It must not absorb package-specific logic from config, theme, data, pages, templates, components, filters, Markdown, rendering, or output.
-- `internal/cli` owns command selection, flag parsing, help text, and delegation to application workflows. It must not load site files, render content, resolve themes, or write build output directly.
+- `internal/build` owns orchestrating one full build by discovering the Veta config from the working directory or an explicit config path, deriving the project root from that config file, and wiring internal packages together through adapters. It must not absorb package-specific logic from config, theme, data, pages, templates, components, filters, Markdown, rendering, or output.
+- `internal/cli` owns command selection, flag parsing, help text, human-facing command errors, and delegation to application workflows. Build behavior flags such as output directory, clean mode, and debug mode belong in `veta.yaml`, not the CLI. It must not load site files, render content, resolve themes, scaffold starter files, or write build output directly.
 
 ## Testing & Quality
 
