@@ -25,6 +25,7 @@ func TestLoad(t *testing.T) {
 					},
 					{
 						permalink: "/sitemap.xml",
+						layout: "seo/sitemap",
 						content: "<urlset></urlset>"
 					}
 				];
@@ -32,7 +33,7 @@ func TestLoad(t *testing.T) {
 		`)},
 		"pages/docs.js": {Data: []byte(`
 			export default function() {
-				return [{ permalink: "docs/intro", layout: "docs/page", title: "Intro" }];
+				return [{ permalink: "docs/intro", layout: "docs/page", content: "Intro", title: "Intro" }];
 			}
 		`)},
 	}
@@ -43,36 +44,57 @@ func TestLoad(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, Manifest{Pages: []Page{
 		{
-			Content: "",
-			Data: map[string]any{
-				"count":    int64(2),
-				"featured": true,
-				"tags":     []any{"go", "ssg"},
+			Fields: map[string]any{
+				"content": "",
+				"data": map[string]any{
+					"count":    int64(2),
+					"featured": true,
+					"tags":     []any{"go", "ssg"},
+				},
+				"date":       "2026-06-26",
+				"generator":  "blog.js",
+				"index":      int64(0),
+				"layout":     "blog/index",
+				"outputPath": "blog/index.html",
+				"permalink":  "/blog/",
+				"title":      "Veta Blog",
 			},
-			Date:       "2026-06-26",
 			Generator:  "blog.js",
 			Index:      0,
 			Layout:     "blog/index",
 			OutputPath: "blog/index.html",
 			Permalink:  "/blog/",
-			Title:      "Veta Blog",
 		},
 		{
-			Content:    "<urlset></urlset>",
-			Data:       map[string]any{},
+			Fields: map[string]any{
+				"content":    "<urlset></urlset>",
+				"generator":  "blog.js",
+				"index":      int64(1),
+				"layout":     "seo/sitemap",
+				"outputPath": "sitemap.xml",
+				"permalink":  "/sitemap.xml",
+			},
 			Generator:  "blog.js",
 			Index:      1,
+			Layout:     "seo/sitemap",
 			OutputPath: "sitemap.xml",
 			Permalink:  "/sitemap.xml",
 		},
 		{
-			Data:       map[string]any{},
+			Fields: map[string]any{
+				"content":    "Intro",
+				"generator":  "docs.js",
+				"index":      int64(0),
+				"layout":     "docs/page",
+				"outputPath": "docs/intro/index.html",
+				"permalink":  "/docs/intro/",
+				"title":      "Intro",
+			},
 			Generator:  "docs.js",
 			Index:      0,
 			Layout:     "docs/page",
 			OutputPath: "docs/intro/index.html",
 			Permalink:  "/docs/intro/",
-			Title:      "Intro",
 		},
 	}}, manifest)
 }
@@ -167,44 +189,66 @@ func TestLoadErrors(t *testing.T) {
 			wantErr: ErrPermalinkInvalid,
 		},
 		{
-			name: "unknown field",
-			files: fstest.MapFS{
-				"pages/blog.js": {
-					Data: []byte(
-						`export default function() { return [{ permalink: "/", draft: true }]; }`,
-					),
-				},
-			},
-			wantErr: ErrPageInvalid,
-		},
-		{
 			name: "layout is not string",
 			files: fstest.MapFS{
 				"pages/blog.js": {
 					Data: []byte(
-						`export default function() { return [{ permalink: "/", layout: 1 }]; }`,
+						`export default function() { return [{ permalink: "/", layout: 1, content: "" }]; }`,
 					),
 				},
 			},
 			wantErr: ErrPageInvalid,
 		},
 		{
-			name: "data is not object",
+			name: "missing layout",
 			files: fstest.MapFS{
 				"pages/blog.js": {
 					Data: []byte(
-						`export default function() { return [{ permalink: "/", data: [] }]; }`,
+						`export default function() { return [{ permalink: "/", content: "" }]; }`,
 					),
 				},
 			},
 			wantErr: ErrPageInvalid,
 		},
 		{
-			name: "data contains function",
+			name: "empty layout",
 			files: fstest.MapFS{
 				"pages/blog.js": {
 					Data: []byte(
-						`export default function() { return [{ permalink: "/", data: { bad: function() {} } }]; }`,
+						`export default function() { return [{ permalink: "/", layout: "", content: "" }]; }`,
+					),
+				},
+			},
+			wantErr: ErrPageInvalid,
+		},
+		{
+			name: "missing content",
+			files: fstest.MapFS{
+				"pages/blog.js": {
+					Data: []byte(
+						`export default function() { return [{ permalink: "/", layout: "page" }]; }`,
+					),
+				},
+			},
+			wantErr: ErrPageInvalid,
+		},
+		{
+			name: "content is not string",
+			files: fstest.MapFS{
+				"pages/blog.js": {
+					Data: []byte(
+						`export default function() { return [{ permalink: "/", layout: "page", content: 1 }]; }`,
+					),
+				},
+			},
+			wantErr: ErrPageInvalid,
+		},
+		{
+			name: "page contains function",
+			files: fstest.MapFS{
+				"pages/blog.js": {
+					Data: []byte(
+						`export default function() { return [{ permalink: "/", custom: function() {} }]; }`,
 					),
 				},
 			},
@@ -215,12 +259,12 @@ func TestLoadErrors(t *testing.T) {
 			files: fstest.MapFS{
 				"pages/a.js": {
 					Data: []byte(
-						`export default function() { return [{ permalink: "/contacto" }]; }`,
+						`export default function() { return [{ permalink: "/contacto", layout: "page", content: "A" }]; }`,
 					),
 				},
 				"pages/b.js": {
 					Data: []byte(
-						`export default function() { return [{ permalink: "/contacto/index.html" }]; }`,
+						`export default function() { return [{ permalink: "/contacto/index.html", layout: "page", content: "B" }]; }`,
 					),
 				},
 			},

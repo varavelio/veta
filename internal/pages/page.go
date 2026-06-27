@@ -2,27 +2,21 @@ package pages
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
+	"strings"
 )
-
-var allowedPageFields = map[string]struct{}{
-	"content":   {},
-	"data":      {},
-	"date":      {},
-	"layout":    {},
-	"permalink": {},
-	"title":     {},
-}
 
 // decodePage converts one generator item into a normalized Page.
 func decodePage(generator string, index int, value any) (Page, error) {
-	object, ok := objectFields(value)
-	if !ok {
-		return Page{}, pageError(generator, index, "must be an object")
+	normalizedValue, err := normalizeJSONValue(value)
+	if err != nil {
+		return Page{}, fmt.Errorf("%w: %s[%d]: %w", ErrPageInvalid, generator, index, err)
 	}
 
-	if err := rejectUnknownFields(generator, index, object); err != nil {
-		return Page{}, err
+	object, ok := objectFields(normalizedValue)
+	if !ok {
+		return Page{}, pageError(generator, index, "must be an object")
 	}
 
 	permalink, err := requiredStringField(generator, index, object, "permalink")
@@ -34,38 +28,37 @@ func decodePage(generator string, index int, value any) (Page, error) {
 		return Page{}, fmt.Errorf("%w: %s[%d].permalink: %w", ErrPageInvalid, generator, index, err)
 	}
 
-	layout, err := optionalStringField(generator, index, object, "layout")
+	layout, err := requiredNonEmptyStringField(generator, index, object, "layout")
 	if err != nil {
 		return Page{}, err
 	}
-	title, err := optionalStringField(generator, index, object, "title")
-	if err != nil {
-		return Page{}, err
-	}
-	content, err := optionalStringField(generator, index, object, "content")
-	if err != nil {
-		return Page{}, err
-	}
-	date, err := optionalStringField(generator, index, object, "date")
-	if err != nil {
-		return Page{}, err
-	}
-	data, err := optionalDataField(generator, index, object)
-	if err != nil {
+	if _, err := requiredStringField(generator, index, object, "content"); err != nil {
 		return Page{}, err
 	}
 
+	fields := clonePageFields(object)
+	fields["generator"] = generator
+	fields["index"] = int64(index)
+	fields["layout"] = layout
+	fields["outputPath"] = outputPath
+	fields["permalink"] = normalizedPermalink
+
 	return Page{
-		Content:    content,
-		Data:       data,
-		Date:       date,
+		Fields:     fields,
 		Generator:  generator,
 		Index:      index,
 		Layout:     layout,
 		OutputPath: outputPath,
 		Permalink:  normalizedPermalink,
-		Title:      title,
 	}, nil
+}
+
+// clonePageFields returns a writable copy of a normalized page object.
+func clonePageFields(fields map[string]any) map[string]any {
+	clone := make(map[string]any, len(fields)+4)
+	maps.Copy(clone, fields)
+
+	return clone
 }
 
 // objectFields converts any map with string keys into map[string]any.
@@ -118,17 +111,6 @@ func reflectedStringKey(value reflect.Value) (string, bool) {
 	return value.String(), true
 }
 
-// rejectUnknownFields rejects top-level page fields outside Veta's contract.
-func rejectUnknownFields(generator string, index int, object map[string]any) error {
-	for field := range object {
-		if _, allowed := allowedPageFields[field]; !allowed {
-			return pageError(generator, index, "unknown field %q", field)
-		}
-	}
-
-	return nil
-}
-
 // requiredStringField returns a required page string field.
 func requiredStringField(
 	generator string,
@@ -149,44 +131,22 @@ func requiredStringField(
 	return stringValue, nil
 }
 
-// optionalStringField returns an optional page string field.
-func optionalStringField(
+// requiredNonEmptyStringField returns a required non-empty page string field.
+func requiredNonEmptyStringField(
 	generator string,
 	index int,
 	object map[string]any,
 	field string,
 ) (string, error) {
-	value, ok := object[field]
-	if !ok {
-		return "", nil
-	}
-
-	stringValue, ok := value.(string)
-	if !ok {
-		return "", pageError(generator, index, "%s must be a string", field)
-	}
-
-	return stringValue, nil
-}
-
-// optionalDataField returns an optional JSON-compatible page data object.
-func optionalDataField(generator string, index int, object map[string]any) (map[string]any, error) {
-	value, ok := object["data"]
-	if !ok {
-		return map[string]any{}, nil
-	}
-
-	normalizedValue, err := normalizeJSONValue(value)
+	value, err := requiredStringField(generator, index, object, field)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s[%d].data: %w", ErrPageInvalid, generator, index, err)
+		return "", err
+	}
+	if strings.TrimSpace(value) == "" {
+		return "", pageError(generator, index, "%s cannot be empty", field)
 	}
 
-	data, ok := normalizedValue.(map[string]any)
-	if !ok || data == nil {
-		return nil, pageError(generator, index, "data must be an object")
-	}
-
-	return data, nil
+	return value, nil
 }
 
 // pageError returns a contextual page contract error.

@@ -18,7 +18,7 @@ type Manifest struct {
 	Pages []Page
 }
 
-// Page contains Veta's normalized page contract.
+// Page contains one normalized page returned by a generator.
 type Page struct {
 	Generator string
 	Index     int
@@ -26,11 +26,9 @@ type Page struct {
 	Permalink  string
 	OutputPath string
 
-	Layout  string
-	Title   string
-	Content string
-	Date    string
-	Data    map[string]any
+	Layout string
+	// Fields contains the page object exposed to templates as page.
+	Fields map[string]any
 }
 
 // Option configures page loading.
