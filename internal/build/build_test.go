@@ -110,14 +110,15 @@ export default function() {
 
 func TestRunUsesRemoteTheme(t *testing.T) {
 	var requests atomic.Int64
+	archive := buildThemeArchive(t, map[string]string{
+		"veta-theme-remote-main/templates/base.pongo": `<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
+		"veta-theme-remote-main/data/theme.json":      `{"name":"Remote"}`,
+	})
 	server := httptest.NewServer(
 		http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 			requests.Add(1)
 			writer.Header().Set("Content-Type", "application/zip")
-			_, err := writer.Write(buildThemeArchive(t, map[string]string{
-				"veta-theme-remote-main/templates/base.pongo": `<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
-				"veta-theme-remote-main/data/theme.json":      `{"name":"Remote"}`,
-			}))
+			_, err := writer.Write(archive)
 			require.NoError(t, err)
 		}),
 	)
@@ -125,7 +126,12 @@ func TestRunUsesRemoteTheme(t *testing.T) {
 
 	root := t.TempDir()
 	cacheDir := t.TempDir()
-	writeProjectFile(t, root, "veta.yaml", `theme: { source: "varavelio/veta-theme-remote@main" }`)
+	writeProjectFile(
+		t,
+		root,
+		"veta.yaml",
+		`theme: { source: "varavelio/veta-theme-remote@main", sha256: "`+bytesSHA256(archive)+`" }`,
+	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
   return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
@@ -241,6 +247,12 @@ func buildThemeArchive(t *testing.T, files map[string]string) []byte {
 	require.NoError(t, writer.Close())
 
 	return buffer.Bytes()
+}
+
+// bytesSHA256 returns the SHA-256 hex digest for content.
+func bytesSHA256(content []byte) string {
+	hash := sha256.Sum256(content)
+	return hex.EncodeToString(hash[:])
 }
 
 func fakeTailwindBinary() tailwindcss.Binary {

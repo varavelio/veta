@@ -169,7 +169,11 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		return Result{}, err
 	}
 	themeOptions := append(
-		[]theme.Option{theme.WithRoot(config.root), theme.WithContext(ctx)},
+		[]theme.Option{
+			theme.WithRoot(config.root),
+			theme.WithContext(ctx),
+			theme.WithSHA256(toolConfig.Theme.SHA256),
+		},
 		config.themeOptions...,
 	)
 	site, err := theme.Resolve(projectFiles, toolConfig.Theme.Source, themeOptions...)
