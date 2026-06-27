@@ -33,14 +33,15 @@ export default function(input) {
 		t,
 		root,
 		"components/card.pongo",
-		`<section class="card">{{ content }}</section>`,
+		`<section class="card">{{ props.content }}</section>`,
 	)
 	writeProjectFile(t, root, "templates/base.pongo", strings.Join([]string{
 		`<!doctype html>`,
 		`<title>{{ page.title }}</title>`,
-		`<main>{{ content }}</main>`,
-		`<footer>{{ site.data.site.title }} {{ "ok"|shout }}</footer>`,
+		`<main>{{ page.content }}</main>`,
+		`<footer>{{ data.site.title }} {{ "ok"|shout }}</footer>`,
 	}, ""))
+	writeProjectFile(t, root, "templates/plain.pongo", `{{ page.content }}`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function({ data }) {
   return [
@@ -50,10 +51,11 @@ export default function({ data }) {
       title: data.site.title,
       content: "<card>**Hello**</card>"
     },
-    {
-      permalink: "/raw/",
-      content: "# Raw"
-    }
+	    {
+	      permalink: "/raw/",
+	      layout: "templates/plain",
+	      content: "# Raw"
+	    }
   ];
 }
 `)
@@ -72,7 +74,7 @@ export default function({ data }) {
 	require.Contains(t, index, `<footer>Veta OK</footer>`)
 
 	raw := readOutputFile(t, root, "dist/raw/index.html")
-	require.Equal(t, "# Raw", raw)
+	require.Equal(t, "<h1>Raw</h1>\n", raw)
 
 	asset := readOutputFile(t, root, "dist/app.css")
 	require.Equal(t, `body { color: black; }`, asset)
@@ -85,7 +87,7 @@ func TestRunUsesLocalTheme(t *testing.T) {
 		t,
 		root,
 		"theme/templates/base.pongo",
-		`<html><body>{{ content }} {{ site.data.theme.name }}</body></html>`,
+		`<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
 	)
 	writeProjectFile(t, root, "theme/data/theme.json", `{"name":"Theme"}`)
 	writeProjectFile(t, root, "theme/public/theme.css", `theme`)
@@ -111,7 +113,7 @@ func TestRunUsesRemoteTheme(t *testing.T) {
 			requests.Add(1)
 			writer.Header().Set("Content-Type", "application/zip")
 			_, err := writer.Write(buildThemeArchive(t, map[string]string{
-				"veta-theme-remote-main/templates/base.pongo": `<html><body>{{ content }} {{ site.data.theme.name }}</body></html>`,
+				"veta-theme-remote-main/templates/base.pongo": `<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
 				"veta-theme-remote-main/data/theme.json":      `{"name":"Remote"}`,
 			}))
 			require.NoError(t, err)
@@ -170,7 +172,7 @@ tailwindcss:
 		t,
 		root,
 		"templates/base.pongo",
-		`<html><head><link href="/app.css" rel="stylesheet"></head><body>{{ content }}</body></html>`,
+		`<html><head><link href="/app.css" rel="stylesheet"></head><body>{{ page.content }}</body></html>`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {

@@ -182,8 +182,8 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("load data: %w", err)
 	}
-	siteContext := newSiteContext(siteData)
-	runtime := js.Runtime{"data": map[string]any(siteData), "site": siteContext}
+	dataContext := map[string]any(siteData)
+	runtime := js.Runtime{"data": dataContext}
 
 	manifest, err := pages.Load(site.Files, pages.WithJSOptions(baseJSOptions(config, runtime)...))
 	if err != nil {
@@ -216,7 +216,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		return Result{}, fmt.Errorf("create renderer: %w", err)
 	}
 
-	documents, err := documentRenderer.RenderPages(renderPages(manifest.Pages), siteContext)
+	documents, err := documentRenderer.RenderPages(renderPages(manifest.Pages), dataContext)
 	if err != nil {
 		return Result{}, fmt.Errorf("render pages: %w", err)
 	}
@@ -340,11 +340,6 @@ func baseJSOptions(config runConfig, runtime js.Runtime) []js.Option {
 	return options
 }
 
-// newSiteContext returns the site namespace exposed to templates and scripts.
-func newSiteContext(values data.Values) map[string]any {
-	return map[string]any{"data": map[string]any(values)}
-}
-
 // newTemplateRenderer creates a template renderer with native and script filters.
 func newTemplateRenderer(
 	files fs.FS,
@@ -380,13 +375,10 @@ func renderPages(manifestPages []pages.Page) []render.Page {
 	renderPages := make([]render.Page, 0, len(manifestPages))
 	for _, page := range manifestPages {
 		renderPages = append(renderPages, render.Page{
-			Content:    page.Content,
-			Data:       page.Data,
-			Date:       page.Date,
+			Fields:     page.Fields,
 			Layout:     page.Layout,
 			OutputPath: page.OutputPath,
 			Permalink:  page.Permalink,
-			Title:      page.Title,
 		})
 	}
 
