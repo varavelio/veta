@@ -11,7 +11,4 @@ var (
 
 	// ErrConfigFileInvalid indicates that the explicit config file option is invalid.
 	ErrConfigFileInvalid = errors.New("build config file is invalid")
-
-	// ErrTailwindUnsupported indicates that Tailwind CSS execution is not implemented.
-	ErrTailwindUnsupported = errors.New("tailwindcss build is not supported yet")
 )

@@ -4,16 +4,20 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/varavelio/veta/internal/tailwindcss"
 	"github.com/varavelio/veta/internal/theme"
 )
 
@@ -152,6 +156,41 @@ export default function() {
 	require.Equal(t, int64(1), requests.Load())
 }
 
+func TestRunBuildsTailwindCSS(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", `
+tailwindcss:
+  input: styles/app.css
+  output: app.css
+  minify: true
+`)
+	writeProjectFile(t, root, "styles/app.css", `@import "tailwindcss";`)
+	writeProjectFile(t, root, "public/app.css", `public css`)
+	writeProjectFile(
+		t,
+		root,
+		"templates/base.pongo",
+		`<html><head><link href="/app.css" rel="stylesheet"></head><body>{{ content }}</body></html>`,
+	)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [{ permalink: "/", layout: "templates/base", content: "<div class=\"text-red-500\">Hello</div>" }];
+}
+`)
+
+	_, err := Run(
+		context.Background(),
+		WithRoot(root),
+		WithClean(true),
+		WithTailwindOptions(
+			tailwindcss.WithBinary(fakeTailwindBinary()),
+			tailwindcss.WithCacheDir(t.TempDir()),
+		),
+	)
+	require.NoError(t, err)
+	require.Contains(t, readOutputFile(t, root, "dist/app.css"), "minify=true rendered=true")
+}
+
 func TestRunErrors(t *testing.T) {
 	_, err := Run(context.Background(), WithRoot(""))
 	require.ErrorIs(t, err, ErrRootInvalid)
@@ -161,15 +200,6 @@ func TestRunErrors(t *testing.T) {
 
 	_, err = Run(context.Background(), WithConfigFile("bad\x00file"))
 	require.ErrorIs(t, err, ErrConfigFileInvalid)
-
-	root := t.TempDir()
-	writeProjectFile(t, root, "veta.yaml", `
-tailwindcss:
-  input: public/app.css
-  output: public/build.css
-`)
-	_, err = Run(context.Background(), WithRoot(root))
-	require.ErrorIs(t, err, ErrTailwindUnsupported)
 
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -207,4 +237,49 @@ func buildThemeArchive(t *testing.T, files map[string]string) []byte {
 	require.NoError(t, writer.Close())
 
 	return buffer.Bytes()
+}
+
+func fakeTailwindBinary() tailwindcss.Binary {
+	content := fakeTailwindBinaryContent()
+	hash := sha256.Sum256(content)
+	name := "tailwindcss-fake"
+	if runtime.GOOS == "windows" {
+		name += ".cmd"
+	}
+
+	return tailwindcss.Binary{Content: content, Name: name, SHA256: hex.EncodeToString(hash[:])}
+}
+
+func fakeTailwindBinaryContent() []byte {
+	if runtime.GOOS == "windows" {
+		return []byte(strings.Join([]string{
+			"@echo off",
+			"set out=",
+			"set minify=false",
+			":loop",
+			"if \"%1\"==\"\" goto done",
+			"if \"%1\"==\"-o\" set out=%2& shift& shift& goto loop",
+			"if \"%1\"==\"--minify\" set minify=true& shift& goto loop",
+			"shift",
+			"goto loop",
+			":done",
+			"if exist veta-rendered\\index.html (set rendered=true) else (set rendered=false)",
+			"> \"%out%\" echo minify=%minify% rendered=%rendered%",
+		}, "\r\n"))
+	}
+
+	return []byte(strings.Join([]string{
+		"#!/bin/sh",
+		"out=",
+		"minify=false",
+		"while [ $# -gt 0 ]; do",
+		"  case \"$1\" in",
+		"    -o) out=\"$2\"; shift 2 ;;",
+		"    --minify) minify=true; shift ;;",
+		"    *) shift ;;",
+		"  esac",
+		"done",
+		"if [ -f veta-rendered/index.html ]; then rendered=true; else rendered=false; fi",
+		"printf 'minify=%s rendered=%s\\n' \"$minify\" \"$rendered\" > \"$out\"",
+	}, "\n"))
 }

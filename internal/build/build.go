@@ -18,6 +18,7 @@ import (
 	"github.com/varavelio/veta/internal/output"
 	"github.com/varavelio/veta/internal/pages"
 	"github.com/varavelio/veta/internal/render"
+	"github.com/varavelio/veta/internal/tailwindcss"
 	"github.com/varavelio/veta/internal/theme"
 	"github.com/varavelio/veta/internal/tmpl"
 )
@@ -41,13 +42,14 @@ type Result struct {
 type Option func(*runConfig) error
 
 type runConfig struct {
-	clean         bool
-	configFile    string
-	consoleOutput io.Writer
-	debug         bool
-	outputDir     string
-	root          string
-	themeOptions  []theme.Option
+	clean           bool
+	configFile      string
+	consoleOutput   io.Writer
+	debug           bool
+	outputDir       string
+	root            string
+	tailwindOptions []tailwindcss.Option
+	themeOptions    []theme.Option
 }
 
 type filterScriptRunner struct {
@@ -132,6 +134,21 @@ func WithThemeOptions(options ...theme.Option) Option {
 	}
 }
 
+// WithTailwindOptions configures Tailwind CSS build options.
+func WithTailwindOptions(options ...tailwindcss.Option) Option {
+	return func(config *runConfig) error {
+		for _, option := range options {
+			if option == nil {
+				continue
+			}
+
+			config.tailwindOptions = append(config.tailwindOptions, option)
+		}
+
+		return nil
+	}
+}
+
 // Run builds a Veta site from the configured root into the configured output.
 func Run(ctx context.Context, options ...Option) (Result, error) {
 	if ctx == nil {
@@ -151,10 +168,6 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if toolConfig.TailwindCSS.Enabled() {
-		return Result{}, ErrTailwindUnsupported
-	}
-
 	themeOptions := append(
 		[]theme.Option{theme.WithRoot(config.root), theme.WithContext(ctx)},
 		config.themeOptions...,
@@ -211,13 +224,34 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		return Result{}, err
 	}
 
+	generatedFiles := outputFiles(documents)
+	tailwindFile, hasTailwindFile, err := buildTailwindFile(
+		ctx,
+		site.Files,
+		documents,
+		toolConfig,
+		config,
+	)
+	if err != nil {
+		return Result{}, err
+	}
+
 	outputDir := outputRoot(config.root, config.outputDir)
 	writer, err := output.New(outputDir, output.WithClean(config.clean))
 	if err != nil {
 		return Result{}, fmt.Errorf("create output writer: %w", err)
 	}
-	if err := writer.WriteSite(outputFiles(documents), site.Files); err != nil {
+	if err := writer.WriteSite(generatedFiles, site.Files); err != nil {
 		return Result{}, fmt.Errorf("write output: %w", err)
+	}
+	if hasTailwindFile {
+		overwriteWriter, err := output.New(outputDir)
+		if err != nil {
+			return Result{}, fmt.Errorf("create tailwind output writer: %w", err)
+		}
+		if err := overwriteWriter.Write([]output.File{tailwindFile}); err != nil {
+			return Result{}, fmt.Errorf("write tailwindcss output: %w", err)
+		}
 	}
 
 	return Result{
@@ -226,6 +260,36 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		OutputDir: outputDir,
 		Pages:     len(manifest.Pages),
 	}, nil
+}
+
+// buildTailwindFile builds CSS when Tailwind CSS is enabled.
+func buildTailwindFile(
+	ctx context.Context,
+	files fs.FS,
+	documents []render.Document,
+	toolConfig config.Config,
+	runConfig runConfig,
+) (output.File, bool, error) {
+	if !toolConfig.TailwindCSS.Enabled() {
+		return output.File{}, false, nil
+	}
+
+	file, err := tailwindcss.Build(
+		ctx,
+		files,
+		tailwindDocuments(documents),
+		tailwindcss.Config{
+			Input:  toolConfig.TailwindCSS.Input,
+			Minify: toolConfig.TailwindCSS.Minify,
+			Output: toolConfig.TailwindCSS.Output,
+		},
+		runConfig.tailwindOptions...,
+	)
+	if err != nil {
+		return output.File{}, false, fmt.Errorf("build tailwindcss: %w", err)
+	}
+
+	return output.File{Content: file.Content, Path: file.Path}, true, nil
 }
 
 // Run executes a JavaScript filter source with explicit filter arguments.
@@ -337,6 +401,19 @@ func outputFiles(documents []render.Document) []output.File {
 	}
 
 	return files
+}
+
+// tailwindDocuments converts rendered documents into Tailwind scan documents.
+func tailwindDocuments(documents []render.Document) []tailwindcss.Document {
+	tailwindDocuments := make([]tailwindcss.Document, 0, len(documents))
+	for _, document := range documents {
+		tailwindDocuments = append(tailwindDocuments, tailwindcss.Document{
+			Content: document.Content,
+			Path:    document.OutputPath,
+		})
+	}
+
+	return tailwindDocuments
 }
 
 // outputRoot returns the output directory resolved against root when relative.
