@@ -42,7 +42,7 @@ func (renderer *testTemplateRenderer) Render(name string, context any) (string, 
 	renderer.context = context
 	contextMap := context.(map[string]any)
 	page := contextMap["page"].(map[string]any)
-	return fmt.Sprintf("%s:%s:%s", name, page["title"], contextMap["content"]), nil
+	return fmt.Sprintf("%s:%s:%s", name, page["title"], page["content"]), nil
 }
 
 type failingTemplateRenderer struct{}
@@ -62,14 +62,16 @@ func TestRenderWithLayout(t *testing.T) {
 	require.NoError(t, err)
 
 	document, err := renderer.Render(Page{
-		Content:    "hello",
-		Data:       map[string]any{"kind": "post"},
-		Date:       "2026-06-26",
+		Fields: map[string]any{
+			"content": "hello",
+			"date":    "2026-06-26",
+			"kind":    "post",
+			"title":   "Blog",
+		},
 		Layout:     "layouts/base",
 		OutputPath: "blog/index.html",
 		Permalink:  "/blog/",
-		Title:      "Blog",
-	}, map[string]any{"name": "Veta"})
+	}, map[string]any{"site": map[string]any{"name": "Veta"}})
 	require.NoError(t, err)
 	require.Equal(
 		t,
@@ -82,11 +84,12 @@ func TestRenderWithLayout(t *testing.T) {
 	)
 
 	context := templateRenderer.context.(map[string]any)
-	require.Equal(t, map[string]any{"name": "Veta"}, context["site"])
-	require.Equal(t, SafeHTML("markdown(processed(hello))"), context["content"])
+	require.Equal(t, map[string]any{"site": map[string]any{"name": "Veta"}}, context["data"])
+	require.Equal(t, map[string]any{}, context["props"])
 	require.Equal(t, map[string]any{
-		"data":       map[string]any{"kind": "post"},
+		"content":    SafeHTML("markdown(processed(hello))"),
 		"date":       "2026-06-26",
+		"kind":       "post",
 		"layout":     "layouts/base",
 		"outputPath": "blog/index.html",
 		"permalink":  "/blog/",
@@ -103,7 +106,11 @@ func TestRenderWithoutLayoutReturnsRawContent(t *testing.T) {
 	require.NoError(t, err)
 
 	document, err := renderer.Render(
-		Page{Content: "raw", OutputPath: "feed.xml", Permalink: "/feed.xml"},
+		Page{
+			Fields:     map[string]any{"content": "raw"},
+			OutputPath: "feed.xml",
+			Permalink:  "/feed.xml",
+		},
 		nil,
 	)
 	require.NoError(t, err)
@@ -121,13 +128,12 @@ func TestRenderPages(t *testing.T) {
 
 	documents, err := renderer.RenderPages([]Page{
 		{
-			Content:    "one",
+			Fields:     map[string]any{"content": "one", "title": "One"},
 			Layout:     "page",
 			OutputPath: "one/index.html",
 			Permalink:  "/one/",
-			Title:      "One",
 		},
-		{Content: "two", OutputPath: "two.txt", Permalink: "/two.txt"},
+		{Fields: map[string]any{"content": "two"}, OutputPath: "two.txt", Permalink: "/two.txt"},
 	}, nil)
 	require.NoError(t, err)
 	require.Len(t, documents, 2)
@@ -143,7 +149,7 @@ func TestRenderErrors(t *testing.T) {
 		WithContentProcessor(failingContentProcessor{}),
 	)
 	require.NoError(t, err)
-	_, err = renderer.Render(Page{Content: "bad", Layout: "page"}, nil)
+	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Layout: "page"}, nil)
 	require.ErrorContains(t, err, "process failed")
 
 	renderer, err = New(
@@ -151,11 +157,11 @@ func TestRenderErrors(t *testing.T) {
 		WithMarkdownRenderer(failingMarkdownRenderer{}),
 	)
 	require.NoError(t, err)
-	_, err = renderer.Render(Page{Content: "bad", Layout: "page"}, nil)
+	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Layout: "page"}, nil)
 	require.ErrorContains(t, err, "markdown failed")
 
 	renderer, err = New(WithTemplateRenderer(failingTemplateRenderer{}))
 	require.NoError(t, err)
-	_, err = renderer.Render(Page{Content: "bad", Layout: "page"}, nil)
+	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Layout: "page"}, nil)
 	require.ErrorContains(t, err, "template failed")
 }

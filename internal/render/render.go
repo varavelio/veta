@@ -1,6 +1,9 @@
 package render
 
-import "fmt"
+import (
+	"fmt"
+	"maps"
+)
 
 // TemplateRenderer renders a template by name.
 type TemplateRenderer interface {
@@ -26,15 +29,13 @@ func (html SafeHTML) SafeHTML() string {
 	return string(html)
 }
 
-// Page contains the page fields render needs from a page manifest.
+// Page contains one normalized page and its template context fields.
 type Page struct {
-	Content    string
-	Data       map[string]any
-	Date       string
+	// Fields contains the page object exposed to templates as page.
+	Fields     map[string]any
 	Layout     string
 	OutputPath string
 	Permalink  string
-	Title      string
 }
 
 // Document is a rendered file ready for output writing.
@@ -94,14 +95,15 @@ func WithTemplateRenderer(templateRenderer TemplateRenderer) Option {
 }
 
 // Render renders one page into a document.
-func (renderer *Renderer) Render(page Page, site any) (Document, error) {
+func (renderer *Renderer) Render(page Page, data any) (Document, error) {
 	if renderer == nil {
 		renderer = &Renderer{}
 	}
 
+	pageContext := pageTemplateContext(page)
 	if page.Layout == "" {
 		return Document{
-			Content:    []byte(page.Content),
+			Content:    []byte(rawPageContent(pageContext)),
 			OutputPath: page.OutputPath,
 			Permalink:  page.Permalink,
 		}, nil
@@ -110,30 +112,26 @@ func (renderer *Renderer) Render(page Page, site any) (Document, error) {
 		return Document{}, ErrTemplateRendererRequired
 	}
 
-	pageContext := pageTemplateContext(page)
-	baseContext := map[string]any{"page": pageContext, "site": site}
-	content := page.Content
-	if renderer.contentProcessor != nil {
-		processedContent, err := renderer.contentProcessor.Render(content, baseContext)
-		if err != nil {
-			return Document{}, fmt.Errorf("process page content %s: %w", page.OutputPath, err)
+	context := baseTemplateContext(data, pageContext, map[string]any{})
+	if content, ok := pageStringField(pageContext, "content"); ok {
+		if renderer.contentProcessor != nil {
+			processedContent, err := renderer.contentProcessor.Render(content, context)
+			if err != nil {
+				return Document{}, fmt.Errorf("process page content %s: %w", page.OutputPath, err)
+			}
+
+			content = processedContent
+		}
+		if renderer.markdownRenderer != nil {
+			renderedContent, err := renderer.markdownRenderer.Render(content)
+			if err != nil {
+				return Document{}, fmt.Errorf("render page markdown %s: %w", page.OutputPath, err)
+			}
+
+			content = renderedContent
 		}
 
-		content = processedContent
-	}
-	if renderer.markdownRenderer != nil {
-		renderedContent, err := renderer.markdownRenderer.Render(content)
-		if err != nil {
-			return Document{}, fmt.Errorf("render page markdown %s: %w", page.OutputPath, err)
-		}
-
-		content = renderedContent
-	}
-
-	context := map[string]any{
-		"content": SafeHTML(content),
-		"page":    pageContext,
-		"site":    site,
+		pageContext["content"] = SafeHTML(content)
 	}
 	output, err := renderer.templateRenderer.Render(page.Layout, context)
 	if err != nil {
@@ -148,10 +146,10 @@ func (renderer *Renderer) Render(page Page, site any) (Document, error) {
 }
 
 // RenderPages renders multiple pages into documents.
-func (renderer *Renderer) RenderPages(pages []Page, site any) ([]Document, error) {
+func (renderer *Renderer) RenderPages(pages []Page, data any) ([]Document, error) {
 	documents := make([]Document, 0, len(pages))
 	for _, page := range pages {
-		document, err := renderer.Render(page, site)
+		document, err := renderer.Render(page, data)
 		if err != nil {
 			return nil, err
 		}
@@ -164,17 +162,42 @@ func (renderer *Renderer) RenderPages(pages []Page, site any) ([]Document, error
 
 // pageTemplateContext returns the page namespace exposed to templates.
 func pageTemplateContext(page Page) map[string]any {
-	data := page.Data
-	if data == nil {
-		data = map[string]any{}
+	context := make(map[string]any, len(page.Fields)+3)
+	maps.Copy(context, page.Fields)
+	context["outputPath"] = page.OutputPath
+	context["permalink"] = page.Permalink
+	if _, exists := context["layout"]; !exists {
+		context["layout"] = page.Layout
 	}
 
-	return map[string]any{
-		"data":       data,
-		"date":       page.Date,
-		"layout":     page.Layout,
-		"outputPath": page.OutputPath,
-		"permalink":  page.Permalink,
-		"title":      page.Title,
+	return context
+}
+
+// baseTemplateContext returns the only root keys exposed to templates.
+func baseTemplateContext(data any, page, props map[string]any) map[string]any {
+	if props == nil {
+		props = map[string]any{}
 	}
+	return map[string]any{
+		"data":  data,
+		"page":  page,
+		"props": props,
+	}
+}
+
+// rawPageContent returns the raw content string for layout-less pages.
+func rawPageContent(page map[string]any) string {
+	content, _ := pageStringField(page, "content")
+	return content
+}
+
+// pageStringField returns a string field from a page context.
+func pageStringField(page map[string]any, key string) (string, bool) {
+	value, ok := page[key]
+	if !ok {
+		return "", false
+	}
+
+	content, ok := value.(string)
+	return content, ok
 }
