@@ -15,6 +15,7 @@ func TestLoad(t *testing.T) {
 			FileName: {Data: []byte(`
 theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
+  sha256: " 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef "
 tailwindcss:
   input: " public/css/app.css "
   output: " dist/css/app.css "
@@ -25,6 +26,11 @@ tailwindcss:
 		config, err := Load(files)
 		require.NoError(t, err)
 		require.Equal(t, "varavelio/veta-theme-clean@v1.0.0", config.Theme.Source)
+		require.Equal(
+			t,
+			"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			config.Theme.SHA256,
+		)
 		require.Equal(t, "public/css/app.css", config.TailwindCSS.Input)
 		require.Equal(t, "dist/css/app.css", config.TailwindCSS.Output)
 		require.Equal(t, true, config.TailwindCSS.Minify)
@@ -154,13 +160,6 @@ site:
 `,
 		},
 		{
-			name: "unknown theme field",
-			content: `
-theme:
-  sha256: abc
-`,
-		},
-		{
 			name: "unknown tailwind field",
 			content: `
 tailwindcss:
@@ -258,6 +257,9 @@ tailwindcss:
 
 func TestThemeValidation(t *testing.T) {
 	_, err := Parse([]byte("theme:\n  source: \"bad\x00source\"\n"))
+	require.ErrorIs(t, err, ErrInvalid)
+
+	_, err = Parse([]byte("theme:\n  sha256: abc\n"))
 	require.ErrorIs(t, err, ErrInvalid)
 }
 
