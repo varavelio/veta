@@ -1,0 +1,54 @@
+{
+  "name": "@varavel/veta",
+  "version": "0.0.0-dev",
+  "description": "Veta is the varavel's static site generator",
+  "author": "Varavel",
+  "license": "MIT",
+  "homepage": "https://github.com/varavelio/veta",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/varavelio/veta.git",
+    "directory": "integrations/installers/npm"
+  },
+  "bugs": {
+    "url": "https://github.com/varavelio/veta/issues"
+  },
+  "type": "commonjs",
+  "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "veta": "bin.js"
+  },
+  "files": [
+    "bin.js",
+    "checksums.json",
+    "install.js",
+    "index.js",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "keywords": [
+    "static-site-generator",
+    "ssg",
+    "markdown",
+    "tailwindcss",
+    "varavel"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}
