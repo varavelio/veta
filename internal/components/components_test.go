@@ -25,9 +25,15 @@ func (renderer *recordingRenderer) Render(name string, context any) (string, err
 		return output, nil
 	}
 
-	props, _ := contextMap["props"].(map[string]string)
-	content := fmt.Sprint(contextMap["content"])
-	return fmt.Sprintf("<%s>%s%s</%s>", name, props["text"], content, name), nil
+	props, _ := contextMap["props"].(map[string]any)
+	content := fmt.Sprint(props["content"])
+	return fmt.Sprintf("<%s>%s%s</%s>", name, propString(props, "text"), content, name), nil
+}
+
+// propString returns a string prop from a test renderer context.
+func propString(props map[string]any, key string) string {
+	value, _ := props[key].(string)
+	return value
 }
 
 // TestProcessorRender verifies self-closing, paired, nested components and slot
@@ -45,8 +51,8 @@ func TestProcessorRender(t *testing.T) {
 	got, err := processor.Render(
 		`<ui-card title="Sale">Hello <ui-button text="Buy" /></ui-card>`,
 		map[string]any{
+			"data": map[string]any{"site": map[string]any{"name": "Veta"}},
 			"page": map[string]any{"title": "Home"},
-			"site": map[string]any{"name": "Veta"},
 		},
 	)
 	require.NoError(t, err)
@@ -58,8 +64,21 @@ func TestProcessorRender(t *testing.T) {
 	require.Len(t, renderer.calls, 2)
 	require.Equal(t, "components/ui/button", renderer.calls[0].template)
 	require.Equal(t, "components/ui/card", renderer.calls[1].template)
-	require.Equal(t, map[string]string{"title": "Sale"}, renderer.calls[1].context["props"])
-	require.Equal(t, map[string]any{"name": "Veta"}, renderer.calls[1].context["site"])
+	require.Equal(
+		t,
+		map[string]any{
+			"content": SafeHTML(
+				"slot(Hello <components/ui/button>Buyslot()</components/ui/button>)",
+			),
+			"title": "Sale",
+		},
+		renderer.calls[1].context["props"],
+	)
+	require.Equal(
+		t,
+		map[string]any{"site": map[string]any{"name": "Veta"}},
+		renderer.calls[1].context["data"],
+	)
 }
 
 // TestProcessorRenderIgnoresUnregisteredAndProtectedTags verifies that regular

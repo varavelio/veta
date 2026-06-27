@@ -194,11 +194,16 @@ func (processor *Processor) renderComponent(
 
 // componentContext builds the context passed to component templates.
 func componentContext(base any, props map[string]string, content string) map[string]any {
+	componentProps := make(map[string]any, len(props)+1)
+	for key, value := range props {
+		componentProps[key] = value
+	}
+	componentProps["content"] = SafeHTML(content)
+
 	return map[string]any{
-		"content": SafeHTML(content),
-		"page":    contextValue(base, "page"),
-		"props":   props,
-		"site":    contextValue(base, "site"),
+		"data":  contextValue(base, "data"),
+		"page":  contextValue(base, "page"),
+		"props": componentProps,
 	}
 }
 
