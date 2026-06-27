@@ -159,7 +159,11 @@ func filePaths(files []fileSpec) []string {
 	return paths
 }
 
-const starterConfig = `tailwindcss:
+const starterConfig = `build:
+  output: dist
+  clean: true
+  debug: false
+tailwindcss:
   input: styles/app.css
   output: assets/app.css
   minify: true

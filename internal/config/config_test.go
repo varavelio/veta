@@ -13,6 +13,10 @@ func TestLoad(t *testing.T) {
 	t.Run("loads default file", func(t *testing.T) {
 		files := fstest.MapFS{
 			FileName: {Data: []byte(`
+build:
+  output: " public-build "
+  clean: true
+  debug: true
 theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
   sha256: " 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef "
@@ -25,6 +29,9 @@ tailwindcss:
 
 		config, err := Load(files)
 		require.NoError(t, err)
+		require.Equal(t, "public-build", config.Build.Output)
+		require.True(t, config.Build.Clean)
+		require.True(t, config.Build.Debug)
 		require.Equal(t, "varavelio/veta-theme-clean@v1.0.0", config.Theme.Source)
 		require.Equal(
 			t,
@@ -123,7 +130,22 @@ func TestParse(t *testing.T) {
 theme:
   source: ./themes/basic
 `,
-			want: Config{Theme: Theme{Source: "./themes/basic"}},
+			want: Config{
+				Build: Build{Output: DefaultBuildOutput},
+				Theme: Theme{Source: "./themes/basic"},
+			},
+		},
+		{
+			name: "build only",
+			content: `
+build:
+  output: public
+  clean: true
+  debug: true
+`,
+			want: Config{
+				Build: Build{Output: "public", Clean: true, Debug: true},
+			},
 		},
 		{
 			name: "tailwind only",
@@ -133,6 +155,7 @@ tailwindcss:
   output: dist/css/app.css
 `,
 			want: Config{
+				Build:       Build{Output: DefaultBuildOutput},
 				TailwindCSS: TailwindCSS{Input: "public/css/app.css", Output: "dist/css/app.css"},
 			},
 		},
@@ -157,6 +180,13 @@ func TestParseStrictSchema(t *testing.T) {
 			content: `
 site:
   title: Veta
+`,
+		},
+		{
+			name: "unknown build field",
+			content: `
+build:
+  destination: dist
 `,
 		},
 		{
@@ -241,6 +271,47 @@ tailwindcss:
 tailwindcss:
   input: C:\public\app.css
   output: dist/app.css
+`,
+			wantErr: ErrPathInvalid,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Parse([]byte(test.content))
+			require.Error(t, err)
+			require.True(t, errors.Is(err, test.wantErr), "expected %v, got %v", test.wantErr, err)
+		})
+	}
+}
+
+func TestBuildValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		wantErr error
+	}{
+		{
+			name: "absolute output",
+			content: `
+build:
+  output: /dist
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "parent traversal output",
+			content: `
+build:
+  output: ../dist
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "windows volume output",
+			content: `
+build:
+  output: C:\dist
 `,
 			wantErr: ErrPathInvalid,
 		},

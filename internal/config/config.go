@@ -19,12 +19,25 @@ const FileName = "veta.yaml"
 
 var fileNames = []string{"veta.yaml", "veta.yml", ".veta.yaml", ".veta.yml"}
 
-const sha256HexLength = 64
+const (
+	// DefaultBuildOutput is the default build output directory.
+	DefaultBuildOutput = "dist"
+
+	sha256HexLength = 64
+)
 
 // Config contains Veta's tool behavior settings.
 type Config struct {
+	Build       Build       `yaml:"build"`
 	Theme       Theme       `yaml:"theme"`
 	TailwindCSS TailwindCSS `yaml:"tailwindcss"`
+}
+
+// Build contains settings for the site build workflow.
+type Build struct {
+	Clean  bool   `yaml:"clean"`
+	Debug  bool   `yaml:"debug"`
+	Output string `yaml:"output"`
 }
 
 // Theme contains theme resolution settings.
@@ -52,7 +65,12 @@ func (tailwind TailwindCSS) Enabled() bool {
 
 // Default returns Veta's default tool configuration.
 func Default() Config {
-	return Config{}
+	return Config{Build: Build{Output: DefaultBuildOutput}}
+}
+
+// FileNames returns supported Veta configuration file names in priority order.
+func FileNames() []string {
+	return append([]string(nil), fileNames...)
 }
 
 // Load reads the first supported Veta configuration file from files. Missing
@@ -88,6 +106,23 @@ func LoadFile(files fs.FS, name string) (Config, error) {
 	}
 	if !found {
 		return Default(), nil
+	}
+
+	return config, nil
+}
+
+// LoadRequiredFile reads a required Veta configuration file from files.
+func LoadRequiredFile(files fs.FS, name string) (Config, error) {
+	if files == nil {
+		return Config{}, ErrFSRequired
+	}
+
+	config, found, err := loadExistingFile(files, name)
+	if err != nil {
+		return Config{}, err
+	}
+	if !found {
+		return Config{}, fmt.Errorf("read configuration %s: %w", name, fs.ErrNotExist)
 	}
 
 	return config, nil
@@ -142,11 +177,18 @@ func Parse(content []byte) (Config, error) {
 }
 
 func normalize(config Config) (Config, error) {
+	config.Build.Output = strings.TrimSpace(config.Build.Output)
+	if config.Build.Output == "" {
+		config.Build.Output = DefaultBuildOutput
+	}
 	config.Theme.Source = strings.TrimSpace(config.Theme.Source)
 	config.Theme.SHA256 = strings.TrimSpace(config.Theme.SHA256)
 	config.TailwindCSS.Input = strings.TrimSpace(config.TailwindCSS.Input)
 	config.TailwindCSS.Output = strings.TrimSpace(config.TailwindCSS.Output)
 
+	if err := validateBuild(config.Build); err != nil {
+		return Config{}, err
+	}
 	if err := validateTheme(config.Theme); err != nil {
 		return Config{}, err
 	}
@@ -156,6 +198,18 @@ func normalize(config Config) (Config, error) {
 	}
 
 	return config, nil
+}
+
+// validateBuild checks build configuration values.
+func validateBuild(build Build) error {
+	if strings.ContainsRune(build.Output, 0) {
+		return fmt.Errorf("%w: build.output cannot contain NUL", ErrInvalid)
+	}
+	if err := validateProjectPath("build.output", build.Output); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // validateTheme checks theme configuration values.
