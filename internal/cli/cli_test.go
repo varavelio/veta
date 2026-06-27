@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/varavelio/veta/internal/scaffold"
 )
 
 func TestRunBuildCommand(t *testing.T) {
@@ -45,23 +46,87 @@ func TestRunHelp(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdout.String(), "Usage:")
 	require.Contains(t, stdout.String(), "build")
+	require.Contains(t, stdout.String(), "init")
+	require.Contains(t, stdout.String(), "version")
 }
 
 func TestRunBuildHelp(t *testing.T) {
-	var stderr bytes.Buffer
+	var stdout bytes.Buffer
 
-	err := Run(context.Background(), []string{"build", "--help"}, nil, &stderr)
+	err := Run(context.Background(), []string{"build", "--help"}, &stdout, nil)
 	require.NoError(t, err)
-	require.Contains(t, stderr.String(), "veta build")
-	require.Contains(t, stderr.String(), "--root")
+	require.Contains(t, stdout.String(), "veta build")
+	require.Contains(t, stdout.String(), "--root")
+}
+
+func TestRunVersion(t *testing.T) {
+	for _, flag := range []string{"--version", "-v", "version"} {
+		t.Run(flag, func(t *testing.T) {
+			var stdout bytes.Buffer
+
+			err := Run(context.Background(), []string{flag}, &stdout, nil)
+			require.NoError(t, err)
+			require.Equal(t, "veta dev\n", stdout.String())
+		})
+	}
+}
+
+func TestRunInitCommand(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "site")
+	var stdout bytes.Buffer
+
+	err := Run(context.Background(), []string{"init", root}, &stdout, nil)
+	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "Initialized Veta project")
+
+	for _, directory := range []string{
+		"components",
+		"data",
+		"filters",
+		"pages",
+		"public",
+		"styles",
+		"templates",
+	} {
+		require.DirExists(t, filepath.Join(root, directory))
+	}
+	for _, file := range []string{
+		"veta.yaml",
+		"data/site.json",
+		"pages/site.js",
+		"templates/base.pongo",
+		"components/card.pongo",
+		"filters/uppercase.js",
+		"styles/app.css",
+		"public/robots.txt",
+	} {
+		require.FileExists(t, filepath.Join(root, filepath.FromSlash(file)))
+	}
+}
+
+func TestRunInitRefusesOverwrite(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "site")
+	require.NoError(t, Run(context.Background(), []string{"init", root}, nil, nil))
+
+	var stderr bytes.Buffer
+	err := Run(context.Background(), []string{"init", root}, nil, &stderr)
+	require.ErrorIs(t, err, scaffold.ErrFileExists)
+	require.Contains(t, stderr.String(), "Cannot initialize the project")
+	require.Contains(t, stderr.String(), "veta init --force")
 }
 
 func TestRunErrors(t *testing.T) {
-	err := Run(context.Background(), []string{"serve"}, nil, nil)
-	require.ErrorIs(t, err, ErrUnknownCommand)
+	var stderr bytes.Buffer
+	err := Run(context.Background(), []string{"serve"}, nil, &stderr)
+	require.ErrorIs(t, err, ErrUsage)
+	require.Contains(t, stderr.String(), "error:")
+	require.Contains(t, stderr.String(), "Usage:")
 
-	err = Run(context.Background(), []string{"build", "unexpected"}, nil, nil)
-	require.ErrorIs(t, err, ErrUnknownCommand)
+	stderr.Reset()
+	err = Run(context.Background(), []string{"build", "unexpected"}, nil, &stderr)
+	require.ErrorIs(t, err, ErrUsage)
+	require.Contains(t, stderr.String(), "error:")
+	require.Contains(t, stderr.String(), "veta build")
 }
 
 func TestRunContextCanceled(t *testing.T) {

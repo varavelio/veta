@@ -2,5 +2,5 @@ package cli
 
 import "errors"
 
-// ErrUnknownCommand indicates that the requested command does not exist.
-var ErrUnknownCommand = errors.New("unknown command")
+// ErrUsage indicates that command-line arguments are invalid.
+var ErrUsage = errors.New("usage error")
