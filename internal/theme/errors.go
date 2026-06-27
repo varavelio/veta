@@ -20,4 +20,28 @@ var (
 
 	// ErrRemoteUnsupported indicates that remote theme sources are not implemented.
 	ErrRemoteUnsupported = errors.New("remote theme sources are not supported")
+
+	// ErrIntegrityRequired indicates that a remote theme checksum is required.
+	ErrIntegrityRequired = errors.New("remote theme sha256 is required")
+
+	// ErrIntegrityMismatch indicates that a remote theme checksum does not match.
+	ErrIntegrityMismatch = errors.New("remote theme sha256 mismatch")
 )
+
+// IntegrityError describes a remote theme checksum failure.
+type IntegrityError struct {
+	Actual   string
+	Expected string
+	Source   string
+	kind     error
+}
+
+// Error returns the checksum failure message.
+func (err *IntegrityError) Error() string {
+	return err.kind.Error()
+}
+
+// Unwrap returns the checksum failure kind.
+func (err *IntegrityError) Unwrap() error {
+	return err.kind
+}
