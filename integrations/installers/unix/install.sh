@@ -31,12 +31,12 @@ QUIET="${QUIET:-false}"
 
 setup_colors() {
   if [ -t 1 ] && [ "$QUIET" != "true" ]; then
-    RED='\033[31m'
-    GREEN='\033[32m'
-    YELLOW='\033[33m'
-    BLUE='\033[34m'
-    BOLD='\033[1m'
-    NC='\033[0m'
+    RED="$(printf '\033[31m')"
+    GREEN="$(printf '\033[32m')"
+    YELLOW="$(printf '\033[33m')"
+    BLUE="$(printf '\033[34m')"
+    BOLD="$(printf '\033[1m')"
+    NC="$(printf '\033[0m')"
   else
     RED=''
     GREEN=''
@@ -82,6 +82,7 @@ check_dependencies() {
   require_command grep
   require_command sed
   require_command tar
+  require_command tr
   require_command uname
 }
 
@@ -105,7 +106,11 @@ detect_platform() {
 get_version() {
   if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
     log_info "Fetching latest version..."
-    VERSION="$(curl -sSfIL "https://github.com/$REPO/releases/latest" | grep -i '^location:' | sed -E 's#.*\/tag\/(v?[^[:space:]]+).*#\1#' | tail -n 1)"
+    VERSION="$(curl -fsSI "https://github.com/$REPO/releases/latest" | tr -d '\r' | sed -nE 's#^[Ll]ocation:[[:space:]]*.*/tag/(v?[^[:space:]]+).*#\1#p' | tail -n 1)"
+    if [ -z "$VERSION" ]; then
+      log_error "Failed to determine latest version. Set VERSION=vx.y.z and retry."
+      exit 1
+    fi
   fi
 
   case "$VERSION" in
@@ -113,8 +118,8 @@ get_version() {
     *) VERSION="v$VERSION" ;;
   esac
 
-  if [ -z "$VERSION" ] || [ "$VERSION" = "v" ]; then
-    log_error "Failed to determine latest version. Set VERSION=vx.y.z and retry."
+  if [ "$VERSION" = "v" ]; then
+    log_error "Invalid version. Set VERSION=vx.y.z and retry."
     exit 1
   fi
 }
