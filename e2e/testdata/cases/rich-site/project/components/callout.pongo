@@ -1,0 +1,3 @@
+<aside class="rounded-xl border border-sky-400 p-4" data-kind="{{ props.kind }}">
+  {{ props.content }}
+</aside>

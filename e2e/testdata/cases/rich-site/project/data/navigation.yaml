@@ -1,0 +1,5 @@
+main:
+  - label: Home
+    href: /
+  - label: Docs
+    href: /docs/intro/

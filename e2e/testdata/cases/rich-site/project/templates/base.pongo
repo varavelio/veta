@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="description" content="{{ data.site.description }}">
+    <title>{{ page.title|titlecase }} | {{ data.site.title }}</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="bg-slate-950 text-slate-50">
+    <header>
+      {% for item in data.navigation.main %}
+        <a href="{{ item.href }}">{{ item.label }}</a>
+      {% endfor %}
+    </header>
+    <div data-pages="{% for item in pages %}{{ item.permalink }};{% endfor %}"></div>
+    <main>{{ page.content }}</main>
+    <footer>{{ data.github.repo }} · {{ data.theme.brand.name }}</footer>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+build:
+  output: dist
+  clean: true
+  debug: false
+
+tailwindcss:
+  input: public/styles.css
+  output: styles.css
+  minify: true
