@@ -53,8 +53,8 @@ func (failingTemplateRenderer) Render(string, any) (string, error) {
 	return "", errors.New("template failed")
 }
 
-// TestRenderWithLayout verifies the full in-memory render sequence.
-func TestRenderWithLayout(t *testing.T) {
+// TestRenderWithTemplate verifies the full in-memory render sequence.
+func TestRenderWithTemplate(t *testing.T) {
 	templateRenderer := &testTemplateRenderer{}
 	renderer, err := New(
 		WithContentProcessor(testContentProcessor{}),
@@ -70,9 +70,9 @@ func TestRenderWithLayout(t *testing.T) {
 			"kind":    "post",
 			"title":   "Blog",
 		},
-		Layout:     "layouts/base",
 		OutputPath: "blog/index.html",
 		Permalink:  "/blog/",
+		Template:   "layouts/base",
 	}, map[string]any{"site": map[string]any{"name": "Veta"}})
 	require.NoError(t, err)
 	require.Equal(
@@ -92,24 +92,24 @@ func TestRenderWithLayout(t *testing.T) {
 		"content":    SafeHTML("markdown(processed(hello))"),
 		"date":       "2026-06-26",
 		"kind":       "post",
-		"layout":     "layouts/base",
 		"outputPath": "blog/index.html",
 		"permalink":  "/blog/",
+		"template":   "layouts/base",
 		"title":      "Blog",
 	}, context["page"])
 	require.Equal(t, []map[string]any{{
 		"content":    SafeHTML("markdown(processed(hello))"),
 		"date":       "2026-06-26",
 		"kind":       "post",
-		"layout":     "layouts/base",
 		"outputPath": "blog/index.html",
 		"permalink":  "/blog/",
+		"template":   "layouts/base",
 		"title":      "Blog",
 	}}, context["pages"])
 }
 
-// TestRenderWithoutLayoutReturnsRawContent verifies raw output pages.
-func TestRenderWithoutLayoutReturnsRawContent(t *testing.T) {
+// TestRenderWithoutTemplateReturnsRawContent verifies raw output pages.
+func TestRenderWithoutTemplateReturnsRawContent(t *testing.T) {
 	renderer, err := New(
 		WithContentProcessor(testContentProcessor{}),
 		WithMarkdownRenderer(testMarkdownRenderer{}),
@@ -141,9 +141,9 @@ func TestRenderPages(t *testing.T) {
 	documents, err := renderer.RenderPages([]Page{
 		{
 			Fields:     map[string]any{"content": "one", "title": "One"},
-			Layout:     "page",
 			OutputPath: "one/index.html",
 			Permalink:  "/one/",
+			Template:   "page",
 		},
 		{Fields: map[string]any{"content": "two"}, OutputPath: "two.txt", Permalink: "/two.txt"},
 	}, nil)
@@ -155,23 +155,23 @@ func TestRenderPages(t *testing.T) {
 	require.Equal(t, []map[string]any{
 		{
 			"content":    SafeHTML("one"),
-			"layout":     "page",
 			"outputPath": "one/index.html",
 			"permalink":  "/one/",
+			"template":   "page",
 			"title":      "One",
 		},
 		{
 			"content":    "two",
-			"layout":     "",
 			"outputPath": "two.txt",
 			"permalink":  "/two.txt",
+			"template":   "",
 		},
 	}, context["pages"])
 }
 
 // TestRenderErrors verifies dependency and render failures.
 func TestRenderErrors(t *testing.T) {
-	_, err := (&Renderer{}).Render(Page{Layout: "page"}, nil)
+	_, err := (&Renderer{}).Render(Page{Template: "page"}, nil)
 	require.ErrorIs(t, err, ErrTemplateRendererRequired)
 
 	renderer, err := New(
@@ -179,7 +179,7 @@ func TestRenderErrors(t *testing.T) {
 		WithContentProcessor(failingContentProcessor{}),
 	)
 	require.NoError(t, err)
-	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Layout: "page"}, nil)
+	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Template: "page"}, nil)
 	require.ErrorContains(t, err, "process failed")
 
 	renderer, err = New(
@@ -187,11 +187,11 @@ func TestRenderErrors(t *testing.T) {
 		WithMarkdownRenderer(failingMarkdownRenderer{}),
 	)
 	require.NoError(t, err)
-	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Layout: "page"}, nil)
+	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Template: "page"}, nil)
 	require.ErrorContains(t, err, "markdown failed")
 
 	renderer, err = New(WithTemplateRenderer(failingTemplateRenderer{}))
 	require.NoError(t, err)
-	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Layout: "page"}, nil)
+	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Template: "page"}, nil)
 	require.ErrorContains(t, err, "template failed")
 }

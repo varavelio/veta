@@ -75,7 +75,7 @@ Veta projects can contain:
 - `veta.yaml` for tool configuration.
 - `data/` for JSON, YAML, TOML, or JavaScript data files.
 - `pages/` for flat JavaScript page generator files.
-- `templates/` for Pongo2 layouts.
+- `templates/` for Pongo2 page templates.
 - `components/` for reusable component templates.
 - `filters/` for JavaScript filters.
 - `public/` for static assets copied to the output directory.

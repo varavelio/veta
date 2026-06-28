@@ -2,6 +2,6 @@
 <html lang="en">
   <body data-page="{{ page.permalink }}">
     <nav>{% for item in pages %}<a href="{{ item.permalink }}">{{ item.title }}</a>{% endfor %}</nav>
-    <main>{{ page.content }}</main>
+    <article>{{ page.content }}</article>
   </body>
 </html>

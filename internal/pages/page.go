@@ -2,8 +2,11 @@ package pages
 
 import (
 	"fmt"
+	"io/fs"
 	"maps"
+	"path"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -28,7 +31,7 @@ func decodePage(generator string, index int, value any) (Page, error) {
 		return Page{}, fmt.Errorf("%w: %s[%d].permalink: %w", ErrPageInvalid, generator, index, err)
 	}
 
-	layout, err := requiredNonEmptyStringField(generator, index, object, "layout")
+	template, err := optionalTemplateField(generator, index, object)
 	if err != nil {
 		return Page{}, err
 	}
@@ -39,17 +42,17 @@ func decodePage(generator string, index int, value any) (Page, error) {
 	fields := clonePageFields(object)
 	fields["generator"] = generator
 	fields["index"] = int64(index)
-	fields["layout"] = layout
 	fields["outputPath"] = outputPath
 	fields["permalink"] = normalizedPermalink
+	fields["template"] = template
 
 	return Page{
 		Fields:     fields,
 		Generator:  generator,
 		Index:      index,
-		Layout:     layout,
 		OutputPath: outputPath,
 		Permalink:  normalizedPermalink,
+		Template:   template,
 	}, nil
 }
 
@@ -131,22 +134,47 @@ func requiredStringField(
 	return stringValue, nil
 }
 
-// requiredNonEmptyStringField returns a required non-empty page string field.
-func requiredNonEmptyStringField(
-	generator string,
-	index int,
-	object map[string]any,
-	field string,
-) (string, error) {
-	value, err := requiredStringField(generator, index, object, field)
-	if err != nil {
-		return "", err
-	}
-	if strings.TrimSpace(value) == "" {
-		return "", pageError(generator, index, "%s cannot be empty", field)
+// optionalTemplateField returns the normalized optional page template field.
+func optionalTemplateField(generator string, index int, object map[string]any) (string, error) {
+	if _, exists := object["layout"]; exists {
+		return "", pageError(generator, index, "layout has been renamed to template")
 	}
 
-	return value, nil
+	value, exists := object["template"]
+	if !exists {
+		return "", nil
+	}
+	stringValue, ok := value.(string)
+	if !ok {
+		return "", pageError(generator, index, "template must be a string")
+	}
+
+	template := strings.TrimSpace(strings.ReplaceAll(stringValue, "\\", "/"))
+	if template == "" {
+		return "", pageError(
+			generator,
+			index,
+			"template cannot be empty; omit template for raw content",
+		)
+	}
+	if strings.ContainsRune(template, 0) || path.IsAbs(template) ||
+		slices.Contains(strings.Split(template, "/"), "..") {
+		return "", pageError(generator, index, "template must be relative to templates/")
+	}
+
+	template = path.Clean(template)
+	if template == "." || !fs.ValidPath(template) {
+		return "", pageError(generator, index, "template must be relative to templates/")
+	}
+	if template == "templates" || strings.HasPrefix(template, "templates/") {
+		return "", pageError(
+			generator,
+			index,
+			"template is already relative to templates/; omit the templates/ prefix",
+		)
+	}
+
+	return template, nil
 }
 
 // pageError returns a contextual page contract error.

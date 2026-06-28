@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -28,6 +29,8 @@ const (
 	DefaultOutputDir = config.DefaultBuildOutput
 
 	defaultRoot = "."
+
+	templatesDirName = "templates"
 )
 
 // Result summarizes a completed site build.
@@ -192,7 +195,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	documentRenderer, err := render.New(
 		render.WithContentProcessor(componentProcessor),
 		render.WithMarkdownRenderer(markdownRenderer),
-		render.WithTemplateRenderer(templateRenderer),
+		render.WithTemplateRenderer(pageTemplateRenderer{renderer: templateRenderer}),
 	)
 	if err != nil {
 		return Result{}, fmt.Errorf("create renderer: %w", err)
@@ -242,6 +245,16 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		OutputDir: outputDir,
 		Pages:     len(manifest.Pages),
 	}, nil
+}
+
+// pageTemplateRenderer resolves page template names from the templates directory.
+type pageTemplateRenderer struct {
+	renderer render.TemplateRenderer
+}
+
+// Render renders one page template by resolving the name under templates/.
+func (renderer pageTemplateRenderer) Render(name string, context any) (string, error) {
+	return renderer.renderer.Render(path.Join(templatesDirName, name), context)
 }
 
 // buildTailwindFile builds CSS when Tailwind CSS is enabled.
@@ -464,9 +477,9 @@ func renderPages(manifestPages []pages.Page) []render.Page {
 	for _, page := range manifestPages {
 		renderPages = append(renderPages, render.Page{
 			Fields:     page.Fields,
-			Layout:     page.Layout,
 			OutputPath: page.OutputPath,
 			Permalink:  page.Permalink,
+			Template:   page.Template,
 		})
 	}
 

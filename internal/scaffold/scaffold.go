@@ -178,14 +178,14 @@ const starterPages = "export default function({ data }) {\n" +
 	"  return [\n" +
 	"    {\n" +
 	"      permalink: \"/\",\n" +
-	"      layout: \"templates/base\",\n" +
+	"      template: \"base\",\n" +
 	"      title: data.site.title,\n" +
 	"      navOrder: 1,\n" +
 	"      content: \"<card>Build something fast with **Veta**.</card>\",\n" +
 	"    },\n" +
 	"    {\n" +
 	"      permalink: \"/about/\",\n" +
-	"      layout: \"templates/base\",\n" +
+	"      template: \"base\",\n" +
 	"      title: \"About\",\n" +
 	"      navOrder: 2,\n" +
 	"      content: \"# About\\n\\nThis page was generated from pages/site.js.\",\n" +

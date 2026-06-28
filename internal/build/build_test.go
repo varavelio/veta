@@ -47,19 +47,17 @@ export default function(input) {
 		`<main>{{ page.content }}</main>`,
 		`<footer>{{ data.site.title }} {{ "ok"|shout }}</footer>`,
 	}, ""))
-	writeProjectFile(t, root, "templates/plain.pongo", `{{ page.content }}`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function({ data }) {
   return [
     {
       permalink: "/",
-      layout: "templates/base",
+      template: "base",
       title: data.site.title,
       content: "<card>**Hello**</card>"
     },
 	    {
 	      permalink: "/raw/",
-	      layout: "templates/plain",
 	      content: "# Raw"
 	    }
   ];
@@ -81,7 +79,7 @@ export default function({ data }) {
 	require.Contains(t, index, `<footer>Veta OK</footer>`)
 
 	raw := readOutputFile(t, root, "dist/raw/index.html")
-	require.Equal(t, "<h1>Raw</h1>\n", raw)
+	require.Equal(t, "# Raw", raw)
 
 	asset := readOutputFile(t, root, "dist/app.css")
 	require.Equal(t, `body { color: black; }`, asset)
@@ -106,7 +104,7 @@ theme:
 	writeProjectFile(t, root, "theme/pages/ignored.js", `export default function() { return []; }`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+  return [{ permalink: "/", template: "base", content: "Hello" }];
 }
 `)
 
@@ -130,7 +128,7 @@ build:
 	writeProjectFile(t, root, "templates/base.pongo", `{{ page.content }}`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+  return [{ permalink: "/", template: "base", content: "Hello" }];
 }
 `)
 
@@ -150,7 +148,7 @@ build:
 	writeProjectFile(t, root, "templates/base.pongo", `{{ page.content }}`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+  return [{ permalink: "/", template: "base.pongo", content: "Hello" }];
 }
 `)
 
@@ -190,7 +188,7 @@ theme:
 	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+  return [{ permalink: "/", template: "base", content: "Hello" }];
 }
 `)
 
@@ -239,7 +237,7 @@ tailwindcss:
 	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", layout: "templates/base", content: "<div class=\"text-red-500\">Hello</div>" }];
+  return [{ permalink: "/", template: "base", content: "<div class=\"text-red-500\">Hello</div>" }];
 }
 `)
 

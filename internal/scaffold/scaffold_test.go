@@ -21,6 +21,10 @@ func TestCreate(t *testing.T) {
 	require.FileExists(t, filepath.Join(root, "veta.yaml"))
 	require.FileExists(t, filepath.Join(root, "pages", "site.js"))
 	require.FileExists(t, filepath.Join(root, "public", "styles.css"))
+	pages, err := os.ReadFile(filepath.Join(root, "pages", "site.js"))
+	require.NoError(t, err)
+	require.Contains(t, string(pages), `template: "base"`)
+	require.NotContains(t, string(pages), "layout:")
 }
 
 func TestCreateRefusesExistingFiles(t *testing.T) {

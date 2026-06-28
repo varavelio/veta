@@ -197,7 +197,7 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` from i
 	}
 	if errors.Is(err, tmpl.ErrTemplateNotFound) || errors.Is(err, tmpl.ErrTemplateNameInvalid) ||
 		errors.Is(err, tmpl.ErrTemplateAmbiguous) {
-		return "Template rendering failed. Check that the page layout points to an existing template.\n\nDetails: " + err.Error()
+		return "Template rendering failed. Check that the page template points to an existing file in templates/.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, tailwindcss.ErrConfigInvalid) || errors.Is(err, tailwindcss.ErrRunFailed) ||
 		errors.Is(

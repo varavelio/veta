@@ -33,9 +33,9 @@ func (html SafeHTML) SafeHTML() string {
 type Page struct {
 	// Fields contains the page object exposed to templates as page.
 	Fields     map[string]any
-	Layout     string
 	OutputPath string
 	Permalink  string
+	Template   string
 }
 
 // Document is a rendered file ready for output writing.
@@ -145,7 +145,7 @@ func (renderer *Renderer) renderPageContent(
 	data any,
 	pages []map[string]any,
 ) error {
-	if page.Layout == "" {
+	if page.Template == "" {
 		return nil
 	}
 
@@ -174,14 +174,14 @@ func (renderer *Renderer) renderPageContent(
 	return nil
 }
 
-// renderPageDocument renders the current page layout or raw content.
+// renderPageDocument renders the current page template or raw content.
 func (renderer *Renderer) renderPageDocument(
 	page Page,
 	pageContext map[string]any,
 	data any,
 	pages []map[string]any,
 ) (Document, error) {
-	if page.Layout == "" {
+	if page.Template == "" {
 		return Document{
 			Content:    []byte(rawPageContent(pageContext)),
 			OutputPath: page.OutputPath,
@@ -193,9 +193,9 @@ func (renderer *Renderer) renderPageDocument(
 	}
 
 	context := baseTemplateContext(data, pages, pageContext, map[string]any{})
-	output, err := renderer.templateRenderer.Render(page.Layout, context)
+	output, err := renderer.templateRenderer.Render(page.Template, context)
 	if err != nil {
-		return Document{}, fmt.Errorf("render page layout %s: %w", page.Layout, err)
+		return Document{}, fmt.Errorf("render page template %s: %w", page.Template, err)
 	}
 
 	return Document{
@@ -211,8 +211,8 @@ func pageTemplateContext(page Page) map[string]any {
 	maps.Copy(context, page.Fields)
 	context["outputPath"] = page.OutputPath
 	context["permalink"] = page.Permalink
-	if _, exists := context["layout"]; !exists {
-		context["layout"] = page.Layout
+	if _, exists := context["template"]; !exists {
+		context["template"] = page.Template
 	}
 
 	return context
@@ -228,10 +228,10 @@ func pageTemplateContexts(pages []Page) []map[string]any {
 	return contexts
 }
 
-// pagesRequireTemplateRenderer reports whether any page needs a layout render.
+// pagesRequireTemplateRenderer reports whether any page needs a template render.
 func pagesRequireTemplateRenderer(pages []Page) bool {
 	for _, page := range pages {
-		if page.Layout != "" {
+		if page.Template != "" {
 			return true
 		}
 	}
@@ -256,7 +256,7 @@ func baseTemplateContext(
 	}
 }
 
-// rawPageContent returns the raw content string for layout-less pages.
+// rawPageContent returns the raw content string for template-less pages.
 func rawPageContent(page map[string]any) string {
 	content, _ := pageStringField(page, "content")
 	return content

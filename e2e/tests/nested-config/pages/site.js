@@ -2,13 +2,13 @@ export default function({ data }) {
   return [
     {
       permalink: "/",
-      layout: "templates/base",
+      template: "base.html",
       title: "Home",
       content: `# ${data.site.name}`,
     },
     {
       permalink: "docs/getting-started",
-      layout: "templates/base",
+      template: "docs/page",
       title: "Docs",
       content: "Nested config works.",
     },

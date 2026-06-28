@@ -26,8 +26,8 @@ func TestReportsHumanErrors(t *testing.T) {
 		writeProjectFile(t, projectRoot, "pages/site.js", `
 export default function() {
   return [
-    { permalink: "/", layout: "templates/plain", content: "One" },
-    { permalink: "/", layout: "templates/plain", content: "Two" },
+    { permalink: "/", content: "One" },
+    { permalink: "/", content: "Two" },
   ];
 }
 `)

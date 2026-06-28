@@ -26,7 +26,7 @@ type Page struct {
 	Permalink  string
 	OutputPath string
 
-	Layout string
+	Template string
 	// Fields contains the page object exposed to templates as page.
 	Fields map[string]any
 }

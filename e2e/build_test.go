@@ -39,7 +39,7 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	require.Contains(t, docs, `<p>Theme: Sky</p>`)
 
 	feed := strings.TrimSpace(readProjectFile(t, projectRoot, "dist/feed.xml"))
-	require.Equal(t, `<p><feed>stars:42</feed></p>`, feed)
+	require.Equal(t, `<feed>stars:42</feed>`, feed)
 	require.Equal(t, "Built by Veta E2E\n", readProjectFile(t, projectRoot, "dist/humans.txt"))
 
 	styles := readProjectFile(t, projectRoot, "dist/styles.css")
@@ -60,7 +60,8 @@ func TestBuildDiscoversConfigFromNestedDirectory(t *testing.T) {
 
 	index := readProjectFile(t, projectRoot, "site-output/index.html")
 	require.Contains(t, index, `<body data-page="/">`)
-	require.Contains(t, index, `<a href="/docs/getting-started/">Docs</a>`)
+	require.Contains(t, index, `href="/docs/getting-started/"`)
+	require.Contains(t, index, `>Docs</a>`)
 	require.Contains(t, index, `<h1>Nested Config Site</h1>`)
 
 	docs := readProjectFile(t, projectRoot, "site-output/docs/getting-started/index.html")

@@ -190,7 +190,7 @@ build:
 	writeCLIFile(t, root, "templates/base.pongo", `{{ page.content }}`)
 	writeCLIFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", layout: "templates/base", content: "Hello" }];
+  return [{ permalink: "/", template: "base", content: "Hello" }];
 }
 `)
 
