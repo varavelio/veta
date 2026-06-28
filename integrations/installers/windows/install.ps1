@@ -96,14 +96,19 @@ function Get-LatestVersion {
       if ($response -and $response.Headers.Location) {
         $location = $response.Headers.Location
         if ($location -is [array]) { $location = $location[0] }
-        if ($location -match "/tag/v?(.+)$") { $script:Version = "v$($Matches[1])" }
+        if ($location -match "/tag/(v?[^/?#\s]+)") { $script:Version = $Matches[1] }
       }
+    }
+
+    if ([string]::IsNullOrEmpty($script:Version)) {
+      Write-Err "Failed to determine latest version. Set VERSION=vx.y.z and retry."
+      exit 1
     }
   }
 
   if (-not $script:Version.StartsWith("v")) { $script:Version = "v$($script:Version)" }
-  if ([string]::IsNullOrEmpty($script:Version) -or $script:Version -eq "v") {
-    Write-Err "Failed to determine latest version. Set VERSION=vx.y.z and retry."
+  if ($script:Version -eq "v") {
+    Write-Err "Invalid version. Set VERSION=vx.y.z and retry."
     exit 1
   }
 }
