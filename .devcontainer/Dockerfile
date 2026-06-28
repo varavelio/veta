@@ -36,6 +36,9 @@ COPY --from=node:24-trixie /usr/local/ /usr/local/
 # Install golangci-lint
 COPY --from=golangci/golangci-lint:v2.12.2 /usr/bin/golangci-lint /usr/local/bin/golangci-lint
 
+# Install previous version of veta as veta-prev
+COPY --from=varavel/veta:0.1.0-alpha.1 /usr/local/bin/veta /usr/local/bin/veta-prev
+
 # Set environment variables
 ENV \
   DEBIAN_FRONTEND="noninteractive" \
