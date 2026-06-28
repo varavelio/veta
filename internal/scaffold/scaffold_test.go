@@ -47,7 +47,8 @@ func TestCreateForceOverwritesExistingFiles(t *testing.T) {
 
 	content, err := os.ReadFile(filepath.Join(root, "veta.yaml"))
 	require.NoError(t, err)
-	require.Contains(t, string(content), "tailwindcss:")
+	require.Contains(t, string(content), "stylesheet: styles.css")
+	require.NotContains(t, string(content), "input: public/styles.css")
 }
 
 func TestCreateErrors(t *testing.T) {

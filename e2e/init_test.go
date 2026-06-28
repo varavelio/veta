@@ -22,7 +22,7 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	require.FileExists(t, filepath.Join(projectRoot, "veta.yaml"))
 	require.FileExists(t, filepath.Join(projectRoot, "public", "styles.css"))
 	requirePathMissing(t, filepath.Join(projectRoot, "styles"))
-	require.Contains(t, readProjectFile(t, projectRoot, "veta.yaml"), "input: public/styles.css")
+	require.Contains(t, readProjectFile(t, projectRoot, "veta.yaml"), "stylesheet: styles.css")
 	require.Equal(
 		t,
 		"@import \"tailwindcss\";\n",

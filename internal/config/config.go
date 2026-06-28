@@ -53,14 +53,13 @@ func (theme Theme) Enabled() bool {
 
 // TailwindCSS contains Tailwind CSS wrapper settings.
 type TailwindCSS struct {
-	Input  string `yaml:"input"`
-	Output string `yaml:"output"`
-	Minify bool   `yaml:"minify"`
+	Stylesheet string `yaml:"stylesheet"`
+	Minify     bool   `yaml:"minify"`
 }
 
 // Enabled reports whether Tailwind CSS should run.
 func (tailwind TailwindCSS) Enabled() bool {
-	return strings.TrimSpace(tailwind.Input) != "" && strings.TrimSpace(tailwind.Output) != ""
+	return strings.TrimSpace(tailwind.Stylesheet) != ""
 }
 
 // Default returns Veta's default tool configuration.
@@ -183,8 +182,7 @@ func normalize(config Config) (Config, error) {
 	}
 	config.Theme.Source = strings.TrimSpace(config.Theme.Source)
 	config.Theme.SHA256 = strings.TrimSpace(config.Theme.SHA256)
-	config.TailwindCSS.Input = strings.TrimSpace(config.TailwindCSS.Input)
-	config.TailwindCSS.Output = strings.TrimSpace(config.TailwindCSS.Output)
+	config.TailwindCSS.Stylesheet = strings.TrimSpace(config.TailwindCSS.Stylesheet)
 
 	if err := validateBuild(config.Build); err != nil {
 		return Config{}, err
@@ -244,29 +242,11 @@ func validSHA256(value string) bool {
 }
 
 func validateTailwindCSS(tailwind TailwindCSS) error {
-	inputSet := tailwind.Input != ""
-	outputSet := tailwind.Output != ""
-	if inputSet != outputSet {
-		return fmt.Errorf(
-			"%w: tailwindcss.input and tailwindcss.output must be configured together",
-			ErrInvalid,
-		)
-	}
-	if !inputSet {
-		if tailwind.Minify {
-			return fmt.Errorf(
-				"%w: tailwindcss.minify requires tailwindcss.input and tailwindcss.output",
-				ErrInvalid,
-			)
-		}
-
+	if tailwind.Stylesheet == "" {
 		return nil
 	}
 
-	if err := validateProjectPath("tailwindcss.input", tailwind.Input); err != nil {
-		return err
-	}
-	if err := validateProjectPath("tailwindcss.output", tailwind.Output); err != nil {
+	if err := validateProjectPath("tailwindcss.stylesheet", tailwind.Stylesheet); err != nil {
 		return err
 	}
 

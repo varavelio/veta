@@ -163,8 +163,7 @@ const starterConfig = `build:
   clean: true
   debug: false
 tailwindcss:
-  input: public/styles.css
-  output: styles.css
+  stylesheet: styles.css
   minify: true
 `
 

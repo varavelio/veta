@@ -210,17 +210,6 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	}
 
 	generatedFiles := outputFiles(documents)
-	tailwindFile, hasTailwindFile, err := buildTailwindFile(
-		ctx,
-		site.Files,
-		documents,
-		toolConfig,
-		runConfig,
-	)
-	if err != nil {
-		return Result{}, err
-	}
-
 	outputDir := outputRoot(projectRoot, toolConfig.Build.Output)
 	writer, err := output.New(outputDir, output.WithClean(toolConfig.Build.Clean))
 	if err != nil {
@@ -229,14 +218,8 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	if err := writer.WriteSite(generatedFiles, site.Files); err != nil {
 		return Result{}, fmt.Errorf("write output: %w", err)
 	}
-	if hasTailwindFile {
-		overwriteWriter, err := output.New(outputDir)
-		if err != nil {
-			return Result{}, fmt.Errorf("create tailwind output writer: %w", err)
-		}
-		if err := overwriteWriter.Write([]output.File{tailwindFile}); err != nil {
-			return Result{}, fmt.Errorf("write tailwindcss output: %w", err)
-		}
+	if err := buildTailwindCSS(ctx, site.Files, outputDir, toolConfig, runConfig); err != nil {
+		return Result{}, err
 	}
 
 	return Result{
@@ -257,34 +240,34 @@ func (renderer pageTemplateRenderer) Render(name string, context any) (string, e
 	return renderer.renderer.Render(path.Join(templatesDirName, name), context)
 }
 
-// buildTailwindFile builds CSS when Tailwind CSS is enabled.
-func buildTailwindFile(
+// buildTailwindCSS builds CSS when Tailwind CSS is enabled.
+func buildTailwindCSS(
 	ctx context.Context,
 	files fs.FS,
-	documents []render.Document,
+	outputDir string,
 	toolConfig config.Config,
 	runConfig runConfig,
-) (output.File, bool, error) {
+) error {
 	if !toolConfig.TailwindCSS.Enabled() {
-		return output.File{}, false, nil
+		return nil
 	}
 
-	file, err := tailwindcss.Build(
+	stylesheet := toolConfig.TailwindCSS.Stylesheet
+	if err := tailwindcss.Build(
 		ctx,
 		files,
-		tailwindDocuments(documents),
 		tailwindcss.Config{
-			Input:  toolConfig.TailwindCSS.Input,
-			Minify: toolConfig.TailwindCSS.Minify,
-			Output: toolConfig.TailwindCSS.Output,
+			Input:   path.Join(output.PublicDirName, stylesheet),
+			Minify:  toolConfig.TailwindCSS.Minify,
+			Output:  filepath.Join(outputDir, filepath.FromSlash(stylesheet)),
+			WorkDir: outputDir,
 		},
 		runConfig.tailwindOptions...,
-	)
-	if err != nil {
-		return output.File{}, false, fmt.Errorf("build tailwindcss: %w", err)
+	); err != nil {
+		return fmt.Errorf("build tailwindcss: %w", err)
 	}
 
-	return output.File{Content: file.Content, Path: file.Path}, true, nil
+	return nil
 }
 
 // Run executes a JavaScript filter source with explicit filter arguments.
@@ -494,19 +477,6 @@ func outputFiles(documents []render.Document) []output.File {
 	}
 
 	return files
-}
-
-// tailwindDocuments converts rendered documents into Tailwind scan documents.
-func tailwindDocuments(documents []render.Document) []tailwindcss.Document {
-	tailwindDocuments := make([]tailwindcss.Document, 0, len(documents))
-	for _, document := range documents {
-		tailwindDocuments = append(tailwindDocuments, tailwindcss.Document{
-			Content: document.Content,
-			Path:    document.OutputPath,
-		})
-	}
-
-	return tailwindDocuments
 }
 
 // outputRoot returns the output directory resolved against root when relative.

@@ -223,11 +223,13 @@ func TestRunBuildsTailwindCSS(t *testing.T) {
 	writeProjectFile(t, root, "veta.yaml", `
 build:
   clean: true
+theme:
+  source: "./theme"
 tailwindcss:
-  input: public/styles.css
-  output: styles.css
+  stylesheet: styles.css
   minify: true
 `)
+	writeProjectFile(t, root, "theme/public/styles.css", `theme css`)
 	writeProjectFile(t, root, "public/styles.css", `@import "tailwindcss";`)
 	writeProjectFile(
 		t,
@@ -250,7 +252,11 @@ export default function() {
 		),
 	)
 	require.NoError(t, err)
-	require.Contains(t, readOutputFile(t, root, "dist/styles.css"), "minify=true rendered=true")
+	require.Contains(
+		t,
+		readOutputFile(t, root, "dist/styles.css"),
+		"minify=true rendered=true copied=true input=true",
+	)
 }
 
 func TestRunErrors(t *testing.T) {
@@ -322,32 +328,41 @@ func fakeTailwindBinaryContent() []byte {
 	if runtime.GOOS == "windows" {
 		return []byte(strings.Join([]string{
 			"@echo off",
+			"set in=",
 			"set out=",
 			"set minify=false",
 			":loop",
 			"if \"%1\"==\"\" goto done",
+			"if \"%1\"==\"-i\" set in=%2& shift& shift& goto loop",
 			"if \"%1\"==\"-o\" set out=%2& shift& shift& goto loop",
 			"if \"%1\"==\"--minify\" set minify=true& shift& goto loop",
 			"shift",
 			"goto loop",
 			":done",
-			"if exist veta-rendered\\index.html (set rendered=true) else (set rendered=false)",
-			"> \"%out%\" echo minify=%minify% rendered=%rendered%",
+			"if exist index.html (set rendered=true) else (set rendered=false)",
+			"if exist styles.css (set copied=true) else (set copied=false)",
+			"set input=false",
+			"if not \"%in%\"==\"\" findstr /C:\"tailwindcss\" \"%in%\" >nul && set input=true",
+			"> \"%out%\" echo minify=%minify% rendered=%rendered% copied=%copied% input=%input%",
 		}, "\r\n"))
 	}
 
 	return []byte(strings.Join([]string{
 		"#!/bin/sh",
+		"in=",
 		"out=",
 		"minify=false",
 		"while [ $# -gt 0 ]; do",
 		"  case \"$1\" in",
+		"    -i) in=\"$2\"; shift 2 ;;",
 		"    -o) out=\"$2\"; shift 2 ;;",
 		"    --minify) minify=true; shift ;;",
 		"    *) shift ;;",
 		"  esac",
 		"done",
-		"if [ -f veta-rendered/index.html ]; then rendered=true; else rendered=false; fi",
-		"printf 'minify=%s rendered=%s\\n' \"$minify\" \"$rendered\" > \"$out\"",
+		"if [ -f index.html ]; then rendered=true; else rendered=false; fi",
+		"if [ -f styles.css ]; then copied=true; else copied=false; fi",
+		"if [ -n \"$in\" ] && grep -q 'tailwindcss' \"$in\"; then input=true; else input=false; fi",
+		"printf 'minify=%s rendered=%s copied=%s input=%s\\n' \"$minify\" \"$rendered\" \"$copied\" \"$input\" > \"$out\"",
 	}, "\n"))
 }

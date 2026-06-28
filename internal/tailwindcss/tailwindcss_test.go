@@ -17,22 +17,34 @@ import (
 func TestBuild(t *testing.T) {
 	cacheDir := t.TempDir()
 	binary := fakeBinary(t)
+	workDir := t.TempDir()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(workDir, "index.html"),
+		[]byte(`<main class="text-blue-500"></main>`),
+		0o644,
+	))
 
-	file, err := Build(
+	err := Build(
 		context.Background(),
 		fstest.MapFS{
-			"styles/app.css":       {Data: []byte(`@import "tailwindcss";`)},
+			"public/styles.css":    {Data: []byte(`@import "tailwindcss";`)},
 			"templates/base.pongo": {Data: []byte(`<div class="text-red-500"></div>`)},
 		},
-		[]Document{{Content: []byte(`<main class="text-blue-500"></main>`), Path: "index.html"}},
-		Config{Input: "styles/app.css", Minify: true, Output: "assets/app.css"},
+		Config{
+			Input:   "public/styles.css",
+			Minify:  true,
+			Output:  "assets/app.css",
+			WorkDir: workDir,
+		},
 		WithBinary(binary),
 		WithCacheDir(cacheDir),
 	)
 	require.NoError(t, err)
-	require.Equal(t, "assets/app.css", file.Path)
-	require.Contains(t, string(file.Content), "minify=true")
-	require.Contains(t, string(file.Content), "rendered=true")
+	content, err := os.ReadFile(filepath.Join(workDir, "assets", "app.css"))
+	require.NoError(t, err)
+	require.Contains(t, string(content), "minify=true")
+	require.Contains(t, string(content), "rendered=true")
+	require.Contains(t, string(content), "input=true")
 	require.FileExists(t, filepath.Join(cacheDir, Version, binary.Name))
 }
 
@@ -43,11 +55,10 @@ func TestBuildRewritesInvalidCachedBinary(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(cachedPath), 0o755))
 	require.NoError(t, os.WriteFile(cachedPath, []byte("bad"), 0o755))
 
-	_, err := Build(
+	err := Build(
 		context.Background(),
-		fstest.MapFS{"styles/app.css": {Data: []byte(`@import "tailwindcss";`)}},
-		nil,
-		Config{Input: "styles/app.css", Output: "assets/app.css"},
+		fstest.MapFS{"public/styles.css": {Data: []byte(`@import "tailwindcss";`)}},
+		Config{Input: "public/styles.css", Output: "assets/app.css", WorkDir: t.TempDir()},
 		WithBinary(binary),
 		WithCacheDir(cacheDir),
 	)
@@ -59,32 +70,45 @@ func TestBuildRewritesInvalidCachedBinary(t *testing.T) {
 }
 
 func TestBuildErrors(t *testing.T) {
-	_, err := Build(context.Background(), nil, nil, Config{})
+	err := Build(context.Background(), nil, Config{})
 	require.ErrorIs(t, err, ErrConfigInvalid)
 
-	_, err = Build(
+	err = Build(
 		context.Background(),
 		fstest.MapFS{},
-		nil,
-		Config{Input: "", Output: "app.css"},
+		Config{Input: "", Output: "app.css", WorkDir: t.TempDir()},
 		WithExecutablePath("tailwindcss"),
 	)
 	require.ErrorIs(t, err, ErrConfigInvalid)
 
-	_, err = Build(
+	err = Build(
 		context.Background(),
 		fstest.MapFS{},
-		nil,
-		Config{Input: "../app.css", Output: "app.css"},
+		Config{Input: "../app.css", Output: "app.css", WorkDir: t.TempDir()},
 		WithExecutablePath("tailwindcss"),
 	)
 	require.ErrorIs(t, err, ErrConfigInvalid)
 
-	_, err = Build(
+	err = Build(
 		context.Background(),
 		fstest.MapFS{},
-		nil,
-		Config{Input: "app.css", Output: "app.css"},
+		Config{Input: "app.css", Output: "", WorkDir: t.TempDir()},
+		WithExecutablePath("tailwindcss"),
+	)
+	require.ErrorIs(t, err, ErrConfigInvalid)
+
+	err = Build(
+		context.Background(),
+		fstest.MapFS{},
+		Config{Input: "app.css", Output: "app.css", WorkDir: ""},
+		WithExecutablePath("tailwindcss"),
+	)
+	require.ErrorIs(t, err, ErrConfigInvalid)
+
+	err = Build(
+		context.Background(),
+		fstest.MapFS{},
+		Config{Input: "app.css", Output: "app.css", WorkDir: t.TempDir()},
 		WithCacheDir(""),
 	)
 	require.ErrorIs(t, err, ErrCacheDirInvalid)
@@ -98,11 +122,10 @@ func TestRunFailure(t *testing.T) {
 	require.NoError(t, file.Close())
 	require.NoError(t, os.Chmod(file.Name(), 0o755))
 
-	_, err = Build(
+	err = Build(
 		context.Background(),
-		fstest.MapFS{"styles/app.css": {Data: []byte(`@import "tailwindcss";`)}},
-		nil,
-		Config{Input: "styles/app.css", Output: "assets/app.css"},
+		fstest.MapFS{"public/styles.css": {Data: []byte(`@import "tailwindcss";`)}},
+		Config{Input: "public/styles.css", Output: "assets/app.css", WorkDir: t.TempDir()},
 		WithExecutablePath(file.Name()),
 	)
 	require.ErrorIs(t, err, ErrRunFailed)
@@ -125,33 +148,40 @@ func fakeBinaryContent() []byte {
 	if runtime.GOOS == "windows" {
 		return []byte(strings.Join([]string{
 			"@echo off",
+			"set in=",
 			"set out=",
 			"set minify=false",
 			":loop",
 			"if \"%1\"==\"\" goto done",
+			"if \"%1\"==\"-i\" set in=%2& shift& shift& goto loop",
 			"if \"%1\"==\"-o\" set out=%2& shift& shift& goto loop",
 			"if \"%1\"==\"--minify\" set minify=true& shift& goto loop",
 			"shift",
 			"goto loop",
 			":done",
-			"if exist veta-rendered\\index.html (set rendered=true) else (set rendered=false)",
-			"> \"%out%\" echo minify=%minify% rendered=%rendered%",
+			"if exist index.html (set rendered=true) else (set rendered=false)",
+			"set input=false",
+			"if not \"%in%\"==\"\" findstr /C:\"tailwindcss\" \"%in%\" >nul && set input=true",
+			"> \"%out%\" echo minify=%minify% rendered=%rendered% input=%input%",
 		}, "\r\n"))
 	}
 
 	return []byte(strings.Join([]string{
 		"#!/bin/sh",
+		"in=",
 		"out=",
 		"minify=false",
 		"while [ $# -gt 0 ]; do",
 		"  case \"$1\" in",
+		"    -i) in=\"$2\"; shift 2 ;;",
 		"    -o) out=\"$2\"; shift 2 ;;",
 		"    --minify) minify=true; shift ;;",
 		"    *) shift ;;",
 		"  esac",
 		"done",
-		"if [ -f veta-rendered/index.html ]; then rendered=true; else rendered=false; fi",
-		"printf 'minify=%s rendered=%s\\n' \"$minify\" \"$rendered\" > \"$out\"",
+		"if [ -f index.html ]; then rendered=true; else rendered=false; fi",
+		"if [ -n \"$in\" ] && grep -q 'tailwindcss' \"$in\"; then input=true; else input=false; fi",
+		"printf 'minify=%s rendered=%s input=%s\\n' \"$minify\" \"$rendered\" \"$input\" > \"$out\"",
 	}, "\n"))
 }
 

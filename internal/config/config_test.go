@@ -21,8 +21,7 @@ theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
   sha256: " 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef "
 tailwindcss:
-  input: " public/css/app.css "
-  output: " dist/css/app.css "
+  stylesheet: " css/app.css "
   minify: true
 `)},
 		}
@@ -38,8 +37,7 @@ tailwindcss:
 			"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 			config.Theme.SHA256,
 		)
-		require.Equal(t, "public/css/app.css", config.TailwindCSS.Input)
-		require.Equal(t, "dist/css/app.css", config.TailwindCSS.Output)
+		require.Equal(t, "css/app.css", config.TailwindCSS.Stylesheet)
 		require.Equal(t, true, config.TailwindCSS.Minify)
 		require.True(t, config.Theme.Enabled())
 		require.True(t, config.TailwindCSS.Enabled())
@@ -151,12 +149,22 @@ build:
 			name: "tailwind only",
 			content: `
 tailwindcss:
-  input: public/css/app.css
-  output: dist/css/app.css
+  stylesheet: css/app.css
 `,
 			want: Config{
 				Build:       Build{Output: DefaultBuildOutput},
-				TailwindCSS: TailwindCSS{Input: "public/css/app.css", Output: "dist/css/app.css"},
+				TailwindCSS: TailwindCSS{Stylesheet: "css/app.css"},
+			},
+		},
+		{
+			name: "tailwind minify without stylesheet",
+			content: `
+tailwindcss:
+  minify: true
+`,
+			want: Config{
+				Build:       Build{Output: DefaultBuildOutput},
+				TailwindCSS: TailwindCSS{Minify: true},
 			},
 		},
 	}
@@ -203,8 +211,7 @@ theme:
   source: ./theme
 ---
 tailwindcss:
-  input: public/app.css
-  output: dist/app.css
+  stylesheet: app.css
 `,
 		},
 	}
@@ -224,44 +231,18 @@ func TestTailwindValidation(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "input without output",
+			name: "absolute stylesheet",
 			content: `
 tailwindcss:
-  input: public/app.css
-`,
-			wantErr: ErrInvalid,
-		},
-		{
-			name: "output without input",
-			content: `
-tailwindcss:
-  output: dist/app.css
-`,
-			wantErr: ErrInvalid,
-		},
-		{
-			name: "minify without input output",
-			content: `
-tailwindcss:
-  minify: true
-`,
-			wantErr: ErrInvalid,
-		},
-		{
-			name: "absolute input",
-			content: `
-tailwindcss:
-  input: /public/app.css
-  output: dist/app.css
+  stylesheet: /app.css
 `,
 			wantErr: ErrPathInvalid,
 		},
 		{
-			name: "parent traversal output",
+			name: "parent traversal stylesheet",
 			content: `
 tailwindcss:
-  input: public/app.css
-  output: ../dist/app.css
+  stylesheet: ../app.css
 `,
 			wantErr: ErrPathInvalid,
 		},
@@ -269,8 +250,7 @@ tailwindcss:
 			name: "windows volume path",
 			content: `
 tailwindcss:
-  input: C:\public\app.css
-  output: dist/app.css
+  stylesheet: C:\public\app.css
 `,
 			wantErr: ErrPathInvalid,
 		},

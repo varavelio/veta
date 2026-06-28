@@ -14,25 +14,12 @@ import (
 	"strings"
 )
 
-const renderedDirName = "veta-rendered"
-
-// Config contains Tailwind CSS input and output settings.
+// Config contains Tailwind CSS build settings.
 type Config struct {
-	Input  string
-	Minify bool
-	Output string
-}
-
-// Document is a rendered page available to Tailwind for class scanning.
-type Document struct {
-	Content []byte
-	Path    string
-}
-
-// File is a generated Tailwind CSS output file.
-type File struct {
-	Content []byte
-	Path    string
+	Input   string
+	Minify  bool
+	Output  string
+	WorkDir string
 }
 
 // Option configures Tailwind CSS builds.
@@ -62,83 +49,56 @@ func WithStdout(writer io.Writer) Option {
 	}
 }
 
-// Build runs Tailwind CSS and returns the generated CSS output file.
+// Build runs Tailwind CSS and writes the generated CSS output file.
 func Build(
 	ctx context.Context,
 	files fs.FS,
-	documents []Document,
 	config Config,
 	options ...Option,
-) (File, error) {
+) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if files == nil {
-		return File{}, fmt.Errorf("%w: filesystem is required", ErrConfigInvalid)
+		return fmt.Errorf("%w: filesystem is required", ErrConfigInvalid)
 	}
 
 	buildConfig, err := newBuildConfig(options)
 	if err != nil {
-		return File{}, err
+		return err
 	}
-	inputPath, outputPath, err := cleanConfigPaths(config)
+	inputPath, outputPath, workDir, err := cleanConfigPaths(config)
 	if err != nil {
-		return File{}, err
+		return err
 	}
 	executable, err := executablePath(buildConfig)
 	if err != nil {
-		return File{}, err
+		return err
 	}
 
-	tempDir, err := os.MkdirTemp("", "veta-tailwind-*")
+	inputContent, err := readInputFile(files, inputPath)
 	if err != nil {
-		return File{}, fmt.Errorf("create tailwindcss workspace: %w", err)
+		return err
 	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	inputFile, cleanup, err := materializeInputFile(inputContent, outputPath)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
 
-	sourceRoot := filepath.Join(tempDir, "source")
-	if err := materializeFS(files, sourceRoot); err != nil {
-		return File{}, err
-	}
-	if err := materializeDocuments(
-		documents,
-		filepath.Join(sourceRoot, renderedDirName),
-	); err != nil {
-		return File{}, err
-	}
-
-	inputFile := filepath.Join(sourceRoot, filepath.FromSlash(inputPath))
-	if info, err := os.Stat(inputFile); err != nil {
-		return File{}, fmt.Errorf("%w: tailwindcss.input %s: %w", ErrConfigInvalid, inputPath, err)
-	} else if info.IsDir() {
-		return File{}, fmt.Errorf(
-			"%w: tailwindcss.input %s is a directory",
-			ErrConfigInvalid,
-			inputPath,
-		)
-	}
-
-	generatedFile := filepath.Join(tempDir, "generated.css")
 	if err := runTailwind(
 		ctx,
 		executable,
-		sourceRoot,
+		workDir,
 		inputFile,
-		generatedFile,
+		outputPath,
 		config.Minify,
 		buildConfig,
 	); err != nil {
-		return File{}, err
+		return err
 	}
 
-	content, err := os.ReadFile(generatedFile)
-	if err != nil {
-		return File{}, fmt.Errorf("read tailwindcss output: %w", err)
-	}
-
-	return File{Content: content, Path: outputPath}, nil
+	return nil
 }
 
 // newBuildConfig applies options and defaults.
@@ -156,18 +116,22 @@ func newBuildConfig(options []Option) (buildConfig, error) {
 	return config, nil
 }
 
-// cleanConfigPaths validates Tailwind input and output paths.
-func cleanConfigPaths(config Config) (string, string, error) {
+// cleanConfigPaths validates Tailwind input, output, and working directory paths.
+func cleanConfigPaths(config Config) (string, string, string, error) {
 	inputPath, err := cleanRelativePath(config.Input)
 	if err != nil {
-		return "", "", fmt.Errorf("%w: tailwindcss.input: %w", ErrConfigInvalid, err)
+		return "", "", "", fmt.Errorf("%w: tailwindcss input: %w", ErrConfigInvalid, err)
 	}
-	outputPath, err := cleanRelativePath(config.Output)
+	workDir, err := cleanWorkDir(config.WorkDir)
 	if err != nil {
-		return "", "", fmt.Errorf("%w: tailwindcss.output: %w", ErrConfigInvalid, err)
+		return "", "", "", err
+	}
+	outputPath, err := cleanOutputPath(config.Output, workDir)
+	if err != nil {
+		return "", "", "", err
 	}
 
-	return inputPath, outputPath, nil
+	return inputPath, outputPath, workDir, nil
 }
 
 // runTailwind runs the standalone Tailwind CSS executable.
@@ -206,56 +170,6 @@ func runTailwind(
 	return nil
 }
 
-// materializeFS copies files into root.
-func materializeFS(files fs.FS, root string) error {
-	return fs.WalkDir(files, ".", func(name string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if name == "." {
-			return os.MkdirAll(root, 0o755)
-		}
-
-		target := filepath.Join(root, filepath.FromSlash(name))
-		if entry.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-
-		content, err := fs.ReadFile(files, name)
-		if err != nil {
-			return fmt.Errorf("read tailwindcss source %s: %w", name, err)
-		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return fmt.Errorf("create tailwindcss source parent %s: %w", name, err)
-		}
-		if err := os.WriteFile(target, content, 0o644); err != nil {
-			return fmt.Errorf("write tailwindcss source %s: %w", name, err)
-		}
-
-		return nil
-	})
-}
-
-// materializeDocuments writes rendered documents for Tailwind class scanning.
-func materializeDocuments(documents []Document, root string) error {
-	for _, document := range documents {
-		cleanPath, err := cleanRelativePath(document.Path)
-		if err != nil {
-			return fmt.Errorf("%w: rendered document %q: %w", ErrConfigInvalid, document.Path, err)
-		}
-
-		target := filepath.Join(root, filepath.FromSlash(cleanPath))
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return fmt.Errorf("create rendered document parent %s: %w", cleanPath, err)
-		}
-		if err := os.WriteFile(target, document.Content, 0o644); err != nil {
-			return fmt.Errorf("write rendered document %s: %w", cleanPath, err)
-		}
-	}
-
-	return nil
-}
-
 // cleanRelativePath validates a slash-separated relative file path.
 func cleanRelativePath(name string) (string, error) {
 	rawName := strings.TrimSpace(name)
@@ -275,6 +189,106 @@ func cleanRelativePath(name string) (string, error) {
 	}
 
 	return cleanPath, nil
+}
+
+// cleanWorkDir validates and normalizes the Tailwind scan directory.
+func cleanWorkDir(name string) (string, error) {
+	workDir := strings.TrimSpace(name)
+	if workDir == "" || strings.ContainsRune(workDir, 0) {
+		return "", fmt.Errorf("%w: tailwindcss work directory is invalid", ErrConfigInvalid)
+	}
+	workDir = normalizeFilesystemPath(workDir)
+	info, err := os.Stat(workDir)
+	if err != nil {
+		return "", fmt.Errorf(
+			"%w: tailwindcss work directory %s: %w",
+			ErrConfigInvalid,
+			workDir,
+			err,
+		)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf(
+			"%w: tailwindcss work directory %s is not a directory",
+			ErrConfigInvalid,
+			workDir,
+		)
+	}
+
+	return workDir, nil
+}
+
+// cleanOutputPath validates and normalizes the generated CSS path.
+func cleanOutputPath(name, workDir string) (string, error) {
+	outputPath := strings.TrimSpace(name)
+	if outputPath == "" || strings.ContainsRune(outputPath, 0) {
+		return "", fmt.Errorf("%w: tailwindcss output is invalid", ErrConfigInvalid)
+	}
+	if !filepath.IsAbs(outputPath) {
+		outputPath = filepath.Join(workDir, outputPath)
+	}
+	outputPath = filepath.Clean(outputPath)
+	if info, err := os.Stat(outputPath); err == nil && info.IsDir() {
+		return "", fmt.Errorf(
+			"%w: tailwindcss output %s is a directory",
+			ErrConfigInvalid,
+			outputPath,
+		)
+	} else if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("%w: tailwindcss output %s: %w", ErrConfigInvalid, outputPath, err)
+	}
+
+	return outputPath, nil
+}
+
+// readInputFile reads the configured Tailwind input from files.
+func readInputFile(files fs.FS, inputPath string) ([]byte, error) {
+	info, err := fs.Stat(files, inputPath)
+	if err != nil {
+		return nil, fmt.Errorf("%w: tailwindcss input %s: %w", ErrConfigInvalid, inputPath, err)
+	}
+	if info.IsDir() {
+		return nil, fmt.Errorf(
+			"%w: tailwindcss input %s is a directory",
+			ErrConfigInvalid,
+			inputPath,
+		)
+	}
+
+	content, err := fs.ReadFile(files, inputPath)
+	if err != nil {
+		return nil, fmt.Errorf("read tailwindcss input %s: %w", inputPath, err)
+	}
+
+	return content, nil
+}
+
+// materializeInputFile writes the Tailwind input next to the configured output.
+func materializeInputFile(content []byte, outputPath string) (string, func(), error) {
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return "", nil, fmt.Errorf("create tailwindcss output parent: %w", err)
+	}
+
+	file, err := os.CreateTemp(outputDir, ".veta-tailwind-input-*.css")
+	if err != nil {
+		return "", nil, fmt.Errorf("create tailwindcss input: %w", err)
+	}
+	path := file.Name()
+	cleanup := func() {
+		_ = os.Remove(path)
+	}
+	if _, err := file.Write(content); err != nil {
+		_ = file.Close()
+		cleanup()
+		return "", nil, fmt.Errorf("write tailwindcss input: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("close tailwindcss input: %w", err)
+	}
+
+	return path, cleanup, nil
 }
 
 // hasWindowsVolumeName reports whether a path starts with a Windows drive name.
