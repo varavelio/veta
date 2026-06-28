@@ -111,7 +111,6 @@ func TestRunInitCommand(t *testing.T) {
 		"filters",
 		"pages",
 		"public",
-		"styles",
 		"templates",
 	} {
 		require.DirExists(t, filepath.Join(root, directory))
@@ -123,7 +122,7 @@ func TestRunInitCommand(t *testing.T) {
 		"templates/base.pongo",
 		"components/card.pongo",
 		"filters/uppercase.js",
-		"styles/app.css",
+		"public/styles.css",
 		"public/robots.txt",
 	} {
 		require.FileExists(t, filepath.Join(root, filepath.FromSlash(file)))

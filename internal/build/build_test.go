@@ -226,17 +226,16 @@ func TestRunBuildsTailwindCSS(t *testing.T) {
 build:
   clean: true
 tailwindcss:
-  input: styles/app.css
-  output: app.css
+  input: public/styles.css
+  output: styles.css
   minify: true
 `)
-	writeProjectFile(t, root, "styles/app.css", `@import "tailwindcss";`)
-	writeProjectFile(t, root, "public/app.css", `public css`)
+	writeProjectFile(t, root, "public/styles.css", `@import "tailwindcss";`)
 	writeProjectFile(
 		t,
 		root,
 		"templates/base.pongo",
-		`<html><head><link href="/app.css" rel="stylesheet"></head><body>{{ page.content }}</body></html>`,
+		`<html><head><link href="/styles.css" rel="stylesheet"></head><body>{{ page.content }}</body></html>`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
@@ -253,7 +252,7 @@ export default function() {
 		),
 	)
 	require.NoError(t, err)
-	require.Contains(t, readOutputFile(t, root, "dist/app.css"), "minify=true rendered=true")
+	require.Contains(t, readOutputFile(t, root, "dist/styles.css"), "minify=true rendered=true")
 }
 
 func TestRunErrors(t *testing.T) {
