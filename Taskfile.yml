@@ -23,6 +23,7 @@ tasks:
       - task: deps
       - task: format
       - task: test
+      - task: test:e2e
       - task: lint
       - task: build
 
@@ -53,3 +54,7 @@ tasks:
     cmds:
       - go test ./...
       - go test -race ./...
+
+  test:e2e:
+    desc: Run end-to-end tests
+    cmd: go test -tags=e2e -count=1 ./e2e
