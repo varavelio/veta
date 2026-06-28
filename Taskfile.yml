@@ -27,6 +27,10 @@ tasks:
       - task: lint
       - task: build
 
+  install:
+    desc: Install the project locally (using go install)
+    cmd: go install ./cmd/veta/.
+
   build:
     desc: Build the project locally
     cmd: go build -o ./dist/veta ./cmd/veta/.
