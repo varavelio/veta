@@ -5,7 +5,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const https = require("node:https");
 const path = require("node:path");
-const checksums = require("./checksums.json");
+const manifest = require("./manifest.json");
 
 const PLATFORM_MAP = {
   darwin: "darwin",
@@ -83,17 +83,31 @@ function getDownloadURL() {
 }
 
 /**
- * Verifies an archive buffer against the checksum embedded in this npm package.
+ * Returns the release artifact metadata for filename.
+ * @param {string} filename Expected release archive filename.
+ * @returns {{ sha256: string }} Release artifact metadata.
+ */
+function getManifestArtifact(filename) {
+  if (!Array.isArray(manifest.artifacts)) {
+    throw new Error("Release manifest is missing artifacts.");
+  }
+
+  const artifact = manifest.artifacts.find((item) => item.name === filename);
+  if (!artifact || !artifact.sha256) {
+    throw new Error(`Release manifest does not include ${filename}.`);
+  }
+
+  return artifact;
+}
+
+/**
+ * Verifies an archive buffer against the checksum embedded in this npm package manifest.
  * @param {Buffer} archiveBuffer Downloaded archive bytes.
- * @param {string} filename Expected filename in embedded checksums.
+ * @param {string} filename Expected release archive filename.
  * @returns {void}
  */
 function verifyChecksum(archiveBuffer, filename) {
-  const expectedHash = checksums[filename];
-  if (!expectedHash) {
-    throw new Error(`Checksum for ${filename} was not embedded in this npm package.`);
-  }
-
+  const expectedHash = getManifestArtifact(filename).sha256;
   const actualHash = crypto.createHash("sha256").update(archiveBuffer).digest("hex");
   if (expectedHash !== actualHash) {
     throw new Error(

@@ -23,9 +23,9 @@
   },
   "files": [
     "bin.js",
-    "checksums.json",
     "install.js",
     "index.js",
+    "manifest.json",
     "package.json",
     "README.md"
   ],
