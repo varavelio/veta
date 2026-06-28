@@ -138,11 +138,11 @@ func runVeta(t *testing.T, workDir string, args ...string) commandResult {
 	}
 }
 
-// copyFixtureProject copies one test fixture project into a temporary directory.
-func copyFixtureProject(t *testing.T, name string) string {
+// copyTestProject copies one e2e test project into a temporary directory.
+func copyTestProject(t *testing.T, name string) string {
 	t.Helper()
 
-	source := filepath.Join(repositoryRoot, "e2e", "testdata", "cases", name, "project")
+	source := filepath.Join(repositoryRoot, "e2e", "tests", name)
 	destination := filepath.Join(t.TempDir(), name)
 	copyDir(t, source, destination)
 

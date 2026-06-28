@@ -3,6 +3,8 @@
 package e2e
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,7 +13,7 @@ import (
 
 // TestBuildsRichProjectFixture verifies the core features working together.
 func TestBuildsRichProjectFixture(t *testing.T) {
-	projectRoot := copyFixtureProject(t, "rich-site")
+	projectRoot := copyTestProject(t, "rich-site")
 
 	result := runVeta(t, projectRoot, "build")
 	result.requireSuccess(t)
@@ -43,4 +45,48 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	styles := readProjectFile(t, projectRoot, "dist/styles.css")
 	require.NotContains(t, styles, `@import "tailwindcss"`)
 	require.Greater(t, len(styles), 100)
+}
+
+// TestBuildDiscoversConfigFromNestedDirectory verifies root discovery and output cleanup.
+func TestBuildDiscoversConfigFromNestedDirectory(t *testing.T) {
+	projectRoot := copyTestProject(t, "nested-config")
+	nestedDir := filepath.Join(projectRoot, "content", "docs")
+	require.NoError(t, os.MkdirAll(nestedDir, 0o755))
+	writeProjectFile(t, projectRoot, "site-output/stale.txt", "stale")
+
+	result := runVeta(t, nestedDir, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Built 2 page(s)")
+
+	index := readProjectFile(t, projectRoot, "site-output/index.html")
+	require.Contains(t, index, `<body data-page="/">`)
+	require.Contains(t, index, `<a href="/docs/getting-started/">Docs</a>`)
+	require.Contains(t, index, `<h1>Nested Config Site</h1>`)
+
+	docs := readProjectFile(t, projectRoot, "site-output/docs/getting-started/index.html")
+	require.Contains(t, docs, `<body data-page="/docs/getting-started/">`)
+	require.Contains(t, docs, `<p>Nested config works.</p>`)
+	require.Equal(t, "nested asset\n", readProjectFile(t, projectRoot, "site-output/asset.txt"))
+	requirePathMissing(t, filepath.Join(projectRoot, "site-output", "stale.txt"))
+}
+
+// TestBuildComposesLocalThemeWithProjectOverrides verifies theme composition end-to-end.
+func TestBuildComposesLocalThemeWithProjectOverrides(t *testing.T) {
+	projectRoot := copyTestProject(t, "theme-overrides")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Built 2 page(s)")
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, "Theme brand: Base Theme")
+	require.Contains(t, index, "Project: Theme Override Site")
+	require.Contains(t, index, `<div class="project-badge"><p>Project component</p>`)
+	require.NotContains(t, index, "theme-badge")
+
+	themeOnly := readProjectFile(t, projectRoot, "dist/theme-only/index.html")
+	require.Contains(t, themeOnly, `<section data-template="theme-only">`)
+	require.Contains(t, themeOnly, `<p>Theme template page</p>`)
+	require.Equal(t, "project asset\n", readProjectFile(t, projectRoot, "dist/theme.txt"))
+	require.Equal(t, "theme only asset\n", readProjectFile(t, projectRoot, "dist/theme-only.txt"))
 }
