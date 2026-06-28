@@ -42,6 +42,13 @@ You MUST follow the following instructions:
 - `internal/build` owns orchestrating one full build by discovering the Veta config from the working directory or an explicit config path, deriving the project root from that config file, and wiring internal packages together through adapters. It must not absorb package-specific logic from config, theme, data, pages, templates, components, filters, Markdown, rendering, or output.
 - `internal/cli` owns command selection, flag parsing, help text, human-facing command errors, and delegation to application workflows. Build behavior flags such as output directory, clean mode, and debug mode belong in `veta.yaml`, not the CLI. It must not load site files, render content, resolve themes, scaffold starter files, or write build output directly.
 
+## Release & Distribution
+
+- `scripts/release` owns local release artifact generation only: cross-compiling the CLI, injecting `internal/version` metadata, writing archives, and producing `checksums.txt` in `dist/`. It must not publish releases, copy installers into `dist/`, or talk to package registries.
+- GitHub Releases are the canonical source for published Veta binaries. Docker, Homebrew, and standalone installers should download release assets from GitHub Releases and verify `checksums.txt` rather than rebuilding Veta. The npm package should embed the release checksums generated from those assets and publish through npm trusted publishing/provenance, not long-lived npm tokens.
+- `integrations/installers` owns distribution-channel wrappers and installer scripts. Keep channel-specific logic there, and do not move registry publishing, image publishing, or Homebrew tap updates into core `internal` packages.
+- Release workflow jobs that need the project toolchain should run inside the existing devcontainer instead of recreating Go, Task, dprint, or lint tooling directly in GitHub Actions.
+
 ## Testing & Quality
 
 - Before considering any task complete, run `task ci`, which executes all project checks.
