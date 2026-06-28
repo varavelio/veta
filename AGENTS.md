@@ -44,8 +44,8 @@ You MUST follow the following instructions:
 
 ## Release & Distribution
 
-- `scripts/release` owns local release artifact generation only: cross-compiling the CLI, injecting `internal/version` metadata, writing archives, and producing `checksums.txt` in `dist/`. It must not publish releases, copy installers into `dist/`, or talk to package registries.
-- GitHub Releases are the canonical source for published Veta binaries. Docker, Homebrew, and standalone installers should download release assets from GitHub Releases and verify `checksums.txt` rather than rebuilding Veta. The npm package should embed the release checksums generated from those assets and publish through npm trusted publishing/provenance, not long-lived npm tokens.
+- `scripts/release` owns local release artifact generation only: cross-compiling the CLI, injecting `internal/version` metadata, writing archives, and producing `manifest.json` plus `checksums.txt` in `dist/`. It must not publish releases, copy installers into `dist/`, or talk to package registries.
+- GitHub Releases are the canonical source for published Veta binaries. Docker, Homebrew, and standalone installers should download release assets from GitHub Releases and verify release integrity rather than rebuilding Veta. The npm package should embed the release manifest generated from those assets and publish through npm trusted publishing/provenance, not long-lived npm tokens.
 - `integrations/installers` owns distribution-channel wrappers and installer scripts. Keep channel-specific logic there, and do not move registry publishing, image publishing, or Homebrew tap updates into core `internal` packages.
 - Release workflow jobs that need the project toolchain should run inside the existing devcontainer instead of recreating Go, Task, dprint, or lint tooling directly in GitHub Actions.
 
