@@ -86,8 +86,8 @@ func starterFiles() []fileSpec {
 		{Path: "data/site.json", Content: starterData},
 		{Path: "pages/site.js", Content: starterPages},
 		{Path: "templates/base.pongo", Content: starterTemplate},
-		{Path: "components/card.pongo", Content: starterComponent},
-		{Path: "filters/uppercase.js", Content: starterFilter},
+		{Path: "components/note.pongo", Content: starterComponent},
+		{Path: "filters/label.js", Content: starterFilter},
 		{Path: "public/styles.css", Content: starterStyles},
 		{Path: "public/robots.txt", Content: starterRobots},
 	}
@@ -158,75 +158,90 @@ func filePaths(files []fileSpec) []string {
 	return paths
 }
 
-const starterConfig = `build:
-  output: dist
-  clean: true
-  debug: false
+const starterConfig = `# Veta configuration file.
+# Read more: https://veta.varavel.com/config
+
+build:
+  output: dist # Directory where Veta writes the generated site.
+  clean: true # Remove the output directory before each build.
+  debug: false # When true, disables template caching and prints debug details.
+
 tailwindcss:
-  stylesheet: styles.css
-  minify: true
+  stylesheet: styles.css # Compile public/styles.css into dist/styles.css.
+  minify: true # Minify the generated stylesheet.
+
+# theme:
+#   source: "" # Local theme path or GitHub source. Docs: https://veta.varavel.com/themes
+#   sha256: "" # Required SHA-256 checksum for remote themes.
 `
 
 const starterData = `{
-  "title": "Veta Starter",
-  "description": "A small site generated with Veta."
+  "name": "Veta Starter",
+  "description": "A tiny site generated with Veta."
 }
 `
 
-const starterPages = "export default function({ data }) {\n" +
+const starterPages = "// Pages are plain JavaScript. Docs: https://veta.varavel.com/pages\n" +
+	"// You can read local files with Veta.files or request data with Veta.httpClient.\n" +
+	"export default function({ data }) {\n" +
 	"  return [\n" +
 	"    {\n" +
 	"      permalink: \"/\",\n" +
 	"      template: \"base\",\n" +
-	"      title: data.site.title,\n" +
-	"      navOrder: 1,\n" +
-	"      content: \"<card>Build something fast with **Veta**.</card>\",\n" +
+	"      title: \"Home\",\n" +
+	"      content: \"<note>A tiny site generated with **Veta**.</note>\",\n" +
 	"    },\n" +
 	"    {\n" +
 	"      permalink: \"/about/\",\n" +
 	"      template: \"base\",\n" +
 	"      title: \"About\",\n" +
-	"      navOrder: 2,\n" +
-	"      content: \"# About\\n\\nThis page was generated from pages/site.js.\",\n" +
+	"      content: \"This page was generated from `pages/site.js`.\",\n" +
 	"    },\n" +
 	"  ];\n" +
 	"}\n"
 
-const starterTemplate = `<!doctype html>
+const starterTemplate = `{# Templates render pages. Docs: https://veta.varavel.com/templates #}
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ data.site.description }}">
-    <title>{{ page.title }} - {{ data.site.title }}</title>
+    <title>{{ page.title }} - {{ data.site.name }}</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
-  <body class="min-h-screen bg-zinc-950 text-zinc-100">
-    <header class="border-b border-white/10 px-6 py-4">
-      <nav class="mx-auto flex max-w-5xl gap-4">
-        {% for item in pages %}
-          <a class="text-sm text-zinc-300 hover:text-white" href="{{ item.permalink }}">{{ item.title }}</a>
-        {% endfor %}
-      </nav>
-    </header>
-    <main class="mx-auto max-w-5xl px-6 py-16">
-      {{ page.content }}
+  <body class="mx-auto max-w-2xl px-6 py-10 text-zinc-950">
+    <nav class="mb-10 flex gap-4 text-sm">
+      {% for item in pages %}
+        <a class="text-zinc-600 hover:text-zinc-950" href="{{ item.permalink }}">{{ item.title }}</a>
+      {% endfor %}
+    </nav>
+
+    <main>
+      <p class="text-sm text-zinc-500">{{ data.site.name|label }}</p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight">{{ page.title }}</h1>
+      <div class="mt-6 leading-7">
+        {{ page.content }}
+      </div>
     </main>
   </body>
 </html>
 `
 
-const starterComponent = `<section class="rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/30">
+const starterComponent = `{# Components are custom content tags. Docs: https://veta.varavel.com/components #}
+<aside class="rounded border border-zinc-200 bg-zinc-50 p-4">
   {{ props.content }}
-</section>
+</aside>
 `
 
-const starterFilter = `export default function(input) {
-  return String(input).toUpperCase();
+const starterFilter = `// Filters transform values inside templates. Docs: https://veta.varavel.com/filters
+export default function(input) {
+  return ` + "`Site: ${String(input)}`" + `;
 }
 `
 
-const starterStyles = `@import "tailwindcss";
+const starterStyles = `/* Tailwind CSS entrypoint. Docs: https://veta.varavel.com/tailwindcss */
+@import "tailwindcss";
 `
 
 const starterRobots = `User-agent: *

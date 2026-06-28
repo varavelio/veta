@@ -120,8 +120,8 @@ func TestRunInitCommand(t *testing.T) {
 		"data/site.json",
 		"pages/site.js",
 		"templates/base.pongo",
-		"components/card.pongo",
-		"filters/uppercase.js",
+		"components/note.pongo",
+		"filters/label.js",
 		"public/styles.css",
 		"public/robots.txt",
 	} {

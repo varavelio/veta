@@ -22,12 +22,21 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	require.FileExists(t, filepath.Join(projectRoot, "veta.yaml"))
 	require.FileExists(t, filepath.Join(projectRoot, "public", "styles.css"))
 	requirePathMissing(t, filepath.Join(projectRoot, "styles"))
-	require.Contains(t, readProjectFile(t, projectRoot, "veta.yaml"), "stylesheet: styles.css")
+	config := readProjectFile(t, projectRoot, "veta.yaml")
+	require.Contains(t, config, "# Veta configuration file.")
+	require.Contains(t, config, "https://veta.varavel.com/config")
+	require.Contains(t, config, "stylesheet: styles.css")
+	require.Contains(t, config, "# theme:")
+	require.NotContains(t, config, "input: public/styles.css")
+	require.NotContains(t, config, "output: styles.css")
 	require.Equal(
 		t,
-		"@import \"tailwindcss\";\n",
+		"/* Tailwind CSS entrypoint. Docs: https://veta.varavel.com/tailwindcss */\n@import \"tailwindcss\";\n",
 		readProjectFile(t, projectRoot, "public/styles.css"),
 	)
+	require.Contains(t, readProjectFile(t, projectRoot, "pages/site.js"), "Veta.httpClient")
+	require.FileExists(t, filepath.Join(projectRoot, "components", "note.pongo"))
+	require.FileExists(t, filepath.Join(projectRoot, "filters", "label.js"))
 
 	buildResult := runVeta(
 		t,
@@ -42,11 +51,13 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, `<link rel="stylesheet" href="/styles.css">`)
 	require.Contains(t, index, `<strong>Veta</strong>`)
-	require.Contains(t, index, `rounded-2xl`)
+	require.Contains(t, index, `Site: Veta Starter`)
+	require.Contains(t, index, `<aside class="rounded border border-zinc-200 bg-zinc-50 p-4">`)
 	require.Contains(t, index, `href="/about/"`)
 
 	about := readProjectFile(t, projectRoot, "dist/about/index.html")
-	require.Contains(t, about, `<h1>About</h1>`)
+	require.Contains(t, about, `>About</h1>`)
+	require.Contains(t, about, `<code>pages/site.js</code>`)
 	require.Equal(
 		t,
 		"User-agent: *\nAllow: /\n",
