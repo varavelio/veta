@@ -53,6 +53,7 @@ jobs:
             ./dist/*.tar.gz
             ./dist/*.zip
             ./dist/checksums.txt
+            ./dist/manifest.json
 
   publish-npm:
     name: Publish to npm
@@ -64,7 +65,6 @@ jobs:
     timeout-minutes: 10
     env:
       TAG: ${{ needs.setup.outputs.tag }}
-      CLEAN_TAG: ${{ needs.setup.outputs.clean_tag }}
 
     steps:
       - name: Checkout code
@@ -76,19 +76,18 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Download release checksums
+      - name: Download release manifest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p "$RUNNER_TEMP/veta-release"
-          gh release download "$TAG" --pattern checksums.txt --dir "$RUNNER_TEMP/veta-release"
+          gh release download "$TAG" --pattern manifest.json --dir ./integrations/installers/npm --clobber
 
       - name: Publish to npm
         run: |
           cd ./integrations/installers/npm
 
           echo "Publishing version: $TAG"
-          node prepare-release.js "$CLEAN_TAG" "$RUNNER_TEMP/veta-release/checksums.txt"
+          npm version "$TAG" --no-git-tag-version --allow-same-version
 
           if [[ "$TAG" == *"-"* ]]; then
             NPM_TAG="next"
