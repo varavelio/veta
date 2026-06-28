@@ -15,9 +15,12 @@ func TestCreate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, root, result.Root)
 	require.Contains(t, result.Directories, "pages")
+	require.NotContains(t, result.Directories, "styles")
 	require.Contains(t, result.Files, "veta.yaml")
+	require.Contains(t, result.Files, "public/styles.css")
 	require.FileExists(t, filepath.Join(root, "veta.yaml"))
 	require.FileExists(t, filepath.Join(root, "pages", "site.js"))
+	require.FileExists(t, filepath.Join(root, "public", "styles.css"))
 }
 
 func TestCreateRefusesExistingFiles(t *testing.T) {

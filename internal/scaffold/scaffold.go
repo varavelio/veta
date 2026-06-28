@@ -75,7 +75,6 @@ func starterDirectories() []string {
 		"filters",
 		"pages",
 		"public",
-		"styles",
 		"templates",
 	}
 }
@@ -89,7 +88,7 @@ func starterFiles() []fileSpec {
 		{Path: "templates/base.pongo", Content: starterTemplate},
 		{Path: "components/card.pongo", Content: starterComponent},
 		{Path: "filters/uppercase.js", Content: starterFilter},
-		{Path: "styles/app.css", Content: starterStyles},
+		{Path: "public/styles.css", Content: starterStyles},
 		{Path: "public/robots.txt", Content: starterRobots},
 	}
 }
@@ -164,8 +163,8 @@ const starterConfig = `build:
   clean: true
   debug: false
 tailwindcss:
-  input: styles/app.css
-  output: assets/app.css
+  input: public/styles.css
+  output: styles.css
   minify: true
 `
 
@@ -201,7 +200,7 @@ const starterTemplate = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ data.site.description }}">
     <title>{{ page.title }} - {{ data.site.title }}</title>
-    <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/styles.css">
   </head>
   <body class="min-h-screen bg-zinc-950 text-zinc-100">
     <header class="border-b border-white/10 px-6 py-4">
