@@ -1,6 +1,13 @@
-# Veta
+<p align="center">
+  <img
+    width="80px"
+    src="https://cdn.jsdelivr.net/gh/varavelio/veta@cdc74d/assets/icon.svg"
+  />
+</p>
 
-<p>
+<h1 align="center">Veta</h1>
+
+<p align="center">
   <a href="https://github.com/varavelio/veta/actions">
     <img src="https://github.com/varavelio/veta/actions/workflows/ci.yaml/badge.svg" alt="CI status"/>
   </a>
@@ -15,7 +22,7 @@
   </a>
 </p>
 
-<p>
+<p align="center">
   <a href="https://varavel.com">
     <img src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/project.svg" alt="A Varavel project"/>
   </a>
