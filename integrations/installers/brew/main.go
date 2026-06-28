@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,15 @@ import (
 	"strings"
 	"unicode"
 )
+
+type releaseArtifact struct {
+	Name   string `json:"name"`
+	SHA256 string `json:"sha256"`
+}
+
+type releaseManifest struct {
+	Artifacts []releaseArtifact `json:"artifacts"`
+}
 
 const (
 	formulaDir  = "Formula"
@@ -38,7 +48,7 @@ func run(ctx context.Context) error {
 		outputRoot = os.Args[2]
 	}
 
-	hashes, err := fetchChecksums(ctx, checksumsURL(version))
+	hashes, err := fetchManifest(ctx, manifestURL(version))
 	if err != nil {
 		return err
 	}
@@ -131,51 +141,51 @@ func generateFormula(fileName, version string, hashes map[string]string) (string
 	return builder.String(), nil
 }
 
-// fetchChecksums downloads checksums.txt and returns filename to hash values.
-func fetchChecksums(ctx context.Context, url string) (map[string]string, error) {
+// fetchManifest downloads manifest.json and returns filename to hash values.
+func fetchManifest(ctx context.Context, url string) (map[string]string, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("create checksums request: %w", err)
+		return nil, fmt.Errorf("create manifest request: %w", err)
 	}
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("download checksums: %w", err)
+		return nil, fmt.Errorf("download manifest: %w", err)
 	}
 	defer func() {
 		_ = response.Body.Close()
 	}()
 	if response.StatusCode >= http.StatusBadRequest {
-		return nil, fmt.Errorf("download checksums: %s", response.Status)
+		return nil, fmt.Errorf("download manifest: %s", response.Status)
 	}
 	content, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read checksums: %w", err)
+		return nil, fmt.Errorf("read manifest: %w", err)
 	}
 
-	return parseChecksums(string(content))
+	return parseManifest(content)
 }
 
-// parseChecksums parses checksums.txt content.
-func parseChecksums(content string) (map[string]string, error) {
+// parseManifest parses manifest.json content.
+func parseManifest(content []byte) (map[string]string, error) {
+	var manifest releaseManifest
+	if err := json.Unmarshal(content, &manifest); err != nil {
+		return nil, fmt.Errorf("parse manifest: %w", err)
+	}
+
 	checksums := map[string]string{}
-	for line := range strings.SplitSeq(strings.TrimSpace(content), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
+	for _, artifact := range manifest.Artifacts {
+		if artifact.Name == "" || artifact.SHA256 == "" {
+			return nil, fmt.Errorf("invalid manifest artifact: name and sha256 are required")
 		}
-		parts := strings.Fields(line)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid checksum line: %s", line)
-		}
-		checksums[parts[1]] = parts[0]
+		checksums[artifact.Name] = artifact.SHA256
 	}
 
 	return checksums, nil
 }
 
-// checksumsURL returns the release checksums URL for version.
-func checksumsURL(version string) string {
-	return releaseBaseURL(version) + "/checksums.txt"
+// manifestURL returns the release manifest URL for version.
+func manifestURL(version string) string {
+	return releaseBaseURL(version) + "/manifest.json"
 }
 
 // releaseBaseURL returns the GitHub release base URL for version.

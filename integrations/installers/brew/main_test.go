@@ -8,19 +8,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestParseChecksums verifies Homebrew checksum parsing.
-func TestParseChecksums(t *testing.T) {
+// TestParseManifest verifies Homebrew manifest parsing.
+func TestParseManifest(t *testing.T) {
 	t.Run("returns archive hashes by filename", func(t *testing.T) {
-		checksums, err := parseChecksums(
-			"abc  veta_linux_amd64.tar.gz\ndef  veta_darwin_arm64.tar.gz\n",
-		)
+		checksums, err := parseManifest([]byte(`{
+  "artifacts": [
+    { "name": "veta_linux_amd64.tar.gz", "sha256": "abc" },
+    { "name": "veta_darwin_arm64.tar.gz", "sha256": "def" }
+  ]
+}`))
 		require.NoError(t, err)
 		require.Equal(t, "abc", checksums["veta_linux_amd64.tar.gz"])
 		require.Equal(t, "def", checksums["veta_darwin_arm64.tar.gz"])
 	})
 
-	t.Run("rejects malformed checksum lines", func(t *testing.T) {
-		_, err := parseChecksums("not-enough-fields\n")
+	t.Run("rejects malformed manifest content", func(t *testing.T) {
+		_, err := parseManifest([]byte(`not-json`))
+		require.Error(t, err)
+	})
+
+	t.Run("rejects incomplete artifacts", func(t *testing.T) {
+		_, err := parseManifest([]byte(`{ "artifacts": [{ "name": "veta_linux_amd64.tar.gz" }] }`))
 		require.Error(t, err)
 	})
 }
