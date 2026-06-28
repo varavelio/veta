@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -21,7 +22,9 @@ const (
 	checksumFileName = "checksums.txt"
 	commandPackage   = "./cmd/veta/."
 	distDirName      = "dist"
+	manifestFileName = "manifest.json"
 	projectName      = "veta"
+	projectRepo      = "varavelio/veta"
 	versionPackage   = "github.com/varavelio/veta/internal/version"
 )
 
@@ -42,6 +45,23 @@ type releaseMetadata struct {
 	Commit  string
 	Date    string
 	Version string
+}
+
+type releaseArtifact struct {
+	Arch   string `json:"arch"`
+	Format string `json:"format"`
+	Name   string `json:"name"`
+	OS     string `json:"os"`
+	SHA256 string `json:"sha256"`
+}
+
+type releaseManifest struct {
+	Artifacts []releaseArtifact `json:"artifacts"`
+	Commit    string            `json:"commit"`
+	Date      string            `json:"date"`
+	Project   string            `json:"project"`
+	Repo      string            `json:"repo"`
+	Version   string            `json:"version"`
 }
 
 // main runs the release builder and owns process exit behavior.
@@ -71,10 +91,16 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("create dist directory: %w", err)
 	}
 
+	artifacts := make([]releaseArtifact, 0, len(releaseTargets))
 	for _, target := range releaseTargets {
-		if err := buildArchive(ctx, root, distDir, metadata, target); err != nil {
+		artifact, err := buildArchive(ctx, root, distDir, metadata, target)
+		if err != nil {
 			return err
 		}
+		artifacts = append(artifacts, artifact)
+	}
+	if err := writeManifest(distDir, metadata, artifacts); err != nil {
+		return err
 	}
 	if err := writeChecksums(distDir); err != nil {
 		return err
@@ -131,11 +157,11 @@ func buildArchive(
 	distDir string,
 	metadata releaseMetadata,
 	target target,
-) error {
+) (releaseArtifact, error) {
 	fmt.Printf("Building %s/%s...\n", target.OS, target.Arch)
 	tempDir, err := os.MkdirTemp(distDir, ".build-*")
 	if err != nil {
-		return fmt.Errorf("create temporary build directory: %w", err)
+		return releaseArtifact{}, fmt.Errorf("create temporary build directory: %w", err)
 	}
 	defer func() {
 		_ = os.RemoveAll(tempDir)
@@ -162,7 +188,7 @@ func buildArchive(
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	if err := command.Run(); err != nil {
-		return fmt.Errorf("build %s/%s: %w", target.OS, target.Arch, err)
+		return releaseArtifact{}, fmt.Errorf("build %s/%s: %w", target.OS, target.Arch, err)
 	}
 
 	format := archiveFormat(target.OS)
@@ -174,10 +200,21 @@ func buildArchive(
 		err = createTarGz(archivePath, files)
 	}
 	if err != nil {
-		return fmt.Errorf("archive %s/%s: %w", target.OS, target.Arch, err)
+		return releaseArtifact{}, fmt.Errorf("archive %s/%s: %w", target.OS, target.Arch, err)
 	}
 
-	return nil
+	checksum, err := fileSHA256(archivePath)
+	if err != nil {
+		return releaseArtifact{}, err
+	}
+
+	return releaseArtifact{
+		Arch:   target.Arch,
+		Format: format,
+		Name:   filepath.Base(archivePath),
+		OS:     target.OS,
+		SHA256: checksum,
+	}, nil
 }
 
 // ldflags returns release metadata flags for the Veta binary.
@@ -201,6 +238,28 @@ func archiveFiles(root, rawBinary, goos string) map[string]string {
 	}
 
 	return files
+}
+
+// writeManifest writes structured release metadata to dist/manifest.json.
+func writeManifest(distDir string, metadata releaseMetadata, artifacts []releaseArtifact) error {
+	manifest := releaseManifest{
+		Artifacts: artifacts,
+		Commit:    metadata.Commit,
+		Date:      metadata.Date,
+		Project:   projectName,
+		Repo:      projectRepo,
+		Version:   metadata.Version,
+	}
+	content, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal release manifest: %w", err)
+	}
+	content = append(content, '\n')
+	if err := os.WriteFile(filepath.Join(distDir, manifestFileName), content, 0o644); err != nil {
+		return fmt.Errorf("write release manifest: %w", err)
+	}
+
+	return nil
 }
 
 // writeChecksums writes SHA-256 checksums for dist/ files.

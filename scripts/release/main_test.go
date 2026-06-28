@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,6 +46,37 @@ func TestBinaryName(t *testing.T) {
 			require.Equal(t, expected, binaryName(goos))
 		})
 	}
+}
+
+// TestWriteManifest verifies structured release manifest output.
+func TestWriteManifest(t *testing.T) {
+	t.Run("writes release metadata and artifacts", func(t *testing.T) {
+		distDir := t.TempDir()
+		metadata := releaseMetadata{
+			Commit:  "abc123",
+			Date:    "2026-01-02T03:04:05Z",
+			Version: "0.1.0",
+		}
+		artifacts := []releaseArtifact{{
+			Arch:   "amd64",
+			Format: "tar.gz",
+			Name:   "veta_linux_amd64.tar.gz",
+			OS:     "linux",
+			SHA256: "sha",
+		}}
+
+		err := writeManifest(distDir, metadata, artifacts)
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(filepath.Join(distDir, manifestFileName))
+		require.NoError(t, err)
+
+		var manifest releaseManifest
+		require.NoError(t, json.Unmarshal(content, &manifest))
+		require.Equal(t, "0.1.0", manifest.Version)
+		require.Equal(t, "abc123", manifest.Commit)
+		require.Equal(t, artifacts, manifest.Artifacts)
+	})
 }
 
 // TestNormalizeVersion verifies release version normalization.
