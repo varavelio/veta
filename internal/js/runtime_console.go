@@ -10,19 +10,19 @@ import (
 )
 
 // installConsole exposes a synchronous console API in JavaScript.
-func (r *Runner) installConsole(vm *goja.Runtime) error {
+func (r *Runner) installConsole(vm *goja.Runtime) (*goja.Object, error) {
 	console := vm.NewObject()
 	for _, method := range []string{"debug", "error", "info", "log", "warn"} {
 		if err := console.Set(method, r.consoleMethod(method)); err != nil {
-			return fmt.Errorf("set console.%s: %w", method, err)
+			return nil, fmt.Errorf("set console.%s: %w", method, err)
 		}
 	}
 
 	if err := vm.Set("console", console); err != nil {
-		return fmt.Errorf("set console global: %w", err)
+		return nil, fmt.Errorf("set console global: %w", err)
 	}
 
-	return nil
+	return console, nil
 }
 
 // consoleMethod returns a Goja callback for one console method.

@@ -1,6 +1,7 @@
 {
-  "globalAvailable": true,
+  "hasFileAPI": true,
   "keys": [
+    "console",
     "env",
     "files",
     "httpClient",

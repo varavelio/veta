@@ -30,7 +30,7 @@ build:
 `)
 	writeProjectFile(t, root, "data/site.json", `{"title":"Veta"}`)
 	writeProjectFile(t, root, "filters/shout.js", `
-export default function(input) {
+export default function(context, input) {
   return input.toUpperCase();
 }
 `)

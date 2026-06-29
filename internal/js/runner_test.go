@@ -19,7 +19,7 @@ import (
 
 // TestRunnerExecute verifies direct in-memory JavaScript execution.
 func TestRunnerExecute(t *testing.T) {
-	t.Run("executes default export with runtime argument and Veta global", func(t *testing.T) {
+	t.Run("executes default export with runtime context argument", func(t *testing.T) {
 		runner := New(WithRuntime(Runtime{"siteName": "Veta"}))
 
 		result, err := runner.ExecuteString("page.js", `
@@ -28,7 +28,7 @@ func TestRunnerExecute(t *testing.T) {
 			export default function(runtime) {
 				return {
 					title: greeting + ", " + runtime.siteName,
-					globalAvailable: Veta.siteName === runtime.siteName,
+					hasFileAPI: typeof runtime.files.listFiles === "function",
 					keys: Object.keys(runtime).sort()
 				};
 			}
@@ -38,8 +38,18 @@ func TestRunnerExecute(t *testing.T) {
 		var got map[string]any
 		require.NoError(t, result.ExportTo(&got))
 		require.Equal(t, "Hello, Veta", got["title"])
-		require.Equal(t, true, got["globalAvailable"])
-		require.Equal(t, []any{"env", "files", "httpClient", "siteName"}, got["keys"])
+		require.Equal(t, true, got["hasFileAPI"])
+		require.Equal(t, []any{"console", "env", "files", "httpClient", "siteName"}, got["keys"])
+	})
+
+	t.Run("does not expose a named runtime global", func(t *testing.T) {
+		result, err := New().ExecuteString("global.js", `
+			export default function() {
+				return globalThis["Ve" + "ta"] === undefined;
+			}
+		`)
+		require.NoError(t, err)
+		require.Equal(t, true, result.Export())
 	})
 
 	t.Run("supports destructuring the runtime argument", func(t *testing.T) {
@@ -68,16 +78,16 @@ func TestRunnerExecute(t *testing.T) {
 	})
 }
 
-// TestRunnerCall verifies explicit default export arguments.
+// TestRunnerCall verifies runtime context plus explicit default export arguments.
 func TestRunnerCall(t *testing.T) {
 	runner := New(WithRuntime(Runtime{"siteName": "Veta"}))
 
 	result, err := runner.Call(Source{Name: "filter.js", Code: `
-		export default function(input, parameter) {
+		export default function(runtime, input, parameter) {
 			return {
+				siteName: runtime.siteName,
 				input,
-				parameter,
-				globalAvailable: Veta.siteName === "Veta"
+				parameter
 			};
 		}
 	`}, "hello", map[string]any{"suffix": "world"})
@@ -85,9 +95,9 @@ func TestRunnerCall(t *testing.T) {
 
 	var got map[string]any
 	require.NoError(t, result.ExportTo(&got))
+	require.Equal(t, "Veta", got["siteName"])
 	require.Equal(t, "hello", got["input"])
 	require.Equal(t, map[string]any{"suffix": "world"}, got["parameter"])
-	require.Equal(t, true, got["globalAvailable"])
 }
 
 // TestRunnerExecutionTimeout verifies that runaway JavaScript is interrupted.
@@ -133,14 +143,14 @@ func TestRunnerExecuteFileReadError(t *testing.T) {
 	require.Contains(t, err.Error(), "read javascript file")
 }
 
-// TestRunnerRuntimeIsolation verifies that each execution receives a fresh Veta
-// object.
+// TestRunnerRuntimeIsolation verifies that each execution receives a fresh
+// runtime context object.
 func TestRunnerRuntimeIsolation(t *testing.T) {
 	runner := New()
 	code := `
-		export default function() {
-			Veta.count = (Veta.count || 0) + 1;
-			return Veta.count;
+		export default function(runtime) {
+			runtime.count = (runtime.count || 0) + 1;
+			return runtime.count;
 		}
 	`
 
@@ -161,8 +171,8 @@ func TestRunnerRuntimeSnapshot(t *testing.T) {
 	runtime["value"] = "after"
 
 	result, err := runner.ExecuteString("snapshot.js", `
-		export default function() {
-			return Veta.value;
+		export default function({ value }) {
+			return value;
 		}
 	`)
 	require.NoError(t, err)
@@ -218,7 +228,7 @@ func TestRunnerConsole(t *testing.T) {
 	runner := New(WithConsoleOutput(&output))
 
 	result, err := runner.ExecuteString("console.js", `
-		export default function() {
+		export default function({ console }) {
 			console.log("hello", 123);
 			console.info("ready");
 			console.warn("careful");
@@ -246,7 +256,7 @@ func TestRunnerConsoleNilOutput(t *testing.T) {
 	runner := New(WithConsoleOutput(nil))
 
 	result, err := runner.ExecuteString("console.js", `
-		export default function() {
+		export default function({ console }) {
 			console.log("ignored");
 			return true;
 		}
@@ -270,7 +280,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.readFile();
 				}
 			`,
-			want: "Veta.files.readFile path is required",
+			want: "files.readFile path is required",
 		},
 		{
 			name: "non-string read path",
@@ -279,7 +289,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.readFile(123);
 				}
 			`,
-			want: "Veta.files.readFile path must be a string",
+			want: "files.readFile path must be a string",
 		},
 		{
 			name: "read outside root",
@@ -315,7 +325,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.readMarkdownFile();
 				}
 			`,
-			want: "Veta.files.readMarkdownFile path is required",
+			want: "files.readMarkdownFile path is required",
 		},
 		{
 			name: "missing json path",
@@ -324,7 +334,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.readJsonFile();
 				}
 			`,
-			want: "Veta.files.readJsonFile path is required",
+			want: "files.readJsonFile path is required",
 		},
 		{
 			name: "missing yaml path",
@@ -333,7 +343,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.readYamlFile();
 				}
 			`,
-			want: "Veta.files.readYamlFile path is required",
+			want: "files.readYamlFile path is required",
 		},
 		{
 			name: "missing toml path",
@@ -342,7 +352,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.readTomlFile();
 				}
 			`,
-			want: "Veta.files.readTomlFile path is required",
+			want: "files.readTomlFile path is required",
 		},
 		{
 			name: "missing glob",
@@ -351,7 +361,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.listFiles();
 				}
 			`,
-			want: "Veta.files.listFiles pattern is required",
+			want: "files.listFiles pattern is required",
 		},
 		{
 			name: "empty glob",
@@ -378,7 +388,7 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 					return files.toPermalink("content/index.md", "bad");
 				}
 			`,
-			want: "Veta.files.toPermalink options must be an object",
+			want: "files.toPermalink options must be an object",
 		},
 		{
 			name: "permalink outside base path",
@@ -466,7 +476,7 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 					return httpClient.get();
 				}
 			`,
-			want: "Veta.httpClient URL is required",
+			want: "httpClient URL is required",
 		},
 		{
 			name: "non-string url",
@@ -475,7 +485,7 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 					return httpClient.get(123);
 				}
 			`,
-			want: "Veta.httpClient URL must be a string",
+			want: "httpClient URL must be a string",
 		},
 		{
 			name: "unsupported url scheme",
@@ -493,7 +503,7 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 					return httpClient.request(undefined, baseURL + "/get");
 				}
 			`,
-			want: "Veta.httpClient.request method is required",
+			want: "httpClient.request method is required",
 		},
 		{
 			name: "invalid method",

@@ -9,7 +9,7 @@ import (
 	"github.com/dop251/goja"
 )
 
-// Environment contains string environment variables exposed through Veta.env.
+// Environment contains string environment variables exposed through context.env.
 type Environment map[string]string
 
 // defaultEnvironment returns a snapshot of the process environment.
@@ -33,7 +33,7 @@ func (r *Runner) newEnvironmentObject(vm *goja.Runtime) (*goja.Object, error) {
 	environment := vm.NewObject()
 	for name, value := range r.environmentSnapshot() {
 		if err := environment.Set(name, value); err != nil {
-			return nil, fmt.Errorf("set %s.env.%s: %w", GlobalName, name, err)
+			return nil, fmt.Errorf("set %s.env.%s: %w", runtimeObjectName, name, err)
 		}
 	}
 

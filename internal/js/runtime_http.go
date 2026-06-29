@@ -15,7 +15,7 @@ import (
 )
 
 // newHTTPClientAPI returns the synchronous HTTP client exposed through
-// Veta.httpClient.
+// context.httpClient.
 func (r *Runner) newHTTPClientAPI(vm *goja.Runtime) (*goja.Object, error) {
 	api := &httpClientAPI{
 		defaultTimeout: r.defaultHTTPTimeout(),
@@ -33,7 +33,7 @@ func (r *Runner) newHTTPClientAPI(vm *goja.Runtime) (*goja.Object, error) {
 		"request": api.request,
 	} {
 		if err := httpClient.Set(name, value); err != nil {
-			return nil, fmt.Errorf("set %s.httpClient.%s: %w", GlobalName, name, err)
+			return nil, fmt.Errorf("set %s.httpClient.%s: %w", runtimeObjectName, name, err)
 		}
 	}
 
@@ -65,7 +65,7 @@ func (api *httpClientAPI) method(method string) func(goja.FunctionCall) goja.Val
 
 // request executes an HTTP request with an explicit method argument.
 func (api *httpClientAPI) request(call goja.FunctionCall) goja.Value {
-	method, err := requiredStringArgument(call.Argument(0), "Veta.httpClient.request method")
+	method, err := requiredStringArgument(call.Argument(0), "httpClient.request method")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -75,7 +75,7 @@ func (api *httpClientAPI) request(call goja.FunctionCall) goja.Value {
 
 // do executes one synchronous HTTP request and returns a JavaScript object.
 func (api *httpClientAPI) do(method string, rawURL, rawOptions goja.Value) goja.Value {
-	requestURL, err := requiredStringArgument(rawURL, "Veta.httpClient URL")
+	requestURL, err := requiredStringArgument(rawURL, "httpClient URL")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}

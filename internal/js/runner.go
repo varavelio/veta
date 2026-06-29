@@ -93,12 +93,14 @@ func (r *Runner) Execute(source Source) (Result, error) {
 	})
 }
 
-// Call runs a Veta JavaScript source and invokes its default export with args.
+// Call runs a Veta JavaScript source and invokes its default export with the
+// runtime context followed by args.
 func (r *Runner) Call(source Source, args ...any) (Result, error) {
-	return r.execute(source, func(vm *goja.Runtime, _ *goja.Object) []goja.Value {
-		values := make([]goja.Value, len(args))
-		for index, arg := range args {
-			values[index] = vm.ToValue(arg)
+	return r.execute(source, func(vm *goja.Runtime, runtimeValue *goja.Object) []goja.Value {
+		values := make([]goja.Value, 0, len(args)+1)
+		values = append(values, runtimeValue)
+		for _, arg := range args {
+			values = append(values, vm.ToValue(arg))
 		}
 
 		return values

@@ -31,7 +31,7 @@ var (
 	ErrPathOutsideRoot = errors.New("path must stay inside the configured root")
 )
 
-// newFileAPI returns the synchronous file APIs exposed through Veta.files.
+// newFileAPI returns the synchronous file APIs exposed through context.files.
 func (r *Runner) newFileAPI(vm *goja.Runtime) (*goja.Object, error) {
 	root, err := r.rootDir()
 	if err != nil {
@@ -51,7 +51,7 @@ func (r *Runner) newFileAPI(vm *goja.Runtime) (*goja.Object, error) {
 	}
 	for name, value := range fileMethods {
 		if err := files.Set(name, value); err != nil {
-			return nil, fmt.Errorf("set %s.files.%s: %w", GlobalName, name, err)
+			return nil, fmt.Errorf("set %s.files.%s: %w", runtimeObjectName, name, err)
 		}
 	}
 
@@ -90,7 +90,7 @@ type fileAPI struct {
 
 // listFiles returns sorted files matching a glob pattern inside the root.
 func (api *fileAPI) listFiles(call goja.FunctionCall) goja.Value {
-	pattern, err := requiredStringArgument(call.Argument(0), "Veta.files.listFiles pattern")
+	pattern, err := requiredStringArgument(call.Argument(0), "files.listFiles pattern")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -105,7 +105,7 @@ func (api *fileAPI) listFiles(call goja.FunctionCall) goja.Value {
 
 // readFile returns one file as a UTF-8 string.
 func (api *fileAPI) readFile(call goja.FunctionCall) goja.Value {
-	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.readFile path")
+	rawPath, err := requiredStringArgument(call.Argument(0), "files.readFile path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -120,7 +120,7 @@ func (api *fileAPI) readFile(call goja.FunctionCall) goja.Value {
 
 // readMarkdownFile returns one Markdown file with parsed front matter.
 func (api *fileAPI) readMarkdownFile(call goja.FunctionCall) goja.Value {
-	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.readMarkdownFile path")
+	rawPath, err := requiredStringArgument(call.Argument(0), "files.readMarkdownFile path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -141,7 +141,7 @@ func (api *fileAPI) readMarkdownFile(call goja.FunctionCall) goja.Value {
 
 // readJSONFile returns one parsed JSON file.
 func (api *fileAPI) readJSONFile(call goja.FunctionCall) goja.Value {
-	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.readJsonFile path")
+	rawPath, err := requiredStringArgument(call.Argument(0), "files.readJsonFile path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -161,7 +161,7 @@ func (api *fileAPI) readJSONFile(call goja.FunctionCall) goja.Value {
 
 // readYAMLFile returns one parsed YAML file.
 func (api *fileAPI) readYAMLFile(call goja.FunctionCall) goja.Value {
-	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.readYamlFile path")
+	rawPath, err := requiredStringArgument(call.Argument(0), "files.readYamlFile path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -181,7 +181,7 @@ func (api *fileAPI) readYAMLFile(call goja.FunctionCall) goja.Value {
 
 // readTOMLFile returns one parsed TOML file.
 func (api *fileAPI) readTOMLFile(call goja.FunctionCall) goja.Value {
-	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.readTomlFile path")
+	rawPath, err := requiredStringArgument(call.Argument(0), "files.readTomlFile path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -201,7 +201,7 @@ func (api *fileAPI) readTOMLFile(call goja.FunctionCall) goja.Value {
 
 // toPermalink converts a project-relative file path into a pretty permalink.
 func (api *fileAPI) toPermalink(call goja.FunctionCall) goja.Value {
-	rawPath, err := requiredStringArgument(call.Argument(0), "Veta.files.toPermalink path")
+	rawPath, err := requiredStringArgument(call.Argument(0), "files.toPermalink path")
 	if err != nil {
 		panic(api.vm.NewGoError(err))
 	}
@@ -346,9 +346,7 @@ func permalinkPathOptions(value goja.Value) (permalink.PathOptions, error) {
 
 	object, ok := value.Export().(map[string]any)
 	if !ok {
-		return permalink.PathOptions{}, fmt.Errorf(
-			"Veta.files.toPermalink options must be an object",
-		)
+		return permalink.PathOptions{}, fmt.Errorf("files.toPermalink options must be an object")
 	}
 
 	options := permalink.PathOptions{}
@@ -356,7 +354,7 @@ func permalinkPathOptions(value goja.Value) (permalink.PathOptions, error) {
 		text, ok := basePath.(string)
 		if !ok {
 			return permalink.PathOptions{}, fmt.Errorf(
-				"Veta.files.toPermalink basePath must be a string",
+				"files.toPermalink basePath must be a string",
 			)
 		}
 		options.BasePath = text

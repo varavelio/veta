@@ -1,4 +1,4 @@
-export default function(input) {
+export default function(context, input) {
   return String(input)
     .split(/\s+/)
     .filter(Boolean)

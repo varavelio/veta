@@ -35,7 +35,11 @@ func TestInitBuildsStarterProject(t *testing.T) {
 		"/* Tailwind CSS entrypoint. Docs: https://veta.varavel.com/tailwindcss */\n@import \"tailwindcss\";\n",
 		readProjectFile(t, projectRoot, "public/styles.css"),
 	)
-	require.Contains(t, readProjectFile(t, projectRoot, "pages/site.js"), "Veta.httpClient")
+	require.Contains(
+		t,
+		readProjectFile(t, projectRoot, "pages/site.js"),
+		"{ data, files, httpClient }",
+	)
 	require.FileExists(t, filepath.Join(projectRoot, "components", "note.html"))
 	require.FileExists(t, filepath.Join(projectRoot, "filters", "label.js"))
 

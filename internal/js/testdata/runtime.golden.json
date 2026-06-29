@@ -1,8 +1,9 @@
 {
+  "contextResult": "Veta:context",
   "functionResult": "Veta:7",
-  "globalResult": "Veta:global",
   "nestedAnswer": 42,
   "runtimeKeys": [
+    "console",
     "env",
     "files",
     "httpClient",

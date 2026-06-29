@@ -9,14 +9,13 @@ import (
 	"github.com/dop251/goja"
 )
 
-// GlobalName is the name of the runtime object exposed to JavaScript files.
-const GlobalName = "Veta"
+const runtimeObjectName = "context"
 
-// Runtime contains the values exposed to JavaScript through the Veta object.
+// Runtime contains values exposed through the default export context argument.
 type Runtime map[string]any
 
-// WithRuntime configures additional values exposed through the Veta global and
-// the default export argument.
+// WithRuntime configures additional values exposed through the default export
+// context argument.
 func WithRuntime(runtime Runtime) Option {
 	return func(runner *Runner) {
 		merged := runner.runtimeSnapshot()
@@ -25,15 +24,14 @@ func WithRuntime(runtime Runtime) Option {
 	}
 }
 
-// WithEnvironment configures the environment variables exposed through
-// Veta.env.
+// WithEnvironment configures environment variables exposed through context.env.
 func WithEnvironment(environment Environment) Option {
 	return func(runner *Runner) {
 		runner.environment = cloneEnvironment(environment)
 	}
 }
 
-// WithRoot configures the filesystem root used by Veta file APIs.
+// WithRoot configures the filesystem root used by JavaScript file APIs.
 func WithRoot(root string) Option {
 	return func(runner *Runner) {
 		runner.root = root
@@ -55,14 +53,14 @@ func WithExecutionTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithHTTPTimeout configures the default timeout for Veta HTTP requests.
+// WithHTTPTimeout configures the default timeout for JavaScript HTTP requests.
 func WithHTTPTimeout(timeout time.Duration) Option {
 	return func(runner *Runner) {
 		runner.httpTimeout = timeout
 	}
 }
 
-// defaultRuntime returns the built-in JavaScript runtime API exposed by Veta.
+// defaultRuntime returns the built-in JavaScript runtime API.
 func defaultRuntime() Runtime {
 	return Runtime{}
 }
@@ -70,17 +68,14 @@ func defaultRuntime() Runtime {
 // newVM creates an isolated JavaScript runtime for one source execution.
 func (r *Runner) newVM() (*goja.Runtime, *goja.Object, error) {
 	vm := goja.New()
-	if err := r.installConsole(vm); err != nil {
-		return nil, nil, err
-	}
-
-	runtimeValue, err := r.newRuntimeObject(vm)
+	console, err := r.installConsole(vm)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err := vm.Set(GlobalName, runtimeValue); err != nil {
-		return nil, nil, fmt.Errorf("set %s global: %w", GlobalName, err)
+	runtimeValue, err := r.newRuntimeObject(vm, console)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if err := vm.Set("Promise", goja.Undefined()); err != nil {
@@ -91,11 +86,11 @@ func (r *Runner) newVM() (*goja.Runtime, *goja.Object, error) {
 }
 
 // newRuntimeObject converts the configured Go runtime API into a Goja object.
-func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
+func (r *Runner) newRuntimeObject(vm *goja.Runtime, console *goja.Object) (*goja.Object, error) {
 	runtimeValue := vm.NewObject()
 	for name, value := range r.runtimeSnapshot() {
 		if err := runtimeValue.Set(name, value); err != nil {
-			return nil, fmt.Errorf("set %s.%s: %w", GlobalName, name, err)
+			return nil, fmt.Errorf("set %s.%s: %w", runtimeObjectName, name, err)
 		}
 	}
 
@@ -105,7 +100,10 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
 	}
 
 	if err := runtimeValue.Set("files", fileAPI); err != nil {
-		return nil, fmt.Errorf("set %s.files: %w", GlobalName, err)
+		return nil, fmt.Errorf("set %s.files: %w", runtimeObjectName, err)
+	}
+	if err := runtimeValue.Set("console", console); err != nil {
+		return nil, fmt.Errorf("set %s.console: %w", runtimeObjectName, err)
 	}
 
 	environment, err := r.newEnvironmentObject(vm)
@@ -113,7 +111,7 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
 		return nil, err
 	}
 	if err := runtimeValue.Set("env", environment); err != nil {
-		return nil, fmt.Errorf("set %s.env: %w", GlobalName, err)
+		return nil, fmt.Errorf("set %s.env: %w", runtimeObjectName, err)
 	}
 
 	httpClientAPI, err := r.newHTTPClientAPI(vm)
@@ -121,7 +119,7 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime) (*goja.Object, error) {
 		return nil, err
 	}
 	if err := runtimeValue.Set("httpClient", httpClientAPI); err != nil {
-		return nil, fmt.Errorf("set %s.httpClient: %w", GlobalName, err)
+		return nil, fmt.Errorf("set %s.httpClient: %w", runtimeObjectName, err)
 	}
 
 	return runtimeValue, nil

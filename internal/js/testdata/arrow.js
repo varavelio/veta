@@ -1,3 +1,3 @@
 export default ({ prefix, suffix }) => {
-  return [`${prefix}-alpha-${suffix}`, Veta.prefix];
+  return [`${prefix}-alpha-${suffix}`, prefix];
 };

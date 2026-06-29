@@ -269,7 +269,8 @@ func buildTailwindCSS(
 	return nil
 }
 
-// Run executes a JavaScript filter source with explicit filter arguments.
+// Run executes a JavaScript filter source with a runtime context followed by
+// explicit filter arguments.
 func (runner filterScriptRunner) Run(source filters.Source, input, parameter any) (any, error) {
 	result, err := runner.runner.Call(
 		js.Source{Name: source.Name, Code: source.Code},

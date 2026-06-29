@@ -1,6 +1,6 @@
 // Pages are plain JavaScript. Docs: https://veta.varavel.com/pages
-// You can read local files with Veta.files or request data with Veta.httpClient.
-export default function({ data }) {
+// You can read local files with files or request data with httpClient.
+export default function({ data, files, httpClient }) {
   return [
     {
       permalink: "/",

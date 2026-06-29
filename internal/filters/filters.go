@@ -23,7 +23,7 @@ type Source struct {
 	Code string
 }
 
-// ScriptRunner executes a JavaScript filter with input and parameter arguments.
+// ScriptRunner executes a JavaScript filter with input and parameter values.
 type ScriptRunner interface {
 	Run(source Source, input, parameter any) (any, error)
 }
