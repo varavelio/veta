@@ -1,0 +1,4 @@
+build:
+  output: dist
+  clean: true
+  debug: false

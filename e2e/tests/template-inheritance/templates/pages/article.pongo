@@ -1,0 +1,11 @@
+{% extends "../base.pongo" %}
+{% block title %}{{ page.title }} | {{ block.Super }}{% endblock %}
+{% block body_class %}article {{ block.Super }}{% endblock %}
+{% block header %}Article Header / {{ data.site.name }}{% endblock %}
+{% block main %}
+  <section data-template="article">
+    {{ block.Super }}
+    <p data-template-extra="true">{{ page.extra }}</p>
+  </section>
+{% endblock %}
+{% block footer %}{{ block.Super }} / Article Footer{% endblock %}

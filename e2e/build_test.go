@@ -91,3 +91,24 @@ func TestBuildComposesLocalThemeWithProjectOverrides(t *testing.T) {
 	require.Equal(t, "project asset\n", readProjectFile(t, projectRoot, "dist/theme.txt"))
 	require.Equal(t, "theme only asset\n", readProjectFile(t, projectRoot, "dist/theme-only.txt"))
 }
+
+// TestBuildSupportsTemplateAndComponentInheritance verifies Pongo2 inheritance end-to-end.
+func TestBuildSupportsTemplateAndComponentInheritance(t *testing.T) {
+	projectRoot := copyTestProject(t, "template-inheritance")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Veta built 1 page to dist in ")
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, `<title>Inheritance | Base Inheritance Site</title>`)
+	require.Contains(t, index, `<body class="article base-body">`)
+	require.Contains(t, index, `Article Header / Inheritance Site`)
+	require.Contains(t, index, `<section data-template="article">`)
+	require.Contains(t, index, `<p data-template-extra="true">extra from page</p>`)
+	require.Contains(t, index, `Base Footer / Article Footer`)
+	require.Contains(t, index, `<div class="component-shell panel base" data-tone="success">`)
+	require.Contains(t, index, `<header>Panel: Nested component</header>`)
+	require.Contains(t, index, `<p>Component <strong>slot</strong> from page.</p>`)
+	require.Contains(t, index, `base-footer / child-footer`)
+}

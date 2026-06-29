@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{% block title %}Base {{ data.site.name }}{% endblock %}</title>
+  </head>
+  <body class="{% block body_class %}base-body{% endblock %}">
+    <header>{% block header %}Base Header{% endblock %}</header>
+    <main>{% block main %}{{ page.content }}{% endblock %}</main>
+    <footer>{% block footer %}Base Footer{% endblock %}</footer>
+  </body>
+</html>
