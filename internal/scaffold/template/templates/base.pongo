@@ -16,7 +16,7 @@
     </nav>
 
     <main>
-      <p class="text-sm text-zinc-500">{{ data.site.name|label }}</p>
+      <p class="text-sm text-zinc-500">{{ data.site.name | label }}</p>
       <h1 class="mt-2 text-4xl font-bold tracking-tight">{{ page.title }}</h1>
       <div class="mt-6 leading-7">
         {{ page.content }}
