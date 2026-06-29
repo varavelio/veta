@@ -7,8 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/varavelio/veta/internal/build"
+	"github.com/varavelio/veta/internal/config"
 	"github.com/varavelio/veta/internal/scaffold"
 )
 
@@ -24,7 +27,8 @@ func TestRunBuildCommand(t *testing.T) {
 		&stderr,
 	)
 	require.NoError(t, err)
-	require.Contains(t, stdout.String(), "Built 1 page(s)")
+	require.Contains(t, stdout.String(), "Veta built 1 page to dist in ")
+	require.NotContains(t, stdout.String(), root)
 	require.FileExists(t, filepath.Join(root, "dist", "index.html"))
 	require.Empty(t, stderr.String())
 }
@@ -51,8 +55,40 @@ func TestRunBuildDiscoversConfig(t *testing.T) {
 
 	err := Run(context.Background(), []string{"build"}, &stdout, nil)
 	require.NoError(t, err)
-	require.Contains(t, stdout.String(), "Built 1 page(s)")
+	require.Contains(t, stdout.String(), "Veta built 1 page to dist in ")
+	require.NotContains(t, stdout.String(), root)
 	require.FileExists(t, filepath.Join(root, "dist", "index.html"))
+}
+
+func TestBuildSuccessMessage(t *testing.T) {
+	message := buildSuccessMessage(
+		build.Result{
+			Config: config.Config{Build: config.Build{Output: "site-output"}},
+			Pages:  2,
+		},
+		1500*time.Millisecond,
+	)
+
+	require.Contains(t, message, "Veta built 2 pages to site-output in 1.5s")
+}
+
+func TestBuildDuration(t *testing.T) {
+	tests := []struct {
+		duration time.Duration
+		want     string
+	}{
+		{duration: 0, want: "0s"},
+		{duration: time.Microsecond, want: "1ms"},
+		{duration: 1499 * time.Microsecond, want: "1ms"},
+		{duration: 1500 * time.Microsecond, want: "2ms"},
+		{duration: 1500 * time.Millisecond, want: "1.5s"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.want, func(t *testing.T) {
+			require.Equal(t, test.want, buildDuration(test.duration))
+		})
+	}
 }
 
 func TestRunHelp(t *testing.T) {

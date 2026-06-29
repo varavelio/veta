@@ -47,7 +47,7 @@ func TestInitBuildsStarterProject(t *testing.T) {
 		filepath.Join(projectRoot, "veta.yaml"),
 	)
 	buildResult.requireSuccess(t)
-	require.Contains(t, buildResult.stdout, "Built 2 page(s)")
+	require.Contains(t, buildResult.stdout, "Veta built 2 pages to dist in ")
 
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, `<link rel="stylesheet" href="/styles.css">`)

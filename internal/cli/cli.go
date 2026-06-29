@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/alexflint/go-arg"
 	"github.com/varavelio/tinta"
@@ -115,17 +116,53 @@ func handleParseError(parser *arg.Parser, stdout, stderr io.Writer, err error) e
 
 // runBuild starts a site build from parsed command options.
 func runBuild(ctx context.Context, command *buildCommand, stdout, stderr io.Writer) error {
+	startedAt := time.Now()
 	result, err := build.Run(
 		ctx,
 		build.WithConfigFile(command.ConfigFile),
 		build.WithConsoleOutput(stderr),
 	)
+	duration := time.Since(startedAt)
 	if err != nil {
 		return writeError(stderr, err)
 	}
 
-	_, err = fmt.Fprintf(stdout, "Built %d page(s) to %s\n", result.Pages, result.OutputDir)
+	_, err = fmt.Fprintln(stdout, buildSuccessMessage(result, duration))
 	return err
+}
+
+// buildSuccessMessage returns the styled message printed after a successful build.
+func buildSuccessMessage(result build.Result, duration time.Duration) string {
+	return tinta.Text().Green().Bold().Sprintf(
+		"Veta built %d %s to %s in %s",
+		result.Pages,
+		pageLabel(result.Pages),
+		result.Config.Build.Output,
+		buildDuration(duration),
+	)
+}
+
+// pageLabel returns the correctly pluralized page noun.
+func pageLabel(pages int) string {
+	if pages == 1 {
+		return "page"
+	}
+
+	return "pages"
+}
+
+// buildDuration returns a readable ASCII duration for CLI output.
+func buildDuration(duration time.Duration) string {
+	if duration <= 0 {
+		return "0s"
+	}
+
+	rounded := duration.Round(time.Millisecond)
+	if rounded == 0 {
+		return "1ms"
+	}
+
+	return rounded.String()
 }
 
 // runInit creates a starter project from parsed command options.

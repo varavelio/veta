@@ -17,7 +17,7 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 
 	result := runVeta(t, projectRoot, "build")
 	result.requireSuccess(t)
-	require.Contains(t, result.stdout, "Built 3 page(s)")
+	require.Contains(t, result.stdout, "Veta built 3 pages to dist in ")
 
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, `<title>Home Page | Veta E2E</title>`)
@@ -56,7 +56,7 @@ func TestBuildDiscoversConfigFromNestedDirectory(t *testing.T) {
 
 	result := runVeta(t, nestedDir, "build")
 	result.requireSuccess(t)
-	require.Contains(t, result.stdout, "Built 2 page(s)")
+	require.Contains(t, result.stdout, "Veta built 2 pages to site-output in ")
 
 	index := readProjectFile(t, projectRoot, "site-output/index.html")
 	require.Contains(t, index, `<body data-page="/">`)
@@ -77,7 +77,7 @@ func TestBuildComposesLocalThemeWithProjectOverrides(t *testing.T) {
 
 	result := runVeta(t, projectRoot, "build")
 	result.requireSuccess(t)
-	require.Contains(t, result.stdout, "Built 2 page(s)")
+	require.Contains(t, result.stdout, "Veta built 2 pages to dist in ")
 
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, "Theme brand: Base Theme")
