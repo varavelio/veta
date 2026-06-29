@@ -17,8 +17,8 @@ import (
 	"github.com/varavelio/veta/internal/pages"
 	"github.com/varavelio/veta/internal/scaffold"
 	"github.com/varavelio/veta/internal/tailwindcss"
+	"github.com/varavelio/veta/internal/template"
 	"github.com/varavelio/veta/internal/theme"
-	"github.com/varavelio/veta/internal/tmpl"
 	"github.com/varavelio/veta/internal/version"
 )
 
@@ -195,8 +195,9 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` from i
 		errors.Is(err, pages.ErrNestedUnsupported) || errors.Is(err, pages.ErrFormatUnsupported) {
 		return "Page generation failed. Check the files in pages/ and the page objects they return.\n\nDetails: " + err.Error()
 	}
-	if errors.Is(err, tmpl.ErrTemplateNotFound) || errors.Is(err, tmpl.ErrTemplateNameInvalid) ||
-		errors.Is(err, tmpl.ErrTemplateAmbiguous) {
+	if errors.Is(err, template.ErrTemplateNotFound) ||
+		errors.Is(err, template.ErrTemplateNameInvalid) ||
+		errors.Is(err, template.ErrTemplateAmbiguous) {
 		return "Template rendering failed. Check that the page template points to an existing file in templates/.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, tailwindcss.ErrConfigInvalid) || errors.Is(err, tailwindcss.ErrRunFailed) ||

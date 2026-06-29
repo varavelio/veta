@@ -20,8 +20,8 @@ import (
 	"github.com/varavelio/veta/internal/pages"
 	"github.com/varavelio/veta/internal/render"
 	"github.com/varavelio/veta/internal/tailwindcss"
+	"github.com/varavelio/veta/internal/template"
 	"github.com/varavelio/veta/internal/theme"
-	"github.com/varavelio/veta/internal/tmpl"
 )
 
 const (
@@ -430,7 +430,7 @@ func newTemplateRenderer(
 	config runConfig,
 	runtime js.Runtime,
 	debug bool,
-) (*tmpl.Renderer, error) {
+) (*template.Renderer, error) {
 	filterRunner := filterScriptRunner{runner: js.New(baseJSOptions(config, runtime)...)}
 	filterSet, err := filters.Load(
 		files,
@@ -441,12 +441,15 @@ func newTemplateRenderer(
 		return nil, fmt.Errorf("load filters: %w", err)
 	}
 
-	templateOptions := []tmpl.Option{tmpl.WithDebug(debug)}
+	templateOptions := []template.Option{template.WithDebug(debug)}
 	for name, filter := range filterSet.Functions() {
-		templateOptions = append(templateOptions, tmpl.WithFilter(name, tmpl.FilterFunc(filter)))
+		templateOptions = append(
+			templateOptions,
+			template.WithFilter(name, template.FilterFunc(filter)),
+		)
 	}
 
-	templateRenderer, err := tmpl.New(files, templateOptions...)
+	templateRenderer, err := template.New(files, templateOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("create template renderer: %w", err)
 	}
