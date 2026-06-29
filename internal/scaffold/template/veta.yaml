@@ -1,0 +1,15 @@
+# Veta configuration file.
+# Read more: https://veta.varavel.com/config
+
+build:
+  output: dist # Directory where Veta writes the generated site.
+  clean: true # Remove the output directory before each build.
+  debug: false # When true, disables template caching and prints debug details.
+
+tailwindcss:
+  stylesheet: styles.css # Compile public/styles.css into dist/styles.css.
+  minify: true # Minify the generated stylesheet.
+
+# theme:
+#   source: "" # Local theme path or GitHub source. Docs: https://veta.varavel.com/themes
+#   sha256: "" # Required SHA-256 checksum for remote themes.
