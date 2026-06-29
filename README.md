@@ -28,9 +28,7 @@
   </a>
 </p>
 
-Veta is a static site generator for small, scriptable sites. It combines flat
-JavaScript page generators, Pongo2 templates, project data files, components,
-filters, Markdown rendering, themes, and embedded Tailwind CSS into a single CLI.
+Veta is a static site generator that combines JavaScript page generators, templates, arbitrary data sources, components, filters, Markdown rendering, themes, and embedded Tailwind CSS into a single binary and easy to use CLI.
 
 ## Installation
 

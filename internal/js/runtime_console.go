@@ -9,7 +9,7 @@ import (
 	"github.com/dop251/goja"
 )
 
-// installConsole exposes a small synchronous console API in JavaScript.
+// installConsole exposes a synchronous console API in JavaScript.
 func (r *Runner) installConsole(vm *goja.Runtime) error {
 	console := vm.NewObject()
 	for _, method := range []string{"debug", "error", "info", "log", "warn"} {
