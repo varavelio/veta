@@ -138,7 +138,7 @@ jobs:
         run: |
           git -C homebrew-tap config user.name "Varavel Release Bot"
           git -C homebrew-tap config user.email "release-bot@varavel.com"
-          git -C homebrew-tap add Formula
+          git -C homebrew-tap add Formula/veta
           if git -C homebrew-tap diff --cached --quiet; then
             echo "No changes detected in Formula directory"
             exit 0

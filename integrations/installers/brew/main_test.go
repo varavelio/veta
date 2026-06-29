@@ -35,7 +35,7 @@ func TestParseManifest(t *testing.T) {
 
 // TestWriteFormula verifies Homebrew formula file placement.
 func TestWriteFormula(t *testing.T) {
-	t.Run("writes formula into the Formula directory", func(t *testing.T) {
+	t.Run("writes formula into the Formula/veta directory", func(t *testing.T) {
 		outputRoot := t.TempDir()
 		err := writeFormula(outputRoot, "veta.rb", "0.1.0", map[string]string{
 			"veta_darwin_arm64.tar.gz": "darwin-arm64",
@@ -45,7 +45,7 @@ func TestWriteFormula(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		content, err := os.ReadFile(filepath.Join(outputRoot, "Formula", "veta.rb"))
+		content, err := os.ReadFile(filepath.Join(outputRoot, "Formula", "veta", "veta.rb"))
 		require.NoError(t, err)
 		require.Contains(t, string(content), "class Veta < Formula")
 	})

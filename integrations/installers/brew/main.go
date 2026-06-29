@@ -22,7 +22,7 @@ type releaseManifest struct {
 }
 
 const (
-	formulaDir  = "Formula"
+	formulaDir  = "Formula/veta"
 	githubRepo  = "varavelio/veta"
 	projectDesc = "Veta static site generator"
 	projectHome = "https://github.com/varavelio/veta"
