@@ -47,6 +47,12 @@ export default function(input) {
 		`<main>{{ page.content }}</main>`,
 		`<footer>{{ data.site.title }} {{ "ok"|shout }}</footer>`,
 	}, ""))
+	writeProjectFile(
+		t,
+		root,
+		"templates/sitemap.pongo",
+		`<sitemap>{{ page.content }}{% for item in pages %}<url>{{ item.permalink }}</url>{% endfor %}</sitemap>`,
+	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function({ data }) {
   return [
@@ -56,10 +62,21 @@ export default function({ data }) {
       title: data.site.title,
       content: "<card>**Hello**</card>"
     },
-	    {
-	      permalink: "/raw/",
-	      content: "# Raw"
-	    }
+    {
+      permalink: "/raw/",
+      content: "# Raw"
+    },
+    {
+      permalink: "/sitemap.xml",
+      template: "sitemap"
+    },
+    {
+      permalink: "/empty.txt"
+    },
+    {
+      permalink: "/raw.txt",
+      content: "hello"
+    }
   ];
 }
 `)
@@ -67,19 +84,27 @@ export default function({ data }) {
 
 	result, err := Run(context.Background(), WithRoot(root))
 	require.NoError(t, err)
-	require.Equal(t, 2, result.Pages)
-	require.Equal(t, 2, result.Documents)
+	require.Equal(t, 5, result.Pages)
+	require.Equal(t, 5, result.Documents)
 	require.Equal(t, filepath.Join(root, DefaultOutputDir), result.OutputDir)
 
 	index := readOutputFile(t, root, "dist/index.html")
 	require.Contains(t, index, `<title>Veta</title>`)
-	require.Contains(t, index, `<nav>/;/raw/;</nav>`)
+	require.Contains(t, index, `<nav>/;/raw/;/sitemap.xml;/empty.txt;/raw.txt;</nav>`)
 	require.Contains(t, index, `<section class="card">`)
 	require.Contains(t, index, `<strong>Hello</strong>`)
 	require.Contains(t, index, `<footer>Veta OK</footer>`)
 
 	raw := readOutputFile(t, root, "dist/raw/index.html")
 	require.Equal(t, "# Raw", raw)
+	sitemap := readOutputFile(t, root, "dist/sitemap.xml")
+	require.Equal(
+		t,
+		`<sitemap><url>/</url><url>/raw/</url><url>/sitemap.xml</url><url>/empty.txt</url><url>/raw.txt</url></sitemap>`,
+		sitemap,
+	)
+	require.Equal(t, "", readOutputFile(t, root, "dist/empty.txt"))
+	require.Equal(t, "hello", readOutputFile(t, root, "dist/raw.txt"))
 
 	asset := readOutputFile(t, root, "dist/app.css")
 	require.Equal(t, `body { color: black; }`, asset)

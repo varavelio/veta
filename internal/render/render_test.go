@@ -108,6 +108,44 @@ func TestRenderWithTemplate(t *testing.T) {
 	}}, context["pages"])
 }
 
+// TestRenderWithTemplateDefaultsOmittedContent verifies that templated pages
+// without content still expose processed safe HTML content to templates.
+func TestRenderWithTemplateDefaultsOmittedContent(t *testing.T) {
+	templateRenderer := &testTemplateRenderer{}
+	renderer, err := New(
+		WithContentProcessor(testContentProcessor{}),
+		WithMarkdownRenderer(testMarkdownRenderer{}),
+		WithTemplateRenderer(templateRenderer),
+	)
+	require.NoError(t, err)
+
+	document, err := renderer.Render(Page{
+		Fields:     map[string]any{"title": "Sitemap"},
+		OutputPath: "sitemap.xml",
+		Permalink:  "/sitemap.xml",
+		Template:   "sitemap",
+	}, nil)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		Document{
+			Content:    []byte("sitemap:Sitemap:markdown(processed())"),
+			OutputPath: "sitemap.xml",
+			Permalink:  "/sitemap.xml",
+		},
+		document,
+	)
+
+	context := templateRenderer.context.(map[string]any)
+	require.Equal(t, map[string]any{
+		"content":    SafeHTML("markdown(processed())"),
+		"outputPath": "sitemap.xml",
+		"permalink":  "/sitemap.xml",
+		"template":   "sitemap",
+		"title":      "Sitemap",
+	}, context["page"])
+}
+
 // TestRenderWithoutTemplateReturnsRawContent verifies raw output pages.
 func TestRenderWithoutTemplateReturnsRawContent(t *testing.T) {
 	renderer, err := New(
@@ -128,6 +166,27 @@ func TestRenderWithoutTemplateReturnsRawContent(t *testing.T) {
 	require.Equal(
 		t,
 		Document{Content: []byte("raw"), OutputPath: "feed.xml", Permalink: "/feed.xml"},
+		document,
+	)
+}
+
+// TestRenderWithoutTemplateDefaultsOmittedContent verifies that template-less
+// pages without content render an empty document.
+func TestRenderWithoutTemplateDefaultsOmittedContent(t *testing.T) {
+	renderer, err := New()
+	require.NoError(t, err)
+
+	document, err := renderer.Render(
+		Page{
+			OutputPath: "empty.txt",
+			Permalink:  "/empty.txt",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		Document{Content: []byte(""), OutputPath: "empty.txt", Permalink: "/empty.txt"},
 		document,
 	)
 }

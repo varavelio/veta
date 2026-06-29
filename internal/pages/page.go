@@ -35,11 +35,13 @@ func decodePage(generator string, index int, value any) (Page, error) {
 	if err != nil {
 		return Page{}, err
 	}
-	if _, err := requiredStringField(generator, index, object, "content"); err != nil {
+	content, err := optionalStringField(generator, index, object, "content")
+	if err != nil {
 		return Page{}, err
 	}
 
 	fields := clonePageFields(object)
+	fields["content"] = content
 	fields["generator"] = generator
 	fields["index"] = int64(index)
 	fields["outputPath"] = outputPath
@@ -124,6 +126,26 @@ func requiredStringField(
 	value, ok := object[field]
 	if !ok {
 		return "", pageError(generator, index, "%s is required", field)
+	}
+
+	stringValue, ok := value.(string)
+	if !ok {
+		return "", pageError(generator, index, "%s must be a string", field)
+	}
+
+	return stringValue, nil
+}
+
+// optionalStringField returns an optional page string field.
+func optionalStringField(
+	generator string,
+	index int,
+	object map[string]any,
+	field string,
+) (string, error) {
+	value, exists := object[field]
+	if !exists {
+		return "", nil
 	}
 
 	stringValue, ok := value.(string)

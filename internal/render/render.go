@@ -207,8 +207,11 @@ func (renderer *Renderer) renderPageDocument(
 
 // pageTemplateContext returns the page namespace exposed to templates.
 func pageTemplateContext(page Page) map[string]any {
-	context := make(map[string]any, len(page.Fields)+3)
+	context := make(map[string]any, len(page.Fields)+4)
 	maps.Copy(context, page.Fields)
+	if _, exists := context["content"]; !exists {
+		context["content"] = ""
+	}
 	context["outputPath"] = page.OutputPath
 	context["permalink"] = page.Permalink
 	if _, exists := context["template"]; !exists {

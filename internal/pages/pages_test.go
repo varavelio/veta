@@ -112,6 +112,72 @@ func TestLoadRequiresFilesystem(t *testing.T) {
 	require.ErrorIs(t, err, ErrFSRequired)
 }
 
+// TestLoadDefaultsOmittedContent verifies that content is optional and defaults
+// to an empty string in normalized page fields.
+func TestLoadDefaultsOmittedContent(t *testing.T) {
+	files := fstest.MapFS{
+		"pages/site.js": {Data: []byte(`
+			export default function() {
+				return [
+					{ permalink: "/sitemap.xml", template: "sitemap" },
+					{ permalink: "/empty.txt" },
+					{ permalink: "/raw.txt", content: "hello" },
+				];
+			}
+		`)},
+	}
+
+	manifest, err := Load(files)
+	require.NoError(t, err)
+	require.Equal(t, Manifest{Pages: []Page{
+		{
+			Fields: map[string]any{
+				"content":    "",
+				"generator":  "site.js",
+				"index":      int64(0),
+				"outputPath": "sitemap.xml",
+				"permalink":  "/sitemap.xml",
+				"template":   "sitemap",
+			},
+			Generator:  "site.js",
+			Index:      0,
+			OutputPath: "sitemap.xml",
+			Permalink:  "/sitemap.xml",
+			Template:   "sitemap",
+		},
+		{
+			Fields: map[string]any{
+				"content":    "",
+				"generator":  "site.js",
+				"index":      int64(1),
+				"outputPath": "empty.txt",
+				"permalink":  "/empty.txt",
+				"template":   "",
+			},
+			Generator:  "site.js",
+			Index:      1,
+			OutputPath: "empty.txt",
+			Permalink:  "/empty.txt",
+			Template:   "",
+		},
+		{
+			Fields: map[string]any{
+				"content":    "hello",
+				"generator":  "site.js",
+				"index":      int64(2),
+				"outputPath": "raw.txt",
+				"permalink":  "/raw.txt",
+				"template":   "",
+			},
+			Generator:  "site.js",
+			Index:      2,
+			OutputPath: "raw.txt",
+			Permalink:  "/raw.txt",
+			Template:   "",
+		},
+	}}, manifest)
+}
+
 // TestLoadErrors verifies filesystem, generator, and page contract validation.
 func TestLoadErrors(t *testing.T) {
 	tests := []struct {
@@ -237,17 +303,6 @@ func TestLoadErrors(t *testing.T) {
 				"pages/blog.js": {
 					Data: []byte(
 						`export default function() { return [{ permalink: "/", template: "../page", content: "" }]; }`,
-					),
-				},
-			},
-			wantErr: ErrPageInvalid,
-		},
-		{
-			name: "missing content",
-			files: fstest.MapFS{
-				"pages/blog.js": {
-					Data: []byte(
-						`export default function() { return [{ permalink: "/", template: "page" }]; }`,
 					),
 				},
 			},
