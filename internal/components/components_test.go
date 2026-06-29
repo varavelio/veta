@@ -41,8 +41,8 @@ func propString(props map[string]any, key string) string {
 func TestProcessorRender(t *testing.T) {
 	renderer := &recordingRenderer{}
 	processor, err := New(fstest.MapFS{
-		"components/ui/button.pongo": {Data: []byte("button")},
-		"components/ui/card.pongo":   {Data: []byte("card")},
+		"components/ui/button.twig": {Data: []byte("button")},
+		"components/ui/card.html":   {Data: []byte("card")},
 	}, renderer, WithSlotRenderer(func(content string, _ any) (string, error) {
 		return "slot(" + content + ")", nil
 	}))
@@ -60,17 +60,17 @@ func TestProcessorRender(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		`<components/ui/card>slot(Hello <components/ui/button>Buyslot()</components/ui/button>)</components/ui/card>`,
+		`<components/ui/card.html>slot(Hello <components/ui/button.twig>Buyslot()</components/ui/button.twig>)</components/ui/card.html>`,
 		got,
 	)
 	require.Len(t, renderer.calls, 2)
-	require.Equal(t, "components/ui/button", renderer.calls[0].template)
-	require.Equal(t, "components/ui/card", renderer.calls[1].template)
+	require.Equal(t, "components/ui/button.twig", renderer.calls[0].template)
+	require.Equal(t, "components/ui/card.html", renderer.calls[1].template)
 	require.Equal(
 		t,
 		map[string]any{
 			"content": SafeHTML(
-				"slot(Hello <components/ui/button>Buyslot()</components/ui/button>)",
+				"slot(Hello <components/ui/button.twig>Buyslot()</components/ui/button.twig>)",
 			),
 			"title": "Sale",
 		},
@@ -102,6 +102,77 @@ func TestProcessorRenderIgnoresUnregisteredAndProtectedTags(t *testing.T) {
 	require.Equal(t, content, got)
 }
 
+// TestProcessorArbitraryExtensions verifies component discovery does not filter
+// by template extension.
+func TestProcessorArbitraryExtensions(t *testing.T) {
+	processor, err := New(fstest.MapFS{
+		"components/note.html":      {Data: []byte("note")},
+		"components/readme.md":      {Data: []byte("readme")},
+		"components/ui/button.twig": {Data: []byte("button")},
+	}, &recordingRenderer{})
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		[]Component{
+			{
+				Depth:    0,
+				Path:     "components/note.html",
+				Tag:      "note",
+				Template: "components/note.html",
+			},
+			{
+				Depth:    0,
+				Path:     "components/readme.md",
+				Tag:      "readme",
+				Template: "components/readme.md",
+			},
+			{
+				Depth:    1,
+				Path:     "components/ui/button.twig",
+				Tag:      "ui-button",
+				Template: "components/ui/button.twig",
+			},
+		},
+		processor.Components(),
+	)
+}
+
+// TestProcessorIgnoresHiddenAndTemporaryFiles verifies editor and dot files are
+// not registered as components.
+func TestProcessorIgnoresHiddenAndTemporaryFiles(t *testing.T) {
+	processor, err := New(fstest.MapFS{
+		"components/.DS_Store":     {Data: []byte("ignored")},
+		"components/.gitkeep":      {Data: []byte("ignored")},
+		"components/.hidden/card":  {Data: []byte("ignored")},
+		"components/card.html.tmp": {Data: []byte("ignored")},
+		"components/card.twig~":    {Data: []byte("ignored")},
+		"components/note.html":     {Data: []byte("note")},
+		"components/note.tmp":      {Data: []byte("ignored")},
+	}, &recordingRenderer{})
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		[]Component{
+			{
+				Depth:    0,
+				Path:     "components/note.html",
+				Tag:      "note",
+				Template: "components/note.html",
+			},
+		},
+		processor.Components(),
+	)
+
+	processor, err = New(fstest.MapFS{
+		"components/.gitkeep": {Data: []byte("ignored")},
+		"components/card.tmp": {Data: []byte("ignored")},
+	}, nil)
+	require.NoError(t, err)
+	require.Nil(t, processor.Components())
+}
+
 // TestProcessorConflicts verifies top-down component conflict resolution.
 func TestProcessorConflicts(t *testing.T) {
 	processor, err := New(fstest.MapFS{
@@ -117,7 +188,7 @@ func TestProcessorConflicts(t *testing.T) {
 				Depth:    0,
 				Path:     "components/ui-table.pongo",
 				Tag:      "ui-table",
-				Template: "components/ui-table",
+				Template: "components/ui-table.pongo",
 			},
 		},
 		processor.Components(),
@@ -133,6 +204,50 @@ func TestProcessorConflicts(t *testing.T) {
 		},
 		processor.Conflicts(),
 	)
+}
+
+// TestProcessorConflictsSameStemDifferentExtensions verifies duplicate stems are
+// resolved deterministically without making rendering ambiguous.
+func TestProcessorConflictsSameStemDifferentExtensions(t *testing.T) {
+	processor, err := New(fstest.MapFS{
+		"components/ui/button":      {Data: []byte("extensionless")},
+		"components/ui/button.html": {Data: []byte("html")},
+		"components/ui/button.twig": {Data: []byte("twig")},
+	}, &recordingRenderer{})
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		[]Component{
+			{
+				Depth:    1,
+				Path:     "components/ui/button.html",
+				Tag:      "ui-button",
+				Template: "components/ui/button.html",
+			},
+		},
+		processor.Components(),
+	)
+	require.Equal(
+		t,
+		[]Conflict{
+			{
+				Ignored: "components/ui/button.twig",
+				Tag:     "ui-button",
+				Winner:  "components/ui/button.html",
+			},
+			{
+				Ignored: "components/ui/button",
+				Tag:     "ui-button",
+				Winner:  "components/ui/button.html",
+			},
+		},
+		processor.Conflicts(),
+	)
+
+	got, err := processor.Render("<ui-button />", nil)
+	require.NoError(t, err)
+	require.Equal(t, "<components/ui/button.html></components/ui/button.html>", got)
 }
 
 // TestNewMissingDirectory verifies that missing component directories are valid.
@@ -152,9 +267,6 @@ func TestNewErrors(t *testing.T) {
 
 	_, err = New(fstest.MapFS{"components/card.pongo": {Data: []byte("card")}}, nil)
 	require.ErrorIs(t, err, ErrRendererRequired)
-
-	_, err = New(fstest.MapFS{"components/readme.md": {Data: []byte("bad")}}, &recordingRenderer{})
-	require.ErrorIs(t, err, ErrFormatUnsupported)
 
 	_, err = New(fstest.MapFS{"components/Bad.pongo": {Data: []byte("bad")}}, &recordingRenderer{})
 	require.ErrorIs(t, err, ErrComponentNameInvalid)

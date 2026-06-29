@@ -8,12 +8,12 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"sort"
 	"strings"
 )
 
 type templateLoader struct {
-	extensions []string
-	files      fs.FS
+	files fs.FS
 }
 
 func (loader *templateLoader) Abs(base, name string) string {
@@ -55,28 +55,25 @@ func (loader *templateLoader) resolve(name string) (string, error) {
 		return "", err
 	}
 
-	if path.Ext(cleanName) != "" {
-		if exists, err := fileExists(loader.files, cleanName); err != nil || !exists {
-			if err != nil {
-				return "", err
-			}
+	if templatePathIgnored(cleanName) {
+		return "", fmt.Errorf("%w: %s", ErrTemplateNotFound, cleanName)
+	}
 
+	if path.Ext(cleanName) != "" {
+		exists, err := fileExists(loader.files, cleanName)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
 			return "", fmt.Errorf("%w: %s", ErrTemplateNotFound, cleanName)
 		}
 
 		return cleanName, nil
 	}
 
-	matches := make([]string, 0, 1)
-	for _, extension := range loader.extensions {
-		candidate := cleanName + extension
-		exists, err := fileExists(loader.files, candidate)
-		if err != nil {
-			return "", err
-		}
-		if exists {
-			matches = append(matches, candidate)
-		}
+	matches, err := loader.resolveExtensionless(cleanName)
+	if err != nil {
+		return "", err
 	}
 
 	switch len(matches) {
@@ -92,6 +89,39 @@ func (loader *templateLoader) resolve(name string) (string, error) {
 			strings.Join(matches, ", "),
 		)
 	}
+}
+
+// resolveExtensionless finds valid template files with a matching stem.
+func (loader *templateLoader) resolveExtensionless(cleanName string) ([]string, error) {
+	directory, stem := path.Split(cleanName)
+	directory = strings.TrimSuffix(directory, "/")
+	if directory == "" {
+		directory = "."
+	}
+
+	entries, err := fs.ReadDir(loader.files, directory)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read template directory %s: %w", directory, err)
+	}
+
+	matches := make([]string, 0, 1)
+	for _, entry := range entries {
+		if entry.IsDir() || templateFileNameIgnored(entry.Name()) {
+			continue
+		}
+		if fileStem(entry.Name()) != stem {
+			continue
+		}
+
+		matches = append(matches, path.Join(directory, entry.Name()))
+	}
+	sort.Strings(matches)
+
+	return matches, nil
 }
 
 func cleanTemplateName(name string) (string, error) {
@@ -123,6 +153,25 @@ func fileExists(files fs.FS, name string) (bool, error) {
 	}
 
 	return !info.IsDir(), nil
+}
+
+// fileStem returns the file name without its final extension.
+func fileStem(name string) string {
+	return strings.TrimSuffix(name, path.Ext(name))
+}
+
+// templatePathIgnored reports whether a path contains an ignored file segment.
+func templatePathIgnored(name string) bool {
+	return slices.ContainsFunc(strings.Split(name, "/"), templateFileNameIgnored)
+}
+
+// templateFileNameIgnored reports whether a template file should be skipped.
+func templateFileNameIgnored(name string) bool {
+	lowerName := strings.ToLower(name)
+
+	return strings.HasPrefix(name, ".") ||
+		strings.HasSuffix(name, "~") ||
+		strings.HasSuffix(lowerName, ".tmp")
 }
 
 func normalizePathSeparators(name string) string {

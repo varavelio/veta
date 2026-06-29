@@ -9,8 +9,6 @@ import (
 // DirName is the project directory containing component templates.
 const DirName = "components"
 
-var defaultExtensions = []string{".pongo", ".html"}
-
 // TemplateRenderer renders a component template by name.
 type TemplateRenderer interface {
 	Render(name string, context any) (string, error)
@@ -55,7 +53,6 @@ type Processor struct {
 type Option func(*processorConfig) error
 
 type processorConfig struct {
-	extensions   []string
 	slotRenderer SlotRenderer
 }
 
@@ -70,7 +67,7 @@ func New(files fs.FS, renderer TemplateRenderer, options ...Option) (*Processor,
 		return nil, err
 	}
 
-	registry, conflicts, err := scan(files, config.extensions)
+	registry, conflicts, err := scan(files)
 	if err != nil {
 		return nil, err
 	}
@@ -86,15 +83,12 @@ func New(files fs.FS, renderer TemplateRenderer, options ...Option) (*Processor,
 	}, nil
 }
 
-// WithExtensions configures component template extensions.
-func WithExtensions(extensions ...string) Option {
+// WithExtensions is retained for compatibility.
+//
+// Deprecated: Veta now discovers any non-ignored component template file,
+// regardless of extension.
+func WithExtensions(_ ...string) Option {
 	return func(config *processorConfig) error {
-		normalized, err := normalizeExtensions(extensions)
-		if err != nil {
-			return err
-		}
-
-		config.extensions = normalized
 		return nil
 	}
 }
@@ -152,7 +146,7 @@ func (processor *Processor) Render(content string, context any) (string, error) 
 
 // newProcessorConfig applies options and defaults.
 func newProcessorConfig(options []Option) (processorConfig, error) {
-	config := processorConfig{extensions: append([]string(nil), defaultExtensions...)}
+	config := processorConfig{}
 	for _, option := range options {
 		if option == nil {
 			continue

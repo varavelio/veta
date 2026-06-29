@@ -1,5 +1,4 @@
-{# Templates render pages. Docs: https://veta.varavel.com/templates #}
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -11,7 +10,9 @@
   <body class="mx-auto max-w-2xl px-6 py-10 text-zinc-950">
     <nav class="mb-10 flex gap-4 text-sm">
       {% for item in pages %}
-        <a class="text-zinc-600 hover:text-zinc-950" href="{{ item.permalink }}">{{ item.title }}</a>
+      <a class="text-zinc-600 hover:text-zinc-950" href="{{ item.permalink }}">
+        {{ item.title }}
+      </a>
       {% endfor %}
     </nav>
 

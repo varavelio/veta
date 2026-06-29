@@ -12,21 +12,30 @@ import (
 
 type componentCandidate struct {
 	component Component
-	extension string
 }
 
 // scan discovers component templates and resolves tag conflicts.
-func scan(files fs.FS, extensions []string) (map[string]Component, []Conflict, error) {
+func scan(files fs.FS) (map[string]Component, []Conflict, error) {
 	candidates := []componentCandidate{}
 	if err := fs.WalkDir(files, DirName, func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if name == DirName || entry.IsDir() {
+		if name == DirName {
+			return nil
+		}
+		if entry.IsDir() {
+			if componentFileNameIgnored(entry.Name()) {
+				return fs.SkipDir
+			}
+
+			return nil
+		}
+		if componentPathIgnored(name) {
 			return nil
 		}
 
-		candidate, err := componentCandidateFor(name, extensions)
+		candidate, err := componentCandidateFor(name)
 		if err != nil {
 			return err
 		}
@@ -46,6 +55,13 @@ func scan(files fs.FS, extensions []string) (map[string]Component, []Conflict, e
 		rightComponent := candidates[right].component
 		if leftComponent.Depth != rightComponent.Depth {
 			return leftComponent.Depth < rightComponent.Depth
+		}
+		if leftComponent.Tag == rightComponent.Tag {
+			leftHasExtension := path.Ext(leftComponent.Path) != ""
+			rightHasExtension := path.Ext(rightComponent.Path) != ""
+			if leftHasExtension != rightHasExtension {
+				return leftHasExtension
+			}
 		}
 
 		return leftComponent.Path < rightComponent.Path
@@ -71,14 +87,9 @@ func scan(files fs.FS, extensions []string) (map[string]Component, []Conflict, e
 }
 
 // componentCandidateFor converts one file path into a component candidate.
-func componentCandidateFor(name string, extensions []string) (componentCandidate, error) {
-	extension := strings.ToLower(path.Ext(name))
-	if !hasExtension(extensions, extension) {
-		return componentCandidate{}, fmt.Errorf("%w: %s", ErrFormatUnsupported, name)
-	}
-
+func componentCandidateFor(name string) (componentCandidate, error) {
 	relativeName := strings.TrimPrefix(name, DirName+"/")
-	stem := strings.TrimSuffix(relativeName, path.Ext(relativeName))
+	stem := fileStem(relativeName)
 	tag := strings.ReplaceAll(stem, "/", "-")
 	if err := validateTagName(tag); err != nil {
 		return componentCandidate{}, fmt.Errorf("%w: %s", err, name)
@@ -89,52 +100,9 @@ func componentCandidateFor(name string, extensions []string) (componentCandidate
 			Depth:    strings.Count(stem, "/"),
 			Path:     name,
 			Tag:      tag,
-			Template: path.Join(DirName, stem),
+			Template: name,
 		},
-		extension: extension,
 	}, nil
-}
-
-// normalizeExtensions validates component template extensions.
-func normalizeExtensions(extensions []string) ([]string, error) {
-	if len(extensions) == 0 {
-		return nil, fmt.Errorf(
-			"%w: at least one component extension is required",
-			ErrFormatUnsupported,
-		)
-	}
-
-	normalized := make([]string, 0, len(extensions))
-	for _, extension := range extensions {
-		extension = strings.TrimSpace(strings.ToLower(extension))
-		if extension == "" || strings.ContainsAny(extension, "/\\") ||
-			strings.ContainsRune(extension, 0) {
-			return nil, fmt.Errorf(
-				"%w: invalid component extension %q",
-				ErrFormatUnsupported,
-				extension,
-			)
-		}
-		if !strings.HasPrefix(extension, ".") {
-			extension = "." + extension
-		}
-		if extension == "." {
-			return nil, fmt.Errorf(
-				"%w: invalid component extension %q",
-				ErrFormatUnsupported,
-				extension,
-			)
-		}
-
-		normalized = append(normalized, extension)
-	}
-
-	return normalized, nil
-}
-
-// hasExtension reports whether extension is allowed.
-func hasExtension(extensions []string, extension string) bool {
-	return slices.Contains(extensions, extension)
 }
 
 // validateTagName checks that a component tag follows Veta's tag syntax.
@@ -152,4 +120,23 @@ func validateTagName(tag string) error {
 	}
 
 	return nil
+}
+
+// fileStem returns the file name without its final extension.
+func fileStem(name string) string {
+	return strings.TrimSuffix(name, path.Ext(name))
+}
+
+// componentPathIgnored reports whether a path contains an ignored file segment.
+func componentPathIgnored(name string) bool {
+	return slices.ContainsFunc(strings.Split(name, "/"), componentFileNameIgnored)
+}
+
+// componentFileNameIgnored reports whether a component file should be skipped.
+func componentFileNameIgnored(name string) bool {
+	lowerName := strings.ToLower(name)
+
+	return strings.HasPrefix(name, ".") ||
+		strings.HasSuffix(name, "~") ||
+		strings.HasSuffix(lowerName, ".tmp")
 }

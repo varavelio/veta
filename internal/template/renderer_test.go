@@ -18,7 +18,7 @@ func TestRendererRender(t *testing.T) {
 		want    string
 	}{
 		{
-			name:   "renders pongo template",
+			name:   "renders arbitrary template extension",
 			render: "pages/home",
 			context: Context{
 				"page": map[string]any{"title": "Home"},
@@ -26,7 +26,7 @@ func TestRendererRender(t *testing.T) {
 			want: "<h1>Home</h1>",
 		},
 		{
-			name:   "renders html template fallback",
+			name:   "renders extensionless template from nested directory",
 			render: "emails/welcome",
 			context: map[string]string{
 				"name": "Veta",
@@ -42,9 +42,9 @@ func TestRendererRender(t *testing.T) {
 	}
 
 	files := fstest.MapFS{
-		"emails/welcome.html": {Data: []byte("Welcome {{ name }}")},
-		"pages/home.pongo":    {Data: []byte("<h1>{{ page.title }}</h1>")},
-		"plain.txt":           {Data: []byte("plain text")},
+		"emails/welcome.njk": {Data: []byte("Welcome {{ name }}")},
+		"pages/home.twig":    {Data: []byte("<h1>{{ page.title }}</h1>")},
+		"plain.txt":          {Data: []byte("plain text")},
 	}
 	renderer, err := New(files)
 	require.NoError(t, err)
@@ -153,9 +153,10 @@ func TestRendererAutoescapesByDefault(t *testing.T) {
 
 func TestRendererErrors(t *testing.T) {
 	tests := []struct {
-		name    string
-		render  string
-		wantErr error
+		name         string
+		render       string
+		wantErr      error
+		wantContains []string
 	}{
 		{
 			name:    "missing template",
@@ -166,6 +167,10 @@ func TestRendererErrors(t *testing.T) {
 			name:    "ambiguous template",
 			render:  "ambiguous",
 			wantErr: ErrTemplateAmbiguous,
+			wantContains: []string{
+				"ambiguous.html",
+				"ambiguous.twig",
+			},
 		},
 		{
 			name:    "rejects parent traversal",
@@ -180,8 +185,8 @@ func TestRendererErrors(t *testing.T) {
 	}
 
 	files := fstest.MapFS{
-		"ambiguous.html":  {Data: []byte("html")},
-		"ambiguous.pongo": {Data: []byte("pongo")},
+		"ambiguous.html": {Data: []byte("html")},
+		"ambiguous.twig": {Data: []byte("twig")},
 	}
 	renderer, err := New(files)
 	require.NoError(t, err)
@@ -191,8 +196,38 @@ func TestRendererErrors(t *testing.T) {
 			_, err := renderer.Render(test.render, nil)
 			require.Error(t, err)
 			require.True(t, errors.Is(err, test.wantErr), "expected %v, got %v", test.wantErr, err)
+			for _, expected := range test.wantContains {
+				require.Contains(t, err.Error(), expected)
+			}
 		})
 	}
+}
+
+func TestRendererIgnoresHiddenAndTemporaryTemplates(t *testing.T) {
+	files := fstest.MapFS{
+		".hidden.html":   {Data: []byte("hidden")},
+		"base.html.tmp":  {Data: []byte("tmp")},
+		"base.tmp":       {Data: []byte("tmp")},
+		"base.twig~":     {Data: []byte("backup")},
+		"partials/.keep": {Data: []byte("keep")},
+		"partials/card":  {Data: []byte("card")},
+		"partials/card~": {Data: []byte("backup")},
+	}
+	renderer, err := New(files)
+	require.NoError(t, err)
+
+	_, err = renderer.Render("base", nil)
+	require.ErrorIs(t, err, ErrTemplateNotFound)
+
+	_, err = renderer.Render("base.tmp", nil)
+	require.ErrorIs(t, err, ErrTemplateNotFound)
+
+	_, err = renderer.Render(".hidden.html", nil)
+	require.ErrorIs(t, err, ErrTemplateNotFound)
+
+	got, err := renderer.Render("partials/card", nil)
+	require.NoError(t, err)
+	require.Equal(t, "card", got)
 }
 
 func TestRendererContextErrors(t *testing.T) {
@@ -210,9 +245,6 @@ func TestRendererOptionErrors(t *testing.T) {
 	_, err := New(nil)
 	require.ErrorIs(t, err, ErrTemplateFSRequired)
 
-	_, err = New(files, WithExtensions())
-	require.ErrorIs(t, err, ErrTemplateNameInvalid)
-
 	_, err = New(files, WithFilter("", func(input, parameter any) (any, error) {
 		return input, nil
 	}))
@@ -222,7 +254,7 @@ func TestRendererOptionErrors(t *testing.T) {
 	require.ErrorIs(t, err, ErrFilterNameInvalid)
 }
 
-func TestRendererCustomExtensions(t *testing.T) {
+func TestRendererWithExtensionsCompatibilityNoop(t *testing.T) {
 	files := fstest.MapFS{
 		"page.tpl": {Data: []byte("Hello {{ name }}")},
 		"feed.xml": {Data: []byte("<title>{{ title }}</title>")},
@@ -233,9 +265,6 @@ func TestRendererCustomExtensions(t *testing.T) {
 	got, err := renderer.Render("page", map[string]string{"name": "Veta"})
 	require.NoError(t, err)
 	require.Equal(t, "Hello Veta", got)
-
-	renderer, err = New(files, WithExtensions("xml"))
-	require.NoError(t, err)
 
 	got, err = renderer.Render("feed", map[string]string{"title": "Veta"})
 	require.NoError(t, err)

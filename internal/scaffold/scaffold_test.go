@@ -21,6 +21,7 @@ func TestCreate(t *testing.T) {
 	require.FileExists(t, filepath.Join(root, "veta.yaml"))
 	require.FileExists(t, filepath.Join(root, "pages", "site.js"))
 	require.FileExists(t, filepath.Join(root, "public", "styles.css"))
+	require.FileExists(t, filepath.Join(root, "templates", "base.html"))
 	config, err := os.ReadFile(filepath.Join(root, "veta.yaml"))
 	require.NoError(t, err)
 	require.Contains(t, string(config), "# Veta configuration file.")
@@ -39,7 +40,7 @@ func TestCreate(t *testing.T) {
 	require.Contains(t, string(pages), "Veta.files")
 	require.Contains(t, string(pages), "Veta.httpClient")
 	require.NotContains(t, string(pages), "layout:")
-	require.FileExists(t, filepath.Join(root, "components", "note.pongo"))
+	require.FileExists(t, filepath.Join(root, "components", "note.html"))
 	require.FileExists(t, filepath.Join(root, "filters", "label.js"))
 }
 

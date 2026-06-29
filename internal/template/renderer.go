@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"io/fs"
 	"reflect"
-	"strings"
 
 	"github.com/flosch/pongo2/v7"
 )
-
-var defaultExtensions = []string{".pongo", ".html"}
 
 // Context contains template variables. Values may be any Go value supported by
 // Pongo2.
@@ -25,9 +22,8 @@ type Renderer struct {
 }
 
 type rendererConfig struct {
-	debug      bool
-	extensions []string
-	filters    map[string]FilterFunc
+	debug   bool
+	filters map[string]FilterFunc
 }
 
 // New creates a Renderer backed by files.
@@ -37,8 +33,7 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 	}
 
 	config := rendererConfig{
-		extensions: append([]string(nil), defaultExtensions...),
-		filters:    map[string]FilterFunc{},
+		filters: map[string]FilterFunc{},
 	}
 	for _, option := range options {
 		if option == nil {
@@ -49,10 +44,7 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 		}
 	}
 
-	loader := &templateLoader{
-		extensions: append([]string(nil), config.extensions...),
-		files:      files,
-	}
+	loader := &templateLoader{files: files}
 	set := pongo2.NewSet("veta", loader)
 	set.Debug = config.debug
 
@@ -83,16 +75,12 @@ func WithDebug(debug bool) Option {
 	}
 }
 
-// WithExtensions configures extension fallbacks for extensionless template
-// names. Extensions may be provided with or without a leading dot.
-func WithExtensions(extensions ...string) Option {
+// WithExtensions is retained for compatibility.
+//
+// Deprecated: Veta now resolves extensionless template names by scanning for any
+// non-ignored file with a matching stem, regardless of extension.
+func WithExtensions(_ ...string) Option {
 	return func(config *rendererConfig) error {
-		normalized, err := normalizeExtensions(extensions)
-		if err != nil {
-			return err
-		}
-
-		config.extensions = normalized
 		return nil
 	}
 }
@@ -137,39 +125,6 @@ func (renderer *Renderer) Render(name string, context any) (string, error) {
 	}
 
 	return output, nil
-}
-
-// normalizeExtensions validates extension fallback values.
-func normalizeExtensions(extensions []string) ([]string, error) {
-	if len(extensions) == 0 {
-		return nil, fmt.Errorf(
-			"%w: at least one template extension is required",
-			ErrTemplateNameInvalid,
-		)
-	}
-
-	normalized := make([]string, 0, len(extensions))
-	for _, extension := range extensions {
-		extension = strings.TrimSpace(extension)
-		if extension == "" {
-			return nil, fmt.Errorf("%w: template extension cannot be empty", ErrTemplateNameInvalid)
-		}
-		if !strings.HasPrefix(extension, ".") {
-			extension = "." + extension
-		}
-		if strings.ContainsAny(extension, "/\\") || strings.ContainsRune(extension, 0) ||
-			extension == "." {
-			return nil, fmt.Errorf(
-				"%w: invalid template extension %q",
-				ErrTemplateNameInvalid,
-				extension,
-			)
-		}
-
-		normalized = append(normalized, extension)
-	}
-
-	return normalized, nil
 }
 
 // normalizeContext converts supported root context maps into Pongo2 context.

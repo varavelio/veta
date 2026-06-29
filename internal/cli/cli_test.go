@@ -119,8 +119,8 @@ func TestRunInitCommand(t *testing.T) {
 		"veta.yaml",
 		"data/site.json",
 		"pages/site.js",
-		"templates/base.pongo",
-		"components/note.pongo",
+		"templates/base.html",
+		"components/note.html",
 		"filters/label.js",
 		"public/styles.css",
 		"public/robots.txt",
@@ -187,7 +187,7 @@ build:
   output: dist
   clean: true
 `)
-	writeCLIFile(t, root, "templates/base.pongo", `{{ page.content }}`)
+	writeCLIFile(t, root, "templates/base.html", `{{ page.content }}`)
 	writeCLIFile(t, root, "pages/site.js", `
 export default function() {
   return [{ permalink: "/", template: "base", content: "Hello" }];

@@ -14,8 +14,8 @@ var (
 	// valid tag name.
 	ErrComponentNameInvalid = errors.New("component name is invalid")
 
-	// ErrFormatUnsupported indicates that a component file has an unsupported
-	// extension.
+	// ErrFormatUnsupported is retained for compatibility with earlier component
+	// extension validation.
 	ErrFormatUnsupported = errors.New("component file format is unsupported")
 
 	// ErrAttributeInvalid indicates that a component tag contains malformed
