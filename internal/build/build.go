@@ -144,7 +144,6 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		[]theme.Option{
 			theme.WithRoot(projectRoot),
 			theme.WithContext(ctx),
-			theme.WithSHA256(toolConfig.Theme.SHA256),
 		},
 		runConfig.themeOptions...,
 	)

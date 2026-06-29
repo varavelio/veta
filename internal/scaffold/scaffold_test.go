@@ -30,7 +30,6 @@ func TestCreate(t *testing.T) {
 	require.Contains(t, string(config), "\ntailwindcss:\n")
 	require.Contains(t, string(config), "# theme:")
 	require.Contains(t, string(config), "#   source:")
-	require.Contains(t, string(config), "#   sha256:")
 	require.NotContains(t, string(config), "input:")
 	require.NotContains(t, string(config), "output: styles.css")
 	pages, err := os.ReadFile(filepath.Join(root, "pages", "site.js"))

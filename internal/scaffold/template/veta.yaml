@@ -12,4 +12,3 @@ tailwindcss:
 
 # theme:
 #   source: "" # Local theme path or GitHub source. Docs: https://veta.varavel.com/themes
-#   sha256: "" # Required SHA-256 checksum for remote themes.

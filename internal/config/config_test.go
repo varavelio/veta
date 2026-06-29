@@ -19,7 +19,6 @@ build:
   debug: true
 theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
-  sha256: " 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef "
 tailwindcss:
   stylesheet: " css/app.css "
   minify: true
@@ -32,11 +31,6 @@ tailwindcss:
 		require.True(t, config.Build.Clean)
 		require.True(t, config.Build.Debug)
 		require.Equal(t, "varavelio/veta-theme-clean@v1.0.0", config.Theme.Source)
-		require.Equal(
-			t,
-			"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-			config.Theme.SHA256,
-		)
 		require.Equal(t, "css/app.css", config.TailwindCSS.Stylesheet)
 		require.Equal(t, true, config.TailwindCSS.Minify)
 		require.True(t, config.Theme.Enabled())
@@ -198,6 +192,14 @@ build:
 `,
 		},
 		{
+			name: "unknown theme field",
+			content: `
+theme:
+  source: ./theme
+  name: clean
+`,
+		},
+		{
 			name: "unknown tailwind field",
 			content: `
 tailwindcss:
@@ -308,9 +310,6 @@ build:
 
 func TestThemeValidation(t *testing.T) {
 	_, err := Parse([]byte("theme:\n  source: \"bad\x00source\"\n"))
-	require.ErrorIs(t, err, ErrInvalid)
-
-	_, err = Parse([]byte("theme:\n  sha256: abc\n"))
 	require.ErrorIs(t, err, ErrInvalid)
 }
 

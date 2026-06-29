@@ -249,13 +249,9 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` from i
 		return "Writing output failed. Check build.output in veta.yaml and any generated output paths.\n\nDetails: " + err.Error()
 	}
 
-	var integrityError *theme.IntegrityError
-	if errors.As(err, &integrityError) {
-		return themeIntegrityMessage(integrityError)
-	}
 	if errors.Is(err, theme.ErrSourceInvalid) || errors.Is(err, theme.ErrDownloadFailed) ||
 		errors.Is(err, theme.ErrRemoteUnsupported) {
-		return "Theme resolution failed. Check theme.source and theme.sha256 in veta.yaml.\n\nDetails: " + err.Error()
+		return "Theme resolution failed. Check theme.source in veta.yaml.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, data.ErrInvalid) || errors.Is(err, data.ErrKeyDuplicate) ||
 		errors.Is(err, data.ErrKeyInvalid) || errors.Is(err, data.ErrFormatUnsupported) ||
@@ -277,31 +273,6 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` from i
 	message := err.Error()
 	message = strings.TrimPrefix(message, ErrUsage.Error()+": ")
 	return message
-}
-
-// themeIntegrityMessage returns guidance for remote theme checksum failures.
-func themeIntegrityMessage(err *theme.IntegrityError) string {
-	if errors.Is(err, theme.ErrIntegrityRequired) {
-		return strings.TrimSpace(fmt.Sprintf(`Remote theme integrity is not configured.
-
-Veta downloaded %s, but remote themes must be pinned with theme.sha256 so your builds stay reproducible and theme code cannot change silently.
-
-After you verify that this is the theme source and version you want to trust, add this checksum to veta.yaml:
-
-theme:
-  source: %s
-  sha256: "%s"`, err.Source, err.Source, err.Actual))
-	}
-
-	return strings.TrimSpace(
-		fmt.Sprintf(`The configured theme.sha256 does not match the downloaded remote theme.
-
-Theme:   %s
-Expected: %s
-Actual:   %s
-
-This can mean the theme version or branch changed, the archive was modified, or the checksum belongs to a different theme version. Verify the theme source before updating theme.sha256.`, err.Source, err.Expected, err.Actual),
-	)
 }
 
 // existingFilesMessage returns guidance for safe init overwrite failures.

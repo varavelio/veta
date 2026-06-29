@@ -19,12 +19,8 @@ const FileName = "veta.yaml"
 
 var fileNames = []string{"veta.yaml", "veta.yml", ".veta.yaml", ".veta.yml"}
 
-const (
-	// DefaultBuildOutput is the default build output directory.
-	DefaultBuildOutput = "dist"
-
-	sha256HexLength = 64
-)
+// DefaultBuildOutput is the default build output directory.
+const DefaultBuildOutput = "dist"
 
 // Config contains Veta's tool behavior settings.
 type Config struct {
@@ -42,7 +38,6 @@ type Build struct {
 
 // Theme contains theme resolution settings.
 type Theme struct {
-	SHA256 string `yaml:"sha256"`
 	Source string `yaml:"source"`
 }
 
@@ -181,7 +176,6 @@ func normalize(config Config) (Config, error) {
 		config.Build.Output = DefaultBuildOutput
 	}
 	config.Theme.Source = strings.TrimSpace(config.Theme.Source)
-	config.Theme.SHA256 = strings.TrimSpace(config.Theme.SHA256)
 	config.TailwindCSS.Stylesheet = strings.TrimSpace(config.TailwindCSS.Stylesheet)
 
 	if err := validateBuild(config.Build); err != nil {
@@ -215,30 +209,8 @@ func validateTheme(theme Theme) error {
 	if strings.ContainsRune(theme.Source, 0) {
 		return fmt.Errorf("%w: theme.source cannot contain NUL", ErrInvalid)
 	}
-	if strings.ContainsRune(theme.SHA256, 0) {
-		return fmt.Errorf("%w: theme.sha256 cannot contain NUL", ErrInvalid)
-	}
-	if theme.SHA256 != "" && !validSHA256(theme.SHA256) {
-		return fmt.Errorf("%w: theme.sha256 must be a SHA-256 hex digest", ErrInvalid)
-	}
 
 	return nil
-}
-
-// validSHA256 reports whether value is a SHA-256 hex digest.
-func validSHA256(value string) bool {
-	if len(value) != sha256HexLength {
-		return false
-	}
-	for _, char := range value {
-		if '0' <= char && char <= '9' || 'a' <= char && char <= 'f' || 'A' <= char && char <= 'F' {
-			continue
-		}
-
-		return false
-	}
-
-	return true
 }
 
 func validateTailwindCSS(tailwind TailwindCSS) error {

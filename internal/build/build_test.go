@@ -208,8 +208,7 @@ func TestRunUsesRemoteTheme(t *testing.T) {
 		`build:
   clean: true
 theme:
-  source: "varavelio/veta-theme-remote@main"
-  sha256: "`+bytesSHA256(archive)+`"`,
+  source: "varavelio/veta-theme-remote@main"`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
@@ -330,12 +329,6 @@ func buildThemeArchive(t *testing.T, files map[string]string) []byte {
 	require.NoError(t, writer.Close())
 
 	return buffer.Bytes()
-}
-
-// bytesSHA256 returns the SHA-256 hex digest for content.
-func bytesSHA256(content []byte) string {
-	hash := sha256.Sum256(content)
-	return hex.EncodeToString(hash[:])
 }
 
 func fakeTailwindBinary() tailwindcss.Binary {

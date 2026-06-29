@@ -3,9 +3,7 @@ package theme
 import (
 	"archive/zip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/fs"
@@ -49,12 +47,11 @@ type Site struct {
 type Option func(*resolverConfig) error
 
 type resolverConfig struct {
-	cacheDir       string
-	context        context.Context
-	expectedSHA256 string
-	githubBaseURL  string
-	httpClient     HTTPClient
-	root           string
+	cacheDir      string
+	context       context.Context
+	githubBaseURL string
+	httpClient    HTTPClient
+	root          string
 }
 
 type remoteReference struct {
@@ -126,14 +123,6 @@ func WithHTTPClient(client HTTPClient) Option {
 	}
 }
 
-// WithSHA256 configures the expected SHA-256 checksum for remote theme archives.
-func WithSHA256(checksum string) Option {
-	return func(config *resolverConfig) error {
-		config.expectedSHA256 = strings.ToLower(strings.TrimSpace(checksum))
-		return nil
-	}
-}
-
 // Resolve composes projectFiles with the optional local or remote theme source.
 func Resolve(projectFiles fs.FS, source string, options ...Option) (Site, error) {
 	if projectFiles == nil {
@@ -162,13 +151,6 @@ func Resolve(projectFiles fs.FS, source string, options ...Option) (Site, error)
 		}
 
 		return compose(projectFiles, themeRoot, source)
-	}
-
-	if config.expectedSHA256 != "" {
-		return Site{}, fmt.Errorf(
-			"%w: theme.sha256 can only be used with remote themes",
-			ErrSourceInvalid,
-		)
 	}
 
 	themeRoot := localThemeRoot(config.root, source)
@@ -235,22 +217,13 @@ func resolveRemoteTheme(config resolverConfig, source string) (string, error) {
 		}
 	}
 
-	cacheRoot := remoteCacheRoot(cacheDir, reference)
+	cacheRoot := remoteCacheRoot(cacheDir, source)
 	filesRoot := filepath.Join(cacheRoot, filesDirName)
 	if cachedThemeReady(cacheRoot, filesRoot) {
-		if err := verifyCachedRemoteTheme(config, source, cacheRoot); err != nil {
-			if !errors.Is(err, ErrIntegrityMismatch) {
-				return "", err
-			}
-			if err := os.RemoveAll(cacheRoot); err != nil {
-				return "", fmt.Errorf("replace stale theme cache %s: %w", cacheRoot, err)
-			}
-		} else {
-			return filesRoot, nil
-		}
+		return filesRoot, nil
 	}
 
-	if err := downloadRemoteTheme(config, source, reference, cacheRoot); err != nil {
+	if err := downloadRemoteTheme(config, reference, cacheRoot); err != nil {
 		return "", err
 	}
 
@@ -331,15 +304,12 @@ func validGitReference(ref string) bool {
 	return true
 }
 
-// remoteCacheRoot returns the cache directory for a remote theme reference.
-func remoteCacheRoot(cacheDir string, reference remoteReference) string {
-	hash := sha256.Sum256([]byte(reference.Ref))
+// remoteCacheRoot returns the cache directory for a remote theme source.
+func remoteCacheRoot(cacheDir, source string) string {
 	return filepath.Join(
 		cacheDir,
 		githubCacheDir,
-		reference.Owner,
-		reference.Repo,
-		hex.EncodeToString(hash[:]),
+		base64.RawURLEncoding.EncodeToString([]byte(source)),
 	)
 }
 
@@ -352,20 +322,9 @@ func cachedThemeReady(cacheRoot, filesRoot string) bool {
 	return err == nil && info.IsDir()
 }
 
-// verifyCachedRemoteTheme validates the archive stored in an existing cache.
-func verifyCachedRemoteTheme(config resolverConfig, source, cacheRoot string) error {
-	actual, err := archiveSHA256(filepath.Join(cacheRoot, archiveFileName))
-	if err != nil {
-		return fmt.Errorf("inspect cached theme archive: %w", err)
-	}
-
-	return verifyRemoteThemeSHA256(source, config.expectedSHA256, actual)
-}
-
 // downloadRemoteTheme downloads and extracts a remote theme into cacheRoot.
 func downloadRemoteTheme(
 	config resolverConfig,
-	source string,
 	reference remoteReference,
 	cacheRoot string,
 ) error {
@@ -389,13 +348,6 @@ func downloadRemoteTheme(
 	if err := downloadArchive(config, reference, archivePath); err != nil {
 		return err
 	}
-	actualSHA256, err := archiveSHA256(archivePath)
-	if err != nil {
-		return err
-	}
-	if err := verifyRemoteThemeSHA256(source, config.expectedSHA256, actualSHA256); err != nil {
-		return err
-	}
 	if err := extractArchive(archivePath, filepath.Join(tempRoot, filesDirName)); err != nil {
 		return err
 	}
@@ -415,41 +367,6 @@ func downloadRemoteTheme(
 	}
 
 	installed = true
-	return nil
-}
-
-// archiveSHA256 returns the SHA-256 hex digest for archivePath.
-func archiveSHA256(archivePath string) (string, error) {
-	archiveFile, err := os.Open(archivePath)
-	if err != nil {
-		return "", fmt.Errorf("open theme archive %s: %w", archivePath, err)
-	}
-	defer func() {
-		_ = archiveFile.Close()
-	}()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, archiveFile); err != nil {
-		return "", fmt.Errorf("hash theme archive %s: %w", archivePath, err)
-	}
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-// verifyRemoteThemeSHA256 checks an actual remote archive digest.
-func verifyRemoteThemeSHA256(source, expected, actual string) error {
-	if expected == "" {
-		return &IntegrityError{Actual: actual, Source: source, kind: ErrIntegrityRequired}
-	}
-	if !strings.EqualFold(expected, actual) {
-		return &IntegrityError{
-			Actual:   actual,
-			Expected: expected,
-			Source:   source,
-			kind:     ErrIntegrityMismatch,
-		}
-	}
-
 	return nil
 }
 

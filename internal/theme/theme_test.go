@@ -3,8 +3,6 @@ package theme
 import (
 	"archive/zip"
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -106,7 +104,6 @@ func TestResolveRemoteTheme(t *testing.T) {
 		WithCacheDir(cacheDir),
 		WithGitHubBaseURL(server.URL),
 		WithHTTPClient(server.Client()),
-		WithSHA256(bytesSHA256(archive)),
 	)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), requests.Load())
@@ -129,47 +126,10 @@ func TestResolveRemoteTheme(t *testing.T) {
 		WithCacheDir(cacheDir),
 		WithGitHubBaseURL(server.URL),
 		WithHTTPClient(server.Client()),
-		WithSHA256(bytesSHA256(archive)),
 	)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), requests.Load())
 	require.DirExists(t, site.Source)
-}
-
-func TestResolveRemoteThemeIntegrity(t *testing.T) {
-	archive := themeArchive(t, map[string]string{
-		"veta-theme-basic-main/templates/base.pongo": "theme base",
-	})
-	server := httptest.NewServer(
-		http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-			writer.Header().Set("Content-Type", "application/zip")
-			_, err := writer.Write(archive)
-			require.NoError(t, err)
-		}),
-	)
-	defer server.Close()
-
-	_, err := Resolve(
-		fstest.MapFS{},
-		"varavelio/veta-theme-basic@main",
-		WithCacheDir(t.TempDir()),
-		WithGitHubBaseURL(server.URL),
-		WithHTTPClient(server.Client()),
-	)
-	require.ErrorIs(t, err, ErrIntegrityRequired)
-	var integrityErr *IntegrityError
-	require.ErrorAs(t, err, &integrityErr)
-	require.Equal(t, bytesSHA256(archive), integrityErr.Actual)
-
-	_, err = Resolve(
-		fstest.MapFS{},
-		"varavelio/veta-theme-basic@main",
-		WithCacheDir(t.TempDir()),
-		WithGitHubBaseURL(server.URL),
-		WithHTTPClient(server.Client()),
-		WithSHA256("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
-	)
-	require.ErrorIs(t, err, ErrIntegrityMismatch)
 }
 
 func TestResolveErrors(t *testing.T) {
@@ -200,7 +160,6 @@ func TestResolveErrors(t *testing.T) {
 		WithCacheDir(t.TempDir()),
 		WithGitHubBaseURL(server.URL),
 		WithHTTPClient(server.Client()),
-		WithSHA256("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
 	)
 	require.ErrorIs(t, err, ErrDownloadFailed)
 
@@ -258,10 +217,4 @@ func themeArchive(t *testing.T, files map[string]string) []byte {
 	require.NoError(t, writer.Close())
 
 	return buffer.Bytes()
-}
-
-// bytesSHA256 returns the SHA-256 hex digest for content.
-func bytesSHA256(content []byte) string {
-	hash := sha256.Sum256(content)
-	return hex.EncodeToString(hash[:])
 }
