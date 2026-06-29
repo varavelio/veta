@@ -1,7 +1,7 @@
 {
   "name": "@varavel/veta",
   "version": "0.0.0-dev",
-  "description": "Veta is the varavel's static site generator",
+  "description": "Veta static site generator",
   "author": "Varavel",
   "license": "MIT",
   "homepage": "https://github.com/varavelio/veta",

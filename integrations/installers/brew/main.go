@@ -24,7 +24,7 @@ type releaseManifest struct {
 const (
 	formulaDir  = "Formula"
 	githubRepo  = "varavelio/veta"
-	projectDesc = "Veta is the varavel's static site generator"
+	projectDesc = "Veta static site generator"
 	projectHome = "https://github.com/varavelio/veta"
 )
 
