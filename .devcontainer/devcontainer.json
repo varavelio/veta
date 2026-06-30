@@ -1,5 +1,5 @@
 {
-  "image": "ghcr.io/varavelio/veta-dev:sha-32884b0657bc",
+  "image": "ghcr.io/varavelio/veta-dev:sha-6f9a66957e98",
   "remoteUser": "root",
   "mounts": [
     "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
