@@ -35,10 +35,12 @@ const (
 
 // Result summarizes a completed site build.
 type Result struct {
-	Config    config.Config
-	Documents int
-	OutputDir string
-	Pages     int
+	Config         config.Config
+	Documents      int
+	GeneratedFiles []string
+	OutputDir      string
+	Pages          int
+	Root           string
 }
 
 // Option configures a build run.
@@ -47,6 +49,9 @@ type Option func(*runConfig) error
 type runConfig struct {
 	configFile      string
 	consoleOutput   io.Writer
+	cleanOverride   *bool
+	outputDir       string
+	outputDirSet    bool
 	root            string
 	tailwindOptions []tailwindcss.Option
 	themeOptions    []theme.Option
@@ -86,6 +91,28 @@ func WithConfigFile(name string) Option {
 func WithConsoleOutput(consoleOutput io.Writer) Option {
 	return func(config *runConfig) error {
 		config.consoleOutput = consoleOutput
+		return nil
+	}
+}
+
+// WithOutputDir configures the output directory for this build run.
+func WithOutputDir(outputDir string) Option {
+	return func(config *runConfig) error {
+		outputDir = strings.TrimSpace(outputDir)
+		if outputDir == "" || strings.ContainsRune(outputDir, 0) {
+			return ErrOutputDirInvalid
+		}
+
+		config.outputDir = outputDir
+		config.outputDirSet = true
+		return nil
+	}
+}
+
+// WithClean configures whether this build run cleans its output directory.
+func WithClean(clean bool) Option {
+	return func(config *runConfig) error {
+		config.cleanOverride = &clean
 		return nil
 	}
 }
@@ -138,6 +165,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+	toolConfig = applyRuntimeOverrides(toolConfig, runConfig)
 	runConfig.root = projectRoot
 	projectFiles := os.DirFS(projectRoot)
 	themeOptions := append(
@@ -226,10 +254,12 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	}
 
 	return Result{
-		Config:    toolConfig,
-		Documents: len(documents),
-		OutputDir: outputDir,
-		Pages:     len(manifest.Pages),
+		Config:         toolConfig,
+		Documents:      len(documents),
+		GeneratedFiles: outputFilePaths(generatedFiles),
+		OutputDir:      outputDir,
+		Pages:          len(manifest.Pages),
+		Root:           projectRoot,
 	}, nil
 }
 
@@ -301,6 +331,18 @@ func newRunConfig(options []Option) (runConfig, error) {
 	}
 
 	return config, nil
+}
+
+// applyRuntimeOverrides applies per-run settings after the config file is loaded.
+func applyRuntimeOverrides(toolConfig config.Config, runConfig runConfig) config.Config {
+	if runConfig.outputDirSet {
+		toolConfig.Build.Output = runConfig.outputDir
+	}
+	if runConfig.cleanOverride != nil {
+		toolConfig.Build.Clean = *runConfig.cleanOverride
+	}
+
+	return toolConfig
 }
 
 // loadToolConfig discovers and loads the Veta config file for a build.
@@ -484,6 +526,16 @@ func outputFiles(documents []render.Document) []output.File {
 	}
 
 	return files
+}
+
+// outputFilePaths returns the generated output paths from files.
+func outputFilePaths(files []output.File) []string {
+	paths := make([]string, 0, len(files))
+	for _, file := range files {
+		paths = append(paths, file.Path)
+	}
+
+	return paths
 }
 
 // outputRoot returns the output directory resolved against root when relative.

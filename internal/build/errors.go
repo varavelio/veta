@@ -11,4 +11,7 @@ var (
 
 	// ErrConfigNotFound indicates that no Veta config file could be discovered.
 	ErrConfigNotFound = errors.New("veta config file was not found")
+
+	// ErrOutputDirInvalid indicates that a build output override is invalid.
+	ErrOutputDirInvalid = errors.New("build output directory is invalid")
 )

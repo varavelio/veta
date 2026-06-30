@@ -86,6 +86,11 @@ export default function({ data }) {
 	require.NoError(t, err)
 	require.Equal(t, 5, result.Pages)
 	require.Equal(t, 5, result.Documents)
+	require.ElementsMatch(
+		t,
+		[]string{"index.html", "raw/index.html", "sitemap.xml", "empty.txt", "raw.txt"},
+		result.GeneratedFiles,
+	)
 	require.Equal(t, filepath.Join(root, DefaultOutputDir), result.OutputDir)
 
 	index := readOutputFile(t, root, "dist/index.html")
@@ -181,6 +186,36 @@ export default function() {
 	require.NoError(t, err)
 	require.Equal(t, filepath.Join(root, "custom-dist"), result.OutputDir)
 	require.FileExists(t, filepath.Join(root, "custom-dist", "index.html"))
+}
+
+func TestRunUsesRuntimeOutputOverrides(t *testing.T) {
+	root := t.TempDir()
+	outputDir := filepath.Join(t.TempDir(), "dev-output")
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  output: dist
+  clean: false
+`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [{ permalink: "/", content: "Hello" }];
+}
+`)
+
+	result, err := Run(
+		context.Background(),
+		WithRoot(root),
+		WithOutputDir(outputDir),
+		WithClean(true),
+	)
+	require.NoError(t, err)
+	require.Equal(t, root, result.Root)
+	require.Equal(t, outputDir, result.OutputDir)
+	require.Equal(t, outputDir, result.Config.Build.Output)
+	require.True(t, result.Config.Build.Clean)
+	require.FileExists(t, filepath.Join(outputDir, "index.html"))
+	_, err = os.Stat(filepath.Join(root, "dist"))
+	require.True(t, os.IsNotExist(err))
 }
 
 func TestRunUsesRemoteTheme(t *testing.T) {
