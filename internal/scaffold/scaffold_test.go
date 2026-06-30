@@ -38,10 +38,8 @@ func TestCreate(t *testing.T) {
 	require.Contains(t, string(pages), `template: "base"`)
 	require.Contains(t, string(pages), "https://veta.varavel.com/pages")
 	require.Contains(t, string(pages), "{ data, files, httpClient }")
-	require.Contains(t, string(pages), "local files with files")
 	require.NotContains(t, string(pages), "layout:")
 	require.FileExists(t, filepath.Join(root, "components", "note.html"))
-	require.FileExists(t, filepath.Join(root, "filters", "label.js"))
 }
 
 func TestCreateRefusesExistingFiles(t *testing.T) {

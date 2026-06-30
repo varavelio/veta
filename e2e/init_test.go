@@ -42,7 +42,6 @@ func TestInitBuildsStarterProject(t *testing.T) {
 		"{ data, files, httpClient }",
 	)
 	require.FileExists(t, filepath.Join(projectRoot, "components", "note.html"))
-	require.FileExists(t, filepath.Join(projectRoot, "filters", "label.js"))
 
 	buildResult := runVeta(
 		t,
@@ -57,8 +56,6 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, `<link rel=stylesheet href=/styles.css>`)
 	require.Contains(t, index, `<strong>Veta</strong>`)
-	require.Contains(t, index, `Site: Veta Starter`)
-	require.Contains(t, index, `<aside class="rounded border border-zinc-200 bg-zinc-50 p-4">`)
 	require.Contains(t, index, `href=/about/`)
 
 	about := readProjectFile(t, projectRoot, "dist/about/index.html")

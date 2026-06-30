@@ -1,5 +1,6 @@
 // Pages are plain JavaScript. Docs: https://veta.varavel.com/pages
-// You can read local files with files or request data with httpClient.
+// You can access environment, data, local files and remote sources
+// using the destructured context.
 export default function({ data, files, httpClient }) {
   return [
     {

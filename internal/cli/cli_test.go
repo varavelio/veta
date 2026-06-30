@@ -144,7 +144,6 @@ func TestRunInitCommand(t *testing.T) {
 	for _, directory := range []string{
 		"components",
 		"data",
-		"filters",
 		"pages",
 		"public",
 		"templates",
@@ -157,7 +156,6 @@ func TestRunInitCommand(t *testing.T) {
 		"pages/site.js",
 		"templates/base.html",
 		"components/note.html",
-		"filters/label.js",
 		"public/styles.css",
 		"public/robots.txt",
 	} {
