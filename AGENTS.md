@@ -40,6 +40,7 @@ You MUST follow the following instructions:
 - `internal/version` owns Veta build metadata such as version, commit, and build date. It must not parse CLI arguments, render terminal UI, run builds, or inspect Git directly.
 - `internal/vfs` owns virtual filesystem overlay and filtering helpers. It must not know about configuration, themes, templates, JavaScript, Markdown, Tailwind, or output writing.
 - `internal/build` owns orchestrating one full build by discovering the Veta config from the working directory or an explicit config path, deriving the project root from that config file, and wiring internal packages together through adapters. It must not absorb package-specific logic from config, theme, data, pages, templates, components, filters, Markdown, rendering, or output.
+- `internal/dev` owns the development-only server workflow: temporary output directories, full clean rebuild orchestration through `internal/build`, polling-based project watching, local HTTP serving, and SSE live reload. It must not become a production server, write to configured production output directories, duplicate build logic, or move CLI flag parsing out of `internal/cli`.
 - `internal/cli` owns command selection, flag parsing, help text, human-facing command errors, and delegation to application workflows. Build behavior flags such as output directory, clean mode, and debug mode belong in `veta.yaml`, not the CLI. It must not load site files, render content, resolve themes, scaffold starter files, or write build output directly.
 
 ## Release & Distribution

@@ -60,6 +60,12 @@ Build a site from the current project:
 veta build
 ```
 
+Start the local development server with live reload:
+
+```sh
+veta dev
+```
+
 Build with an explicit config file:
 
 ```sh
