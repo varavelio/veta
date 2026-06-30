@@ -283,6 +283,57 @@ export default function() {
 	)
 }
 
+// TestRunMinifiesGeneratedHTMLOnly verifies html.minify is wired to output writing.
+func TestRunMinifiesGeneratedHTMLOnly(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  clean: true
+html:
+  minify: true
+`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [
+    {
+      permalink: "/",
+      content: "<!doctype html>\n<html>\n<body>\n  <main class=\"home\"> Hello </main>\n</body>\n</html>\n"
+    },
+    {
+      permalink: "/feed.xml",
+      content: "<feed>\n  <title> Keep XML spacing </title>\n</feed>\n"
+    },
+    {
+      permalink: "/data.json",
+      content: "{\n  \"message\": \"keep json spacing\"\n}\n"
+    },
+    {
+      permalink: "/styles.css",
+      content: "body {\n  color: red;\n}\n"
+    }
+  ];
+}
+`)
+
+	_, err := Run(context.Background(), WithRoot(root))
+	require.NoError(t, err)
+
+	index := readOutputFile(t, root, "dist/index.html")
+	require.NotContains(t, index, "\n")
+	require.Contains(t, index, `<main class=home>Hello</main>`)
+	require.Equal(
+		t,
+		"<feed>\n  <title> Keep XML spacing </title>\n</feed>\n",
+		readOutputFile(t, root, "dist/feed.xml"),
+	)
+	require.Equal(
+		t,
+		"{\n  \"message\": \"keep json spacing\"\n}\n",
+		readOutputFile(t, root, "dist/data.json"),
+	)
+	require.Equal(t, "body {\n  color: red;\n}\n", readOutputFile(t, root, "dist/styles.css"))
+}
+
 func TestRunErrors(t *testing.T) {
 	_, err := Run(context.Background(), WithRoot(""))
 	require.ErrorIs(t, err, ErrRootInvalid)

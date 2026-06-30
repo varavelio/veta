@@ -12,4 +12,7 @@ var (
 
 	// ErrPathDuplicate indicates that multiple output files target the same path.
 	ErrPathDuplicate = errors.New("output path is duplicated")
+
+	// ErrMinifyFailed indicates that an output file could not be minified.
+	ErrMinifyFailed = errors.New("output minification failed")
 )

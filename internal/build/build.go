@@ -210,7 +210,11 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 
 	generatedFiles := outputFiles(documents)
 	outputDir := outputRoot(projectRoot, toolConfig.Build.Output)
-	writer, err := output.New(outputDir, output.WithClean(toolConfig.Build.Clean))
+	writer, err := output.New(
+		outputDir,
+		output.WithClean(toolConfig.Build.Clean),
+		output.WithHTMLMinify(toolConfig.HTML.Minify),
+	)
 	if err != nil {
 		return Result{}, fmt.Errorf("create output writer: %w", err)
 	}

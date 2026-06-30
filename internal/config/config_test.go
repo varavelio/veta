@@ -19,6 +19,8 @@ build:
   debug: true
 theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
+html:
+  minify: true
 tailwindcss:
   stylesheet: " css/app.css "
   minify: true
@@ -30,9 +32,10 @@ tailwindcss:
 		require.Equal(t, "public-build", config.Build.Output)
 		require.True(t, config.Build.Clean)
 		require.True(t, config.Build.Debug)
+		require.True(t, config.HTML.Minify)
 		require.Equal(t, "varavelio/veta-theme-clean@v1.0.0", config.Theme.Source)
 		require.Equal(t, "css/app.css", config.TailwindCSS.Stylesheet)
-		require.Equal(t, true, config.TailwindCSS.Minify)
+		require.True(t, config.TailwindCSS.Minify)
 		require.True(t, config.Theme.Enabled())
 		require.True(t, config.TailwindCSS.Enabled())
 	})
@@ -151,6 +154,17 @@ tailwindcss:
 			},
 		},
 		{
+			name: "html minify",
+			content: `
+html:
+  minify: true
+`,
+			want: Config{
+				Build: Build{Output: DefaultBuildOutput},
+				HTML:  HTML{Minify: true},
+			},
+		},
+		{
 			name: "tailwind minify without stylesheet",
 			content: `
 tailwindcss:
@@ -197,6 +211,13 @@ build:
 theme:
   source: ./theme
   name: clean
+`,
+		},
+		{
+			name: "unknown html field",
+			content: `
+html:
+  enabled: true
 `,
 		},
 		{

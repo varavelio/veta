@@ -6,6 +6,9 @@ build:
   clean: true # Remove the output directory before each build.
   debug: false # When true, disables template caching and prints debug details.
 
+html:
+  minify: false # Minify generated .html files only when true.
+
 tailwindcss:
   stylesheet: styles.css # Compile public/styles.css into dist/styles.css.
   minify: true # Minify the generated stylesheet.

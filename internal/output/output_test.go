@@ -21,6 +21,45 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, "hello", string(content))
 }
 
+// TestWriteMinifiesGeneratedHTMLOnly verifies HTML minification is extension-gated.
+func TestWriteMinifiesGeneratedHTMLOnly(t *testing.T) {
+	dir := t.TempDir()
+	writer, err := New(dir, WithHTMLMinify(true))
+	require.NoError(t, err)
+
+	nonHTMLContent := map[string]string{
+		"feed.xml":   "<feed>\n  <title> Keep XML spacing </title>\n</feed>\n",
+		"notes.md":   "# Keep Markdown\n\nBody\n",
+		"data.json":  "{\n  \"message\": \"keep json spacing\"\n}\n",
+		"readme.txt": "hello\n  world\n",
+		"app.js":     "function test() {\n  return true;\n}\n",
+		"styles.css": "body {\n  color: red;\n}\n",
+	}
+	files := []File{
+		{
+			Content: []byte(
+				"<!doctype html>\n<html>\n<body>\n  <div class=\"hero\"> Hello </div>\n</body>\n</html>\n",
+			),
+			Path: "index.HTML",
+		},
+	}
+	for path, content := range nonHTMLContent {
+		files = append(files, File{Content: []byte(content), Path: path})
+	}
+
+	require.NoError(t, writer.Write(files))
+
+	index, err := os.ReadFile(filepath.Join(dir, "index.HTML"))
+	require.NoError(t, err)
+	require.NotContains(t, string(index), "\n")
+	require.Contains(t, string(index), `<div class=hero>Hello</div>`)
+	for path, want := range nonHTMLContent {
+		content, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(path)))
+		require.NoError(t, err)
+		require.Equal(t, want, string(content))
+	}
+}
+
 // TestWriteClean removes previous output before writing.
 func TestWriteClean(t *testing.T) {
 	dir := t.TempDir()
@@ -76,6 +115,22 @@ func TestWriteSiteIgnoresMissingPublic(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(dir, "index.html"))
 	require.NoError(t, err)
 	require.Equal(t, "doc", string(content))
+}
+
+// TestWriteSiteDoesNotMinifyPublicHTML verifies public assets are copied as-is.
+func TestWriteSiteDoesNotMinifyPublicHTML(t *testing.T) {
+	dir := t.TempDir()
+	writer, err := New(dir, WithHTMLMinify(true))
+	require.NoError(t, err)
+
+	publicHTML := "<html>\n  <body> Public HTML </body>\n</html>\n"
+	require.NoError(t, writer.WriteSite(nil, fstest.MapFS{
+		"public/public.html": {Data: []byte(publicHTML)},
+	}))
+
+	content, err := os.ReadFile(filepath.Join(dir, "public.html"))
+	require.NoError(t, err)
+	require.Equal(t, publicHTML, string(content))
 }
 
 // TestWriterErrors verifies path and directory validation.

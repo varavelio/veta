@@ -47,6 +47,92 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	require.Greater(t, len(styles), 100)
 }
 
+// TestBuildMinifiesGeneratedHTMLOnly verifies html.minify affects generated HTML only.
+func TestBuildMinifiesGeneratedHTMLOnly(t *testing.T) {
+	projectRoot := t.TempDir()
+	writeProjectFile(t, projectRoot, "veta.yaml", `
+build:
+  output: dist
+  clean: true
+html:
+  minify: true
+`)
+	writeProjectFile(
+		t,
+		projectRoot,
+		"public/public.html",
+		"<html>\n  <body> Public HTML </body>\n</html>\n",
+	)
+	writeProjectFile(t, projectRoot, "pages/site.js", `
+export default function() {
+  return [
+    {
+      permalink: "/",
+      content: "<!doctype html>\n<html>\n<body>\n  <section class=\"hero\"> Hello </section>\n</body>\n</html>\n"
+    },
+    {
+      permalink: "/feed.xml",
+      content: "<feed>\n  <title> Keep XML spacing </title>\n</feed>\n"
+    },
+    {
+      permalink: "/notes.md",
+      content: "# Keep Markdown\n\nBody\n"
+    },
+    {
+      permalink: "/data.json",
+      content: "{\n  \"message\": \"keep json spacing\"\n}\n"
+    },
+    {
+      permalink: "/readme.txt",
+      content: "hello\n  world\n"
+    },
+    {
+      permalink: "/app.js",
+      content: "function test() {\n  return true;\n}\n"
+    },
+    {
+      permalink: "/styles.css",
+      content: "body {\n  color: red;\n}\n"
+    }
+  ];
+}
+`)
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.NotContains(t, index, "\n")
+	require.Contains(t, index, `<section class=hero>Hello</section>`)
+	require.Equal(
+		t,
+		"<feed>\n  <title> Keep XML spacing </title>\n</feed>\n",
+		readProjectFile(t, projectRoot, "dist/feed.xml"),
+	)
+	require.Equal(t, "# Keep Markdown\n\nBody\n", readProjectFile(t, projectRoot, "dist/notes.md"))
+	require.Equal(
+		t,
+		"{\n  \"message\": \"keep json spacing\"\n}\n",
+		readProjectFile(t, projectRoot, "dist/data.json"),
+	)
+	require.Equal(t, "hello\n  world\n", readProjectFile(t, projectRoot, "dist/readme.txt"))
+	require.Equal(
+		t,
+		"function test() {\n  return true;\n}\n",
+		readProjectFile(t, projectRoot, "dist/app.js"),
+	)
+	require.Equal(
+		t,
+		"body {\n  color: red;\n}\n",
+		readProjectFile(t, projectRoot, "dist/styles.css"),
+	)
+	require.Equal(
+		t,
+		"<html>\n  <body> Public HTML </body>\n</html>\n",
+		readProjectFile(t, projectRoot, "dist/public.html"),
+	)
+}
+
 // TestBuildDiscoversConfigFromNestedDirectory verifies root discovery and output cleanup.
 func TestBuildDiscoversConfigFromNestedDirectory(t *testing.T) {
 	projectRoot := copyTestProject(t, "nested-config")

@@ -25,6 +25,7 @@ const DefaultBuildOutput = "dist"
 // Config contains Veta's tool behavior settings.
 type Config struct {
 	Build       Build       `yaml:"build"`
+	HTML        HTML        `yaml:"html"`
 	Theme       Theme       `yaml:"theme"`
 	TailwindCSS TailwindCSS `yaml:"tailwindcss"`
 }
@@ -34,6 +35,11 @@ type Build struct {
 	Clean  bool   `yaml:"clean"`
 	Debug  bool   `yaml:"debug"`
 	Output string `yaml:"output"`
+}
+
+// HTML contains generated HTML output settings.
+type HTML struct {
+	Minify bool `yaml:"minify"`
 }
 
 // Theme contains theme resolution settings.

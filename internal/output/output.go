@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/html"
 )
 
 // PublicDirName is the project directory copied directly to the output root.
@@ -22,8 +25,9 @@ type File struct {
 
 // Writer writes output files under a directory.
 type Writer struct {
-	clean bool
-	dir   string
+	clean      bool
+	dir        string
+	minifyHTML bool
 }
 
 // Option configures a Writer.
@@ -57,6 +61,14 @@ func WithClean(clean bool) Option {
 	}
 }
 
+// WithHTMLMinify configures whether generated HTML files are minified.
+func WithHTMLMinify(minifyHTML bool) Option {
+	return func(writer *Writer) error {
+		writer.minifyHTML = minifyHTML
+		return nil
+	}
+}
+
 // Write writes files to the output directory.
 func (writer *Writer) Write(files []File) error {
 	if err := writer.prepare(); err != nil {
@@ -65,6 +77,9 @@ func (writer *Writer) Write(files []File) error {
 
 	normalized, err := normalizeFiles(files)
 	if err != nil {
+		return err
+	}
+	if normalized, err = writer.minifyGeneratedFiles(normalized); err != nil {
 		return err
 	}
 
@@ -95,6 +110,9 @@ func (writer *Writer) WriteSite(files []File, projectFiles fs.FS) error {
 	if err != nil {
 		return err
 	}
+	if normalized, err = writer.minifyGeneratedFiles(normalized); err != nil {
+		return err
+	}
 	publicFiles, err := collectPublicFiles(projectFiles)
 	if err != nil {
 		return err
@@ -109,6 +127,32 @@ func (writer *Writer) WriteSite(files []File, projectFiles fs.FS) error {
 	}
 
 	return writer.writeFiles(merged)
+}
+
+// minifyGeneratedFiles minifies generated HTML files when configured.
+func (writer *Writer) minifyGeneratedFiles(files []File) ([]File, error) {
+	if !writer.minifyHTML {
+		return files, nil
+	}
+
+	minifier := minify.New()
+	minifier.AddFunc("text/html", html.Minify)
+
+	minified := make([]File, 0, len(files))
+	for _, file := range files {
+		if isHTMLFile(file.Path) {
+			content, err := minifier.Bytes("text/html", file.Content)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %s: %w", ErrMinifyFailed, file.Path, err)
+			}
+
+			file.Content = content
+		}
+
+		minified = append(minified, file)
+	}
+
+	return minified, nil
 }
 
 // prepare creates or cleans the output directory.
@@ -220,6 +264,11 @@ func cleanOutputPath(filePath string) (string, error) {
 	}
 
 	return cleanPath, nil
+}
+
+// isHTMLFile reports whether filePath has an HTML file extension.
+func isHTMLFile(filePath string) bool {
+	return strings.EqualFold(path.Ext(filePath), ".html")
 }
 
 // hasWindowsVolumeName reports whether a path starts with a Windows drive name.
