@@ -235,3 +235,71 @@ func TestBuildSupportsTemplateAndComponentInheritance(t *testing.T) {
 	require.Contains(t, index, `<p>Component <strong>slot</strong> from page.</p>`)
 	require.Contains(t, index, `base-footer / child-footer`)
 }
+
+// TestBuildRendersComponentsFromMultipleContentSources verifies component expansion
+// across Markdown files, raw file content, inline generator strings, nesting, and
+// nested component directories.
+func TestBuildRendersComponentsFromMultipleContentSources(t *testing.T) {
+	projectRoot := copyTestProject(t, "component-pipeline")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Veta built 3 pages to dist in ")
+
+	markdownPage := readProjectFile(t, projectRoot, "dist/markdown/index.html")
+	require.Contains(t, markdownPage, `<title>Markdown Components</title>`)
+	require.Contains(
+		t,
+		markdownPage,
+		`<body data-source="readMarkdownFile" data-permalink="/markdown/">`,
+	)
+	require.Contains(
+		t,
+		markdownPage,
+		`<section class="component-box" data-title="Markdown Source">`,
+	)
+	require.Contains(t, markdownPage, `<h1>Markdown Component</h1>`)
+	require.Contains(t, markdownPage, `<strong>bold</strong>`)
+	require.Contains(t, markdownPage, `<div class="component-stack" data-name="outer">`)
+	require.Contains(t, markdownPage, `<strong>stack</strong>`)
+	require.Contains(
+		t,
+		markdownPage,
+		`<span class="deep-badge" data-label="Deep Folder">Deep Folder</span>`,
+	)
+	require.Contains(t, markdownPage, `Inline Code`)
+	require.Contains(t, markdownPage, `Code Fence`)
+	require.NotContains(t, markdownPage, `data-title="Inline Code"`)
+	require.NotContains(t, markdownPage, `data-title="Code Fence"`)
+	require.NotContains(t, markdownPage, `<box title=`)
+	require.NotContains(t, markdownPage, `<stack name=`)
+	require.NotContains(t, markdownPage, `<ui-layout-blocks-deep-badge`)
+
+	filePage := readProjectFile(t, projectRoot, "dist/file/index.html")
+	require.Contains(t, filePage, `<body data-source="readFile" data-permalink="/file/">`)
+	require.Contains(t, filePage, `<section data-source="read-file">`)
+	require.Contains(t, filePage, `<section class="component-box" data-title="File Source">`)
+	require.Contains(t, filePage, `<em>emphasis</em>`)
+	require.Contains(
+		t,
+		filePage,
+		`<span class="deep-badge" data-label="File Deep">File Deep</span>`,
+	)
+	require.Contains(t, filePage, `<div data-native-html="preserved">Raw HTML remains.</div>`)
+	require.NotContains(t, filePage, `<box title=`)
+	require.NotContains(t, filePage, `<ui-layout-blocks-deep-badge`)
+
+	inlinePage := readProjectFile(t, projectRoot, "dist/inline/index.html")
+	require.Contains(t, inlinePage, `<body data-source="inline-string" data-permalink="/inline/">`)
+	require.Contains(t, inlinePage, `<div class="component-stack" data-name="inline">`)
+	require.Contains(t, inlinePage, `<section class="component-box" data-title="Inline Nested">`)
+	require.Contains(t, inlinePage, `<strong>slot</strong>`)
+	require.Contains(
+		t,
+		inlinePage,
+		`<span class="deep-badge" data-label="Inline Deep">Inline Deep</span>`,
+	)
+	require.NotContains(t, inlinePage, `<box title=`)
+	require.NotContains(t, inlinePage, `<stack name=`)
+	require.NotContains(t, inlinePage, `<ui-layout-blocks-deep-badge`)
+}

@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ page.title }}</title>
+  </head>
+  <body data-source="{{ page.source }}" data-permalink="{{ page.permalink }}">
+    <main>{{ page.content }}</main>
+  </body>
+</html>

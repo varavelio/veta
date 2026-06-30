@@ -1,0 +1,6 @@
+<section data-source="read-file">
+<box title="File Source">
+Raw HTML slot with <em>emphasis</em> and <ui-layout-blocks-deep-badge label="File Deep" />.
+</box>
+<div data-native-html="preserved">Raw HTML remains.</div>
+</section>

@@ -1,0 +1,6 @@
+<section class="component-box" data-title="{{ props.title }}">
+  <header class="component-box__title">{{ props.title }}</header>
+  <div class="component-box__content">
+    {{ props.content }}
+  </div>
+</section>
