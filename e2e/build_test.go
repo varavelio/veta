@@ -133,6 +133,43 @@ export default function() {
 	)
 }
 
+// TestBuildReadsProjectFilesFromJavaScript verifies the file APIs in a real build.
+func TestBuildReadsProjectFilesFromJavaScript(t *testing.T) {
+	projectRoot := copyTestProject(t, "file-api-content")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Veta built 2 pages to dist in ")
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, `<h1>File API Fixture</h1>`)
+	require.Contains(t, index, `<p data-nav="Docs">/docs/</p>`)
+	require.Contains(t, index, `<p data-theme="indigo">Readable</p>`)
+	require.Contains(t, index, `<article data-source="yaml">`)
+	require.Contains(t, index, `<h2>YAML Article</h2>`)
+	require.Contains(t, index, `<p>guide,yaml</p>`)
+	require.Contains(t, index, `# YAML Body`)
+	require.Contains(t, index, `<article data-source="toml">`)
+	require.Contains(t, index, `<h2>TOML Article</h2>`)
+	require.Contains(t, index, `<p>Veta</p>`)
+	require.Contains(t, index, `# TOML Body`)
+	require.Contains(t, index, `data-plain-path="content/snippets/plain.md"`)
+	require.Contains(t, index, `# Plain Note`)
+	require.Contains(t, index, `data-note="Plain text asset."`)
+	require.Contains(
+		t,
+		index,
+		`content/articles/toml.md;content/articles/yaml.md;content/snippets/plain.md`,
+	)
+	require.Contains(t, index, `data-permalinks="/articles/toml/;/articles/yaml/;/snippets/plain/"`)
+
+	files := readProjectFile(t, projectRoot, "dist/files.json")
+	require.Contains(t, files, `"tomlTitle": "TOML Article"`)
+	require.Contains(t, files, `"yamlTitle": "YAML Article"`)
+	require.Contains(t, files, `"/articles/toml/"`)
+	require.Contains(t, files, `"content/articles/yaml.md"`)
+}
+
 // TestBuildDiscoversConfigFromNestedDirectory verifies root discovery and output cleanup.
 func TestBuildDiscoversConfigFromNestedDirectory(t *testing.T) {
 	projectRoot := copyTestProject(t, "nested-config")
