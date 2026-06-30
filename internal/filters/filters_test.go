@@ -9,12 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testMarkdownRenderer struct{}
-
-func (testMarkdownRenderer) Render(content string) (string, error) {
-	return "<p>" + content + "</p>", nil
-}
-
 type testScriptRunner struct {
 	calls []Source
 }
@@ -30,39 +24,6 @@ func (failingScriptRunner) Run(Source, any, any) (any, error) {
 	return nil, errors.New("boom")
 }
 
-// TestNative verifies native filters.
-func TestNative(t *testing.T) {
-	set := Native(testMarkdownRenderer{})
-	require.Equal(t, []string{"json", "markdown", "slugify"}, set.Names())
-
-	markdown, ok := set.Get("markdown")
-	require.True(t, ok)
-	markdownOutput, err := markdown("**Veta**", nil)
-	require.NoError(t, err)
-	require.Equal(t, SafeHTML("<p>**Veta**</p>"), markdownOutput)
-
-	jsonFilter, ok := set.Get("json")
-	require.True(t, ok)
-	jsonOutput, err := jsonFilter(map[string]any{"tag": "<x>"}, nil)
-	require.NoError(t, err)
-	require.Equal(t, SafeHTML(`{"tag":"\u003cx\u003e"}`), jsonOutput)
-
-	slugify, ok := set.Get("slugify")
-	require.True(t, ok)
-	slug, err := slugify(" Hello, Veta SSG! ", nil)
-	require.NoError(t, err)
-	require.Equal(t, "hello-veta-ssg", slug)
-}
-
-// TestNativeMarkdownRequiresRenderer verifies markdown renderer validation.
-func TestNativeMarkdownRequiresRenderer(t *testing.T) {
-	markdown, ok := Native(nil).Get("markdown")
-	require.True(t, ok)
-
-	_, err := markdown("content", nil)
-	require.ErrorIs(t, err, ErrMarkdownRendererRequired)
-}
-
 // TestLoad verifies native plus JavaScript filters and override behavior.
 func TestLoad(t *testing.T) {
 	runner := &testScriptRunner{}
@@ -73,7 +34,7 @@ func TestLoad(t *testing.T) {
 		},
 	}, WithMarkdownRenderer(testMarkdownRenderer{}), WithScriptRunner(runner))
 	require.NoError(t, err)
-	require.Equal(t, []string{"json", "markdown", "slugify", "upper"}, set.Names())
+	require.Equal(t, []string{"json", "markdown", "upper"}, set.Names())
 
 	upper, ok := set.Get("upper")
 	require.True(t, ok)
@@ -93,7 +54,7 @@ func TestLoad(t *testing.T) {
 func TestLoadMissingDirectory(t *testing.T) {
 	set, err := Load(fstest.MapFS{}, WithMarkdownRenderer(testMarkdownRenderer{}))
 	require.NoError(t, err)
-	require.Equal(t, []string{"json", "markdown", "slugify"}, set.Names())
+	require.Equal(t, []string{"json", "markdown"}, set.Names())
 }
 
 // TestLoadErrors verifies filter loading validation.

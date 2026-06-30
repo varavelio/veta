@@ -56,7 +56,7 @@ type loadConfig struct {
 	runner           ScriptRunner
 }
 
-// Load returns native filters plus user filters from the filters directory.
+// Load returns built-in filters plus user filters from the filters directory.
 func Load(files fs.FS, options ...Option) (Set, error) {
 	if files == nil {
 		return Set{}, ErrFSRequired
@@ -69,7 +69,7 @@ func Load(files fs.FS, options ...Option) (Set, error) {
 
 	set := Set{filters: map[string]Func{}}
 	if config.native {
-		set.Merge(Native(config.markdownRenderer))
+		set.Merge(Builtin(config.markdownRenderer))
 	}
 
 	entries, err := fs.ReadDir(files, DirName)
@@ -109,12 +109,11 @@ func Load(files fs.FS, options ...Option) (Set, error) {
 	return set, nil
 }
 
-// Native returns Veta's built-in filters.
-func Native(markdownRenderer MarkdownRenderer) Set {
+// Builtin returns Veta's built-in filters.
+func Builtin(markdownRenderer MarkdownRenderer) Set {
 	return Set{filters: map[string]Func{
 		"json":     jsonFilter,
 		"markdown": markdownFilter(markdownRenderer),
-		"slugify":  slugifyFilter,
 	}}
 }
 
