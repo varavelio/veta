@@ -43,6 +43,7 @@ func TestRunDefaultShowsHelp(t *testing.T) {
 	require.Contains(t, stdout.String(), "Repository:")
 	require.Contains(t, stdout.String(), "https://github.com/varavelio/veta")
 	require.Contains(t, stdout.String(), "Usage:")
+	require.Contains(t, stdout.String(), "veta dev")
 	require.Contains(t, stdout.String(), "veta build")
 }
 
@@ -101,6 +102,7 @@ func TestRunHelp(t *testing.T) {
 	require.Contains(t, stdout.String(), "Repository:")
 	require.Contains(t, stdout.String(), "Usage:")
 	require.Contains(t, stdout.String(), "build")
+	require.Contains(t, stdout.String(), "dev")
 	require.Contains(t, stdout.String(), "init")
 	require.Contains(t, stdout.String(), "version")
 }
@@ -116,6 +118,34 @@ func TestRunBuildHelp(t *testing.T) {
 	require.NotContains(t, stdout.String(), "--out")
 	require.NotContains(t, stdout.String(), "--clean")
 	require.NotContains(t, stdout.String(), "--debug")
+}
+
+func TestRunDevHelp(t *testing.T) {
+	var stdout bytes.Buffer
+
+	err := Run(context.Background(), []string{"dev", "--help"}, &stdout, nil)
+	require.NoError(t, err)
+	require.Contains(t, stdout.String(), "veta dev")
+	require.Contains(t, stdout.String(), "--config")
+	require.Contains(t, stdout.String(), "--host")
+	require.Contains(t, stdout.String(), "--port")
+	require.NotContains(t, stdout.String(), "--out")
+	require.NotContains(t, stdout.String(), "--clean")
+	require.NotContains(t, stdout.String(), "--debug")
+}
+
+func TestRunDevContextCanceled(t *testing.T) {
+	root := newCLISite(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := Run(
+		ctx,
+		[]string{"dev", "--config", filepath.Join(root, "veta.yaml")},
+		nil,
+		nil,
+	)
+	require.True(t, errors.Is(err, context.Canceled))
 }
 
 func TestRunVersion(t *testing.T) {
@@ -138,6 +168,7 @@ func TestRunInitCommand(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdout.String(), "Initialized Veta project")
 	require.Contains(t, stdout.String(), "Next steps:")
+	require.Contains(t, stdout.String(), "veta dev")
 	require.Contains(t, stdout.String(), "veta build")
 	require.Contains(t, stdout.String(), "Build settings live in veta.yaml")
 
@@ -201,6 +232,7 @@ func TestRunConfigNotFoundError(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, stderr.String(), "Could not find a Veta config file")
 	require.Contains(t, stderr.String(), "veta init")
+	require.Contains(t, stderr.String(), "veta dev")
 	require.Contains(t, stderr.String(), "veta build --config ./veta.yaml")
 }
 

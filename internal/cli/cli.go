@@ -14,6 +14,7 @@ import (
 	"github.com/varavelio/veta/internal/components"
 	"github.com/varavelio/veta/internal/config"
 	"github.com/varavelio/veta/internal/data"
+	"github.com/varavelio/veta/internal/dev"
 	"github.com/varavelio/veta/internal/output"
 	"github.com/varavelio/veta/internal/pages"
 	"github.com/varavelio/veta/internal/scaffold"
@@ -27,6 +28,7 @@ const programName = "veta"
 
 type arguments struct {
 	Build       *buildCommand   `arg:"subcommand:build"   help:"build the site"`
+	Dev         *devCommand     `arg:"subcommand:dev"     help:"start the local development server"`
 	Init        *initCommand    `arg:"subcommand:init"    help:"create a starter Veta project"`
 	VersionCmd  *versionCommand `arg:"subcommand:version" help:"print version information"`
 	VersionFlag bool            `arg:"-v,--"              help:"display version and exit"`
@@ -34,6 +36,12 @@ type arguments struct {
 
 type buildCommand struct {
 	ConfigFile string `arg:"-c,--config" help:"configuration file to use" placeholder:"FILE"`
+}
+
+type devCommand struct {
+	ConfigFile string `arg:"-c,--config" help:"configuration file to use"         placeholder:"FILE"`
+	Host       string `arg:"--host"      help:"host to bind (default: 127.0.0.1)" placeholder:"HOST"`
+	Port       int    `arg:"--port"      help:"port to bind (default: 3000)"      placeholder:"PORT"`
 }
 
 type initCommand struct {
@@ -57,6 +65,7 @@ func (arguments) Version() string {
 func (arguments) Epilogue() string {
 	return strings.TrimSpace(`Examples:
   veta init my-site
+  veta dev
   veta build
   veta build --config ./veta.yaml`)
 }
@@ -88,8 +97,31 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if parsed.Build != nil {
 		return runBuild(ctx, parsed.Build, stdout, stderr)
 	}
+	if parsed.Dev != nil {
+		return runDev(ctx, parsed.Dev, stdout, stderr)
+	}
 
 	parser.WriteHelp(stdout)
+	return nil
+}
+
+// runDev starts the local development server from parsed command options.
+func runDev(ctx context.Context, command *devCommand, stdout, stderr io.Writer) error {
+	port := command.Port
+	if port == 0 {
+		port = dev.DefaultPort
+	}
+
+	if err := dev.Run(ctx, dev.Config{
+		ConfigFile: command.ConfigFile,
+		Host:       command.Host,
+		Port:       port,
+		Stderr:     stderr,
+		Stdout:     stdout,
+	}); err != nil {
+		return writeError(stderr, err)
+	}
+
 	return nil
 }
 
@@ -176,6 +208,7 @@ func runInit(command *initCommand, stdout, stderr io.Writer) error {
 
 Next steps:
   cd %s
+  veta dev
   veta build
 
 Build settings live in veta.yaml.
@@ -216,10 +249,16 @@ func humanError(err error) string {
 
 Veta looks for veta.yaml, veta.yml, .veta.yaml, or .veta.yml in the current directory and then walks up through its ancestors.
 
-Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` from inside an existing project, or pass an explicit config file with ` + "`veta build --config ./veta.yaml`" + `.`)
+Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` or ` + "`veta dev`" + ` from inside an existing project, or pass an explicit config file with ` + "`veta build --config ./veta.yaml`" + `.`)
 	}
 	if errors.Is(err, build.ErrConfigFileInvalid) {
 		return "The config file passed with --config could not be used. Check that the file exists and is not a directory.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, build.ErrOutputDirInvalid) {
+		return "The build output directory is invalid. Check the output path and run the command again.\n\nDetails: " + err.Error()
+	}
+	if errors.Is(err, dev.ErrAddressInvalid) || errors.Is(err, dev.ErrListenFailed) {
+		return "The dev server could not start. Check --host and --port, then run `veta dev` again.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, build.ErrRootInvalid) {
 		return "The config search directory is invalid. Run Veta from an existing directory or pass an explicit config file with `veta build --config ./veta.yaml`.\n\nDetails: " + err.Error()
