@@ -55,11 +55,11 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	require.Contains(t, buildResult.stdout, "Veta built 2 pages to dist in ")
 
 	index := readProjectFile(t, projectRoot, "dist/index.html")
-	require.Contains(t, index, `<link rel="stylesheet" href="/styles.css">`)
+	require.Contains(t, index, `<link rel=stylesheet href=/styles.css>`)
 	require.Contains(t, index, `<strong>Veta</strong>`)
 	require.Contains(t, index, `Site: Veta Starter`)
 	require.Contains(t, index, `<aside class="rounded border border-zinc-200 bg-zinc-50 p-4">`)
-	require.Contains(t, index, `href="/about/"`)
+	require.Contains(t, index, `href=/about/`)
 
 	about := readProjectFile(t, projectRoot, "dist/about/index.html")
 	require.Contains(t, about, `>About</h1>`)

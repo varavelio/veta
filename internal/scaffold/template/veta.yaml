@@ -7,7 +7,7 @@ build:
   debug: false # When true, disables template caching and prints debug details.
 
 html:
-  minify: false # Minify generated .html files only when true.
+  minify: true # Minify generated .html files.
 
 tailwindcss:
   stylesheet: styles.css # Compile public/styles.css into dist/styles.css.
