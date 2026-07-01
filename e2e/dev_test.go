@@ -38,6 +38,13 @@ dev:
     - content
 `)
 	writeProjectFile(t, projectRoot, "content/message.txt", "Initial")
+	writeProjectFile(t, projectRoot, "includes/status.html", "Initial Include")
+	writeProjectFile(
+		t,
+		projectRoot,
+		"templates/base.html",
+		`<html><body><main>{{ page.content }}</main>{% include "includes/status.html" %}</body></html>`,
+	)
 	writeProjectFile(t, projectRoot, "pages/site.js", devPageSource())
 
 	process := startDevProcess(t, projectRoot)
@@ -47,12 +54,21 @@ dev:
 	process.requireStarted(t, baseURL)
 
 	body := requireHTTPBodyContains(t, baseURL, "Initial")
+	require.Contains(t, body, "Initial Include")
 	require.Contains(t, body, "new EventSource('/_veta/live')")
 	requirePathMissing(t, filepath.Join(projectRoot, "dist"))
 
 	stream := openDevEventStream(t, baseURL+"_veta/live")
 	defer stream.close()
 	stream.requireLine(t, ": connected")
+
+	writeProjectFile(t, projectRoot, "includes/status.html", "Updated Include")
+	stream.requireLine(t, "event: reload")
+	stream.requireLine(t, "data: reload")
+
+	includeBody := requireHTTPBodyContains(t, baseURL, "Updated Include")
+	require.Contains(t, includeBody, "Initial")
+	require.Contains(t, includeBody, "new EventSource('/_veta/live')")
 
 	writeProjectFile(t, projectRoot, "content/message.txt", "Updated")
 	stream.requireLine(t, "event: reload")
@@ -333,7 +349,7 @@ func devPageSource() string {
 	return `
 export default function({ files }) {
   const message = files.readFile("content/message.txt").trim();
-  return [{ permalink: "/", content: "<html><body><main>" + message + "</main></body></html>" }];
+  return [{ permalink: "/", template: "base", content: message }];
 }
 `
 }

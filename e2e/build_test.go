@@ -50,6 +50,23 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	require.Greater(t, len(adminStyles), 100)
 }
 
+// TestBuildSupportsIncludesFromTemplatesAndComponents verifies shared Pongo
+// fragments can be included from both page templates and component templates.
+func TestBuildSupportsIncludesFromTemplatesAndComponents(t *testing.T) {
+	projectRoot := copyTestProject(t, "includes")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, `<h1>Includes</h1>`)
+	require.Contains(t, index, `<section class="component-panel">`)
+	require.Contains(t, index, `<strong>slot</strong>`)
+	require.Equal(t, 2, strings.Count(index, `class="shared-include"`))
+	require.Equal(t, 2, strings.Count(index, `class="nested-include"`))
+	require.Equal(t, 2, strings.Count(index, `Include Fixture`))
+}
+
 // TestBuildMinifiesGeneratedHTMLOnly verifies html.minify affects generated HTML only.
 func TestBuildMinifiesGeneratedHTMLOnly(t *testing.T) {
 	projectRoot := t.TempDir()

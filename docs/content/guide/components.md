@@ -101,6 +101,21 @@ Components are Pongo templates, so they can use inheritance too:
 
 Use relative paths with `./` or `../` inside component templates.
 
+## Shared Includes
+
+Component templates can include shared Pongo fragments from `includes/`:
+
+```html
+{# components/note.html #}
+<aside class="note">
+  {% include "includes/brand.html" %} {{ props.content }}
+</aside>
+```
+
+This is useful when the same markup is needed from both page templates and content components. Keep shared markup in `includes/`, then include it from `templates/` or `components/` as needed.
+
+If the markup is only used by one component, keep it inside `components/`. If it is only used by page templates, keep it inside `templates/`. `includes/` is the shared convention and is watched by `veta dev` by default.
+
 ## Ignored Component Files
 
 Veta ignores component files or path segments that:

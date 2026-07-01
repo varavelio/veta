@@ -9,6 +9,7 @@
   </head>
   <body class="mx-auto max-w-2xl px-6 py-10 text-zinc-950">
     <nav class="mb-10 flex gap-4 text-sm">
+      {% include "includes/brand.html" %}
       {% for item in pages %}
       <a class="text-zinc-600 hover:text-zinc-950" href="{{ item.permalink }}">
         {{ item.title }}

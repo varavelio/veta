@@ -87,6 +87,20 @@ Pongo inheritance works inside `templates/`:
 
 Use `./` or `../` for relative paths in `extends` and `include` statements.
 
+## Includes
+
+Shared Pongo fragments live in `includes/`. Templates can include them by project-relative path:
+
+```html
+{% include "includes/brand.html" %}
+```
+
+Includes receive the current template context, including `data`, `pages`, `page`, and `props`.
+
+Use `includes/` for reusable markup shared between templates and components, such as buttons, badges, tables, and navigation fragments. Markup used only by page templates can stay in `templates/`. Use `components/` when you need a custom tag inside page content.
+
+Pongo can include files from other project directories, but `includes/` is Veta's standard convention and is watched by `veta dev` by default.
+
 ## Filters
 
 Veta registers built-in filters and custom filters:

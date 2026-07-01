@@ -1,0 +1,4 @@
+<section class="component-panel">
+  {% include "includes/shared.pongo" %}
+  <div class="component-slot">{{ props.content }}</div>
+</section>

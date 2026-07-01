@@ -21,6 +21,7 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	projectRoot := filepath.Join(workspace, "site")
 	require.FileExists(t, filepath.Join(projectRoot, "veta.yaml"))
 	require.FileExists(t, filepath.Join(projectRoot, "templates", "base.html"))
+	require.FileExists(t, filepath.Join(projectRoot, "includes", "brand.html"))
 	require.FileExists(t, filepath.Join(projectRoot, "public", "styles.css"))
 	requirePathMissing(t, filepath.Join(projectRoot, "styles"))
 	config := readProjectFile(t, projectRoot, "veta.yaml")
@@ -59,6 +60,7 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, `<link rel=stylesheet href=/styles.css>`)
 	require.Contains(t, index, `<strong>Veta</strong>`)
+	require.Contains(t, index, `Veta Starter`)
 	require.Contains(t, index, `href=/about/`)
 
 	about := readProjectFile(t, projectRoot, "dist/about/index.html")

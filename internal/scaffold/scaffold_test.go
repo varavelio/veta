@@ -15,12 +15,14 @@ func TestCreate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, root, result.Root)
 	require.Contains(t, result.Directories, "pages")
+	require.Contains(t, result.Directories, "includes")
 	require.NotContains(t, result.Directories, "styles")
 	require.Contains(t, result.Files, "veta.yaml")
 	require.Contains(t, result.Files, "public/styles.css")
 	require.FileExists(t, filepath.Join(root, "veta.yaml"))
 	require.FileExists(t, filepath.Join(root, "pages", "site.js"))
 	require.FileExists(t, filepath.Join(root, "public", "styles.css"))
+	require.FileExists(t, filepath.Join(root, "includes", "brand.html"))
 	require.FileExists(t, filepath.Join(root, "templates", "base.html"))
 	config, err := os.ReadFile(filepath.Join(root, "veta.yaml"))
 	require.NoError(t, err)
@@ -42,6 +44,12 @@ func TestCreate(t *testing.T) {
 	require.Contains(t, string(pages), "{ data, files, httpClient }")
 	require.NotContains(t, string(pages), "layout:")
 	require.FileExists(t, filepath.Join(root, "components", "note.html"))
+	base, err := os.ReadFile(filepath.Join(root, "templates", "base.html"))
+	require.NoError(t, err)
+	require.Contains(t, string(base), `{% include "includes/brand.html" %}`)
+	note, err := os.ReadFile(filepath.Join(root, "components", "note.html"))
+	require.NoError(t, err)
+	require.Contains(t, string(note), `{% include "includes/brand.html" %}`)
 }
 
 func TestCreateRefusesExistingFiles(t *testing.T) {

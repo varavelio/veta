@@ -13,6 +13,7 @@ A Veta project is a folder with a `veta.yaml` configuration file and optional fe
   components/
   data/
   filters/
+  includes/
   pages/
   public/
   templates/
@@ -44,6 +45,18 @@ The directory is intentionally flat. Do not put nested folders under `pages/`.
 ```
 
 That can resolve `templates/base.html`, `templates/base.pongo`, or another non-ignored file with the same stem.
+
+## `includes/`
+
+`includes/` is the standard place for shared Pongo fragments used by both templates and components:
+
+```html
+{% include "includes/brand.html" %}
+```
+
+Use `includes/` when markup is shared across templates and components. Markup used only by page templates belongs in `templates/`; markup used only as a content component belongs in `components/`.
+
+Pongo can include project files from other directories too, but `includes/` is Veta's convention and is watched by `veta dev` by default.
 
 ## `components/`
 
