@@ -1,7 +1,6 @@
 build:
   output: dist
   clean: true
-  debug: false
 
 tailwindcss:
   stylesheet: styles.css

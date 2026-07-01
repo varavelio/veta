@@ -13,7 +13,6 @@ Veta config is YAML. Unknown fields are rejected.
 build:
   output: dist
   clean: true
-  debug: false
 
 html:
   minify: true
@@ -49,14 +48,6 @@ Type: boolean
 Default: `false`
 
 When true, Veta removes the output directory before writing the build.
-
-## `build.debug`
-
-Type: boolean
-
-Default: `false`
-
-When true, disables template caching and enables debug-oriented behavior where applicable.
 
 ## `html.minify`
 

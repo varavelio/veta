@@ -22,7 +22,7 @@ Only `veta.yaml` and `pages/` are necessary for most useful sites. The other dir
 
 ## `veta.yaml`
 
-`veta.yaml` configures Veta itself. It controls build output, clean mode, debug mode, generated HTML minification, Tailwind CSS, and themes.
+`veta.yaml` configures Veta itself. It controls build output, clean mode, generated HTML minification, Tailwind CSS, and themes.
 
 Site content does not belong in `veta.yaml`. Put content, navigation, SEO metadata, and theme data in `data/` or content files read through the JavaScript file API.
 

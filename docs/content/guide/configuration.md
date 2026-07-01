@@ -38,7 +38,6 @@ If `build.output` is omitted or blank, Veta uses `dist`.
 build:
   output: dist
   clean: true
-  debug: false
 
 html:
   minify: true
@@ -65,14 +64,11 @@ theme:
 build:
   output: dist
   clean: true
-  debug: false
 ```
 
 `output` is the production output directory used by `veta build`. It must be a relative project path.
 
 `clean` removes the output directory before writing a new build.
-
-`debug` disables template caching and prints additional debug details where applicable.
 
 ## `html`
 

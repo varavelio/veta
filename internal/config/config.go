@@ -40,7 +40,6 @@ type Config struct {
 // Build contains settings for the site build workflow.
 type Build struct {
 	Clean  bool   `yaml:"clean"`
-	Debug  bool   `yaml:"debug"`
 	Output string `yaml:"output"`
 }
 

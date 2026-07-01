@@ -60,7 +60,6 @@ The starter `veta.yaml` looks like this:
 build:
   output: dist
   clean: true
-  debug: false
 
 html:
   minify: true

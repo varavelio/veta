@@ -16,7 +16,6 @@ func TestLoad(t *testing.T) {
 build:
   output: " public-build "
   clean: true
-  debug: true
 theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
 dev:
@@ -37,7 +36,6 @@ tailwindcss:
 		require.NoError(t, err)
 		require.Equal(t, "public-build", config.Build.Output)
 		require.True(t, config.Build.Clean)
-		require.True(t, config.Build.Debug)
 		require.Equal(t, "0.0.0.0", config.Dev.Host)
 		require.Equal(t, 4000, config.Dev.Port)
 		require.Equal(t, []string{"content", "docs"}, config.Dev.Watch)
@@ -146,10 +144,9 @@ theme:
 build:
   output: public
   clean: true
-  debug: true
 `,
 			want: Config{
-				Build: Build{Output: "public", Clean: true, Debug: true},
+				Build: Build{Output: "public", Clean: true},
 				Dev:   Dev{Host: DefaultDevHost, Port: DefaultDevPort},
 			},
 		},

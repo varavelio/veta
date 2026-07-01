@@ -117,7 +117,6 @@ func TestRunBuildHelp(t *testing.T) {
 	require.NotContains(t, stdout.String(), "--root")
 	require.NotContains(t, stdout.String(), "--out")
 	require.NotContains(t, stdout.String(), "--clean")
-	require.NotContains(t, stdout.String(), "--debug")
 }
 
 func TestRunDevHelp(t *testing.T) {
@@ -131,7 +130,6 @@ func TestRunDevHelp(t *testing.T) {
 	require.NotContains(t, stdout.String(), "--port")
 	require.NotContains(t, stdout.String(), "--out")
 	require.NotContains(t, stdout.String(), "--clean")
-	require.NotContains(t, stdout.String(), "--debug")
 }
 
 func TestRunDevContextCanceled(t *testing.T) {

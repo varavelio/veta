@@ -22,7 +22,6 @@ type Renderer struct {
 }
 
 type rendererConfig struct {
-	debug   bool
 	filters map[string]FilterFunc
 }
 
@@ -46,7 +45,6 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 
 	loader := &templateLoader{files: files}
 	set := pongo2.NewSet("veta", loader)
-	set.Debug = config.debug
 
 	for name, filter := range config.filters {
 		wrappedFilter := wrapFilter(filter)
@@ -64,15 +62,6 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 	}
 
 	return &Renderer{loader: loader, set: set}, nil
-}
-
-// WithDebug configures whether templates are cached. Debug mode disables
-// caching so changes in the backing filesystem are picked up immediately.
-func WithDebug(debug bool) Option {
-	return func(config *rendererConfig) error {
-		config.debug = debug
-		return nil
-	}
 }
 
 // WithExtensions is retained for compatibility.

@@ -204,7 +204,6 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		markdownRenderer,
 		runConfig,
 		runtime,
-		toolConfig.Build.Debug,
 	)
 	if err != nil {
 		return Result{}, err
@@ -475,7 +474,6 @@ func newTemplateRenderer(
 	markdownRenderer *markdown.Renderer,
 	config runConfig,
 	runtime js.Runtime,
-	debug bool,
 ) (*template.Renderer, error) {
 	filterRunner := filterScriptRunner{runner: js.New(baseJSOptions(config, runtime)...)}
 	filterSet, err := filters.Load(
@@ -487,7 +485,7 @@ func newTemplateRenderer(
 		return nil, fmt.Errorf("load filters: %w", err)
 	}
 
-	templateOptions := []template.Option{template.WithDebug(debug)}
+	templateOptions := []template.Option{}
 	for name, filter := range filterSet.Functions() {
 		templateOptions = append(
 			templateOptions,
