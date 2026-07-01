@@ -67,6 +67,23 @@ func TestBuildSupportsIncludesFromTemplatesAndComponents(t *testing.T) {
 	require.Equal(t, 2, strings.Count(index, `Include Fixture`))
 }
 
+// TestBuildSupportsLoadDataInPongo verifies templates, includes and components
+// can load local structured and text data directly from Pongo.
+func TestBuildSupportsLoadDataInPongo(t *testing.T) {
+	projectRoot := copyTestProject(t, "template-load-data")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, `<h1>Template Load Data</h1>`)
+	require.Contains(t, index, `<a href="/">Home</a>`)
+	require.Contains(t, index, `<a href="/docs/">Docs</a>`)
+	require.Contains(t, index, `<p data-snippet="include">Plain text from load_data.`)
+	require.Contains(t, index, `<aside data-badge="blue">`)
+	require.Contains(t, index, `Loaded Badge: <p>Component <strong>slot</strong>.</p>`)
+}
+
 // TestBuildMinifiesGeneratedHTMLOnly verifies html.minify affects generated HTML only.
 func TestBuildMinifiesGeneratedHTMLOnly(t *testing.T) {
 	projectRoot := t.TempDir()

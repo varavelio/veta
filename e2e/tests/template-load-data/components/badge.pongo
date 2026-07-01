@@ -1,0 +1,4 @@
+{% load_data path="data/badge.toml" as badge %}
+<aside data-badge="{{ badge.tone }}">
+  {{ badge.label }}: {{ props.content }}
+</aside>

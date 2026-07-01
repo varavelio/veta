@@ -1,0 +1,2 @@
+{% load_data path="content/snippet.txt" format="text" as snippet %}
+<p data-snippet="include">{{ snippet }}</p>
