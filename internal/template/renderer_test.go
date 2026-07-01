@@ -119,6 +119,46 @@ func TestRendererFilters(t *testing.T) {
 	require.Equal(t, "!Veta! <strong>safe</strong>", got)
 }
 
+func TestRendererGlobals(t *testing.T) {
+	files := fstest.MapFS{
+		"page.pongo": {Data: []byte(`{{ greet(page.title) }}`)},
+	}
+	renderer, err := New(files, WithGlobal("greet", func(value string) string {
+		return "Hello " + value
+	}))
+	require.NoError(t, err)
+
+	got, err := renderer.Render("page", Context{"page": map[string]any{"title": "Veta"}})
+	require.NoError(t, err)
+	require.Equal(t, "Hello Veta", got)
+}
+
+func TestRendererLoadData(t *testing.T) {
+	files := fstest.MapFS{
+		"page.pongo": {Data: []byte(strings.Join([]string{
+			`{% load_data path="data/site.json" as site %}`,
+			`{% load_data path="data/raw.txt" format="text" as raw %}`,
+			`{{ site.name }} {{ raw }} {{ load_data("data/site.json").name }}`,
+		}, ""))},
+	}
+	renderer, err := New(files, WithLoadData(func(request LoadDataRequest) (any, error) {
+		switch request.Path {
+		case "data/site.json":
+			return map[string]any{"name": "Veta"}, nil
+		case "data/raw.txt":
+			require.Equal(t, "text", request.Format)
+			return "Raw", nil
+		default:
+			return nil, fmt.Errorf("unexpected path %s", request.Path)
+		}
+	}))
+	require.NoError(t, err)
+
+	got, err := renderer.Render("page", nil)
+	require.NoError(t, err)
+	require.Equal(t, "Veta Raw Veta", got)
+}
+
 type testSafeHTML string
 
 func (html testSafeHTML) SafeHTML() string {
@@ -252,6 +292,12 @@ func TestRendererOptionErrors(t *testing.T) {
 
 	_, err = New(files, WithFilter("broken", nil))
 	require.ErrorIs(t, err, ErrFilterNameInvalid)
+
+	_, err = New(files, WithGlobal("", "bad"))
+	require.ErrorIs(t, err, ErrGlobalNameInvalid)
+
+	_, err = New(files, WithGlobal("broken", nil))
+	require.ErrorIs(t, err, ErrGlobalNameInvalid)
 }
 
 func TestRendererWithExtensionsCompatibilityNoop(t *testing.T) {

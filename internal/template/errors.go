@@ -22,6 +22,9 @@ var (
 	// ErrFilterNameInvalid indicates that a filter name is empty or malformed.
 	ErrFilterNameInvalid = errors.New("filter name is invalid")
 
+	// ErrGlobalNameInvalid indicates that a global name is empty or malformed.
+	ErrGlobalNameInvalid = errors.New("global name is invalid")
+
 	// ErrTemplateFSRequired indicates that a renderer was created without a
 	// template filesystem.
 	ErrTemplateFSRequired = errors.New("template filesystem is required")

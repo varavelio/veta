@@ -9,12 +9,14 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/varavelio/veta/internal/components"
 	"github.com/varavelio/veta/internal/config"
 	"github.com/varavelio/veta/internal/data"
 	"github.com/varavelio/veta/internal/filters"
 	"github.com/varavelio/veta/internal/js"
+	"github.com/varavelio/veta/internal/loaddata"
 	"github.com/varavelio/veta/internal/markdown"
 	"github.com/varavelio/veta/internal/output"
 	"github.com/varavelio/veta/internal/pages"
@@ -486,7 +488,24 @@ func newTemplateRenderer(
 		return nil, fmt.Errorf("load filters: %w", err)
 	}
 
-	templateOptions := []template.Option{}
+	dataLoader, err := loaddata.New(files)
+	if err != nil {
+		return nil, fmt.Errorf("create load_data loader: %w", err)
+	}
+	templateOptions := []template.Option{
+		template.WithLoadData(func(request template.LoadDataRequest) (any, error) {
+			if request.TimeoutMs < 0 {
+				return nil, fmt.Errorf("load_data timeout_ms cannot be negative")
+			}
+
+			return dataLoader.Load(loaddata.Request{
+				Path:    request.Path,
+				URL:     request.URL,
+				Format:  request.Format,
+				Timeout: time.Duration(request.TimeoutMs) * time.Millisecond,
+			})
+		}),
+	}
 	for name, filter := range filterSet.Functions() {
 		templateOptions = append(
 			templateOptions,

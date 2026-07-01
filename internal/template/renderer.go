@@ -3,6 +3,7 @@ package template
 import (
 	"fmt"
 	"io/fs"
+	"maps"
 	"reflect"
 
 	"github.com/flosch/pongo2/v7"
@@ -23,6 +24,7 @@ type Renderer struct {
 
 type rendererConfig struct {
 	filters map[string]FilterFunc
+	globals map[string]any
 }
 
 // New creates a Renderer backed by files.
@@ -33,6 +35,7 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 
 	config := rendererConfig{
 		filters: map[string]FilterFunc{},
+		globals: map[string]any{},
 	}
 	for _, option := range options {
 		if option == nil {
@@ -45,6 +48,10 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 
 	loader := &templateLoader{files: files}
 	set := pongo2.NewSet("veta", loader)
+	if err := set.RegisterTag("load_data", parseLoadDataTag); err != nil {
+		return nil, fmt.Errorf("register template tag load_data: %w", err)
+	}
+	maps.Copy(set.Globals, config.globals)
 
 	for name, filter := range config.filters {
 		wrappedFilter := wrapFilter(filter)
@@ -62,6 +69,22 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 	}
 
 	return &Renderer{loader: loader, set: set}, nil
+}
+
+// WithGlobal registers a global template value or function for this renderer.
+func WithGlobal(name string, value any) Option {
+	return func(config *rendererConfig) error {
+		cleanName, err := cleanGlobalName(name)
+		if err != nil {
+			return err
+		}
+		if value == nil {
+			return fmt.Errorf("%w: %s", ErrGlobalNameInvalid, cleanName)
+		}
+
+		config.globals[cleanName] = value
+		return nil
+	}
 }
 
 // WithExtensions is retained for compatibility.

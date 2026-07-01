@@ -21,9 +21,18 @@ type safeHTML interface {
 
 // cleanFilterName validates a template filter name.
 func cleanFilterName(name string) (string, error) {
+	return cleanIdentifierName(name, ErrFilterNameInvalid)
+}
+
+// cleanGlobalName validates a template global name.
+func cleanGlobalName(name string) (string, error) {
+	return cleanIdentifierName(name, ErrGlobalNameInvalid)
+}
+
+func cleanIdentifierName(name string, invalidError error) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || strings.ContainsAny(name, " \t\r\n|:()") {
-		return "", ErrFilterNameInvalid
+		return "", invalidError
 	}
 
 	return name, nil
