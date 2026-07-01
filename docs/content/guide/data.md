@@ -141,3 +141,11 @@ Use the JavaScript file API for content collections and project files you want t
 ```js
 const posts = files.listFiles("content/posts/**/*.md");
 ```
+
+Templates can also load local or remote data on demand with `load_data`:
+
+```html
+{% load_data path="data/navigation.yaml" as navigation %}
+```
+
+Use `load_data` for data that is only needed by a specific template, include, or component.

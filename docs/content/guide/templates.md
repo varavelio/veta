@@ -101,6 +101,17 @@ Use `includes/` for reusable markup shared between templates and components, suc
 
 Pongo can include files from other project directories, but `includes/` is Veta's standard convention and is watched by `veta dev` by default.
 
+## Loading Data
+
+Templates, includes, and components can load local or remote data with `load_data`:
+
+```html
+{% load_data path="data/navigation.yaml" as navigation %} {% set site =
+load_data("data/site.json") %}
+```
+
+Use `load_data` for template-specific data. Use global `data/` files for data shared across the whole site. See [Template Functions](../api/template-functions.md) for the full API.
+
 ## Filters
 
 Veta registers built-in filters and custom filters:

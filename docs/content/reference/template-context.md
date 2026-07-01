@@ -58,3 +58,14 @@ In component templates, `props` contains tag attributes and `props.content`:
   {{ props.content }}
 </aside>
 ```
+
+## Template Helpers
+
+Templates, includes, and components can call `load_data` to read local or remote data:
+
+```html
+{% load_data path="data/navigation.yaml" as navigation %} {% set site =
+load_data("data/site.json") %}
+```
+
+See [Template Functions](../api/template-functions.md) for details.
