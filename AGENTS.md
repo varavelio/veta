@@ -57,6 +57,10 @@ You MUST follow the following instructions:
 - Before considering any task complete, run `task ci`, which executes all project checks.
 - Verify there are no errors. If there is any error, fix it and continue until the task is complete and `task ci` passes.
 
+## Documentation
+
+- User-facing documentation lives under `docs/content/`. Every page should use frontmatter with `title` and `description`.
+
 ## Operational Commands
 
 - Use `task --list-all` as the source of truth for available project commands.
