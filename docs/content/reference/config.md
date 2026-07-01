@@ -1,0 +1,119 @@
+---
+title: "Config Reference"
+description: "Complete reference for veta.yaml configuration fields."
+---
+
+# Config Reference
+
+Veta config is YAML. Unknown fields are rejected.
+
+## Example
+
+```yaml
+build:
+  output: dist
+  clean: true
+  debug: false
+
+html:
+  minify: true
+
+tailwindcss:
+  stylesheet: styles.css
+  minify: true
+
+theme:
+  source: "./theme"
+```
+
+## `build.output`
+
+Type: string
+
+Default: `dist`
+
+The production output directory used by `veta build`.
+
+Must be a relative project path.
+
+## `build.clean`
+
+Type: boolean
+
+Default: `false`
+
+When true, Veta removes the output directory before writing the build.
+
+## `build.debug`
+
+Type: boolean
+
+Default: `false`
+
+When true, disables template caching and enables debug-oriented behavior where applicable.
+
+## `html.minify`
+
+Type: boolean
+
+Default: `false`
+
+When true, minifies generated `.html` files only.
+
+## `tailwindcss.stylesheet`
+
+Type: string
+
+Default: empty
+
+When set, enables Tailwind CSS. The path is relative to `public/`.
+
+Example:
+
+```yaml
+tailwindcss:
+  stylesheet: styles.css
+```
+
+This reads `public/styles.css` and writes the generated CSS to `dist/styles.css`.
+
+## `tailwindcss.minify`
+
+Type: boolean
+
+Default: `false`
+
+When true, passes Tailwind's minification flag to the embedded Tailwind CSS standalone CLI.
+
+## `theme.source`
+
+Type: string
+
+Default: empty
+
+When set, resolves and composes a theme with the project.
+
+Examples:
+
+```yaml
+theme:
+  source: "./themes/blog"
+```
+
+```yaml
+theme:
+  source: "owner/veta-theme-name@v1.0.0"
+```
+
+> Note: The theme should match the owner/veta-theme-{name}@{ref} pattern.
+
+## Supported File Names
+
+Veta checks these names in order:
+
+```txt
+veta.yaml
+veta.yml
+.veta.yaml
+.veta.yml
+```
