@@ -96,21 +96,21 @@ func TestFromPath(t *testing.T) {
 	}{
 		{name: "plain file", path: "content/about.md", want: "/content/about/"},
 		{
-			name:    "base path",
+			name:    "strip prefix",
 			path:    "content/blog/hello.md",
-			options: PathOptions{BasePath: "content"},
+			options: PathOptions{StripPrefix: "content"},
 			want:    "/blog/hello/",
 		},
 		{
-			name:    "base index",
+			name:    "strip prefix index",
 			path:    "content/index.md",
-			options: PathOptions{BasePath: "content"},
+			options: PathOptions{StripPrefix: "content"},
 			want:    "/",
 		},
 		{
 			name:    "nested index",
 			path:    "content/blog/index.md",
-			options: PathOptions{BasePath: "content"},
+			options: PathOptions{StripPrefix: "content"},
 			want:    "/blog/",
 		},
 		{name: "extensionless", path: "docs/guide", want: "/docs/guide/"},
@@ -135,7 +135,11 @@ func TestFromPathErrors(t *testing.T) {
 		{name: "empty", path: ""},
 		{name: "absolute", path: "/content/index.md"},
 		{name: "parent", path: "../content/index.md"},
-		{name: "outside base", path: "posts/index.md", options: PathOptions{BasePath: "content"}},
+		{
+			name:    "missing strip prefix",
+			path:    "posts/index.md",
+			options: PathOptions{StripPrefix: "content"},
+		},
 	}
 
 	for _, test := range tests {

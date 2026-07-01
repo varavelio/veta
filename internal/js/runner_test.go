@@ -391,10 +391,28 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 			want: "files.toPermalink options must be an object",
 		},
 		{
-			name: "permalink outside base path",
+			name: "bad permalink strip prefix",
 			code: `
 				export default function({ files }) {
-					return files.toPermalink("posts/index.md", { basePath: "content" });
+					return files.toPermalink("content/index.md", { stripPrefix: 123 });
+				}
+			`,
+			want: "files.toPermalink stripPrefix must be a string",
+		},
+		{
+			name: "unknown permalink option",
+			code: `
+				export default function({ files }) {
+					return files.toPermalink("content/index.md", { unknownOption: "content" });
+				}
+			`,
+			want: `files.toPermalink unknown option "unknownOption"`,
+		},
+		{
+			name: "permalink missing strip prefix",
+			code: `
+				export default function({ files }) {
+					return files.toPermalink("posts/index.md", { stripPrefix: "content" });
 				}
 			`,
 			want: "permalink is invalid",

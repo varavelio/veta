@@ -15,7 +15,7 @@ export default function({ files }) {
   const plainPost = files.readMarkdownFile("content/snippets/plain.md");
   const note = files.readFile("content/plain.txt").trim();
   const markdownFiles = files.listFiles("content/**/*.md");
-  const permalinks = markdownFiles.map((file) => files.toPermalink(file, { basePath: "content" }));
+  const permalinks = markdownFiles.map((file) => files.toPermalink(file, { stripPrefix: "content" }));
 
   return [
     {

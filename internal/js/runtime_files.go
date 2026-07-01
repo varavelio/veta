@@ -350,14 +350,22 @@ func permalinkPathOptions(value goja.Value) (permalink.PathOptions, error) {
 	}
 
 	options := permalink.PathOptions{}
-	if basePath, exists := object["basePath"]; exists {
-		text, ok := basePath.(string)
-		if !ok {
+	for name := range object {
+		if name != "stripPrefix" {
 			return permalink.PathOptions{}, fmt.Errorf(
-				"files.toPermalink basePath must be a string",
+				"files.toPermalink unknown option %q",
+				name,
 			)
 		}
-		options.BasePath = text
+	}
+	if stripPrefix, exists := object["stripPrefix"]; exists {
+		text, ok := stripPrefix.(string)
+		if !ok {
+			return permalink.PathOptions{}, fmt.Errorf(
+				"files.toPermalink stripPrefix must be a string",
+			)
+		}
+		options.StripPrefix = text
 	}
 
 	return options, nil

@@ -12,7 +12,7 @@ export default function({ files }) {
         content: file.content,
         frontmatter: file.frontmatter,
         path: file.path,
-        permalink: files.toPermalink(path, { basePath: "content" }),
+        permalink: files.toPermalink(path, { stripPrefix: "content" }),
       };
     }),
     textContent: files.readFile("content/drafts/ignore.txt"),

@@ -86,14 +86,14 @@ See [Frontmatter](./frontmatter.md) for details.
 Converts a project-relative path into a pretty permalink.
 
 ```js
-files.toPermalink("content/posts/hello.md", { basePath: "content" });
+files.toPermalink("content/posts/hello.md", { stripPrefix: "content" });
 // "/posts/hello/"
 ```
 
 If the source file is an `index` file, the last segment is removed:
 
 ```js
-files.toPermalink("content/docs/index.md", { basePath: "content" });
+files.toPermalink("content/docs/index.md", { stripPrefix: "content" });
 // "/docs/"
 ```
 
@@ -101,11 +101,11 @@ Options:
 
 ```js
 {
-  basePath: "content";
+  stripPrefix: "content";
 }
 ```
 
-`basePath` is optional. When present, the path must be inside that base path.
+`stripPrefix` is optional. When present, Veta removes it as a complete path segment before generating the permalink. The source path must have that prefix.
 
 ## Security Rules
 

@@ -14,8 +14,8 @@ var ErrInvalid = errors.New("permalink is invalid")
 
 // PathOptions controls how project-relative paths become permalinks.
 type PathOptions struct {
-	// BasePath is stripped from the source path before generating the permalink.
-	BasePath string
+	// StripPrefix is removed from the source path before generating the permalink.
+	StripPrefix string
 }
 
 // Normalize converts a user permalink into a canonical permalink and relative
@@ -66,25 +66,25 @@ func FromPath(rawPath string, options PathOptions) (string, error) {
 		return "", err
 	}
 
-	basePath := strings.TrimSpace(options.BasePath)
-	if basePath != "" {
-		basePath, err = cleanRelativePath(basePath)
+	stripPrefix := strings.TrimSpace(options.StripPrefix)
+	if stripPrefix != "" {
+		stripPrefix, err = cleanRelativePath(stripPrefix)
 		if err != nil {
 			return "", err
 		}
-		if sourcePath == basePath {
+		if sourcePath == stripPrefix {
 			return "/", nil
 		}
-		if !strings.HasPrefix(sourcePath, basePath+"/") {
+		if !strings.HasPrefix(sourcePath, stripPrefix+"/") {
 			return "", fmt.Errorf(
-				"%w: path %q is not inside base path %q",
+				"%w: path %q does not have strip prefix %q",
 				ErrInvalid,
 				rawPath,
-				options.BasePath,
+				options.StripPrefix,
 			)
 		}
 
-		sourcePath = strings.TrimPrefix(sourcePath, basePath+"/")
+		sourcePath = strings.TrimPrefix(sourcePath, stripPrefix+"/")
 	}
 
 	withoutExtension := strings.TrimSuffix(sourcePath, path.Ext(sourcePath))

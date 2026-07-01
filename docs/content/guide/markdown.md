@@ -56,7 +56,7 @@ export default function({ files }) {
     const post = files.readMarkdownFile(path);
 
     return {
-      permalink: files.toPermalink(path, { basePath: "content" }),
+      permalink: files.toPermalink(path, { stripPrefix: "content" }),
       template: "post",
       title: post.frontmatter.title,
       content: post.content,
