@@ -18,6 +18,12 @@ build:
 html:
   minify: true
 
+dev:
+  host: 127.0.0.1
+  port: 3000
+  watch:
+    - content
+
 tailwindcss:
   stylesheet: styles.css
   minify: true
@@ -59,6 +65,39 @@ Type: boolean
 Default: `false`
 
 When true, minifies generated `.html` files only.
+
+## `dev.host`
+
+Type: string
+
+Default: `127.0.0.1`
+
+The local interface used by `veta dev`.
+
+## `dev.port`
+
+Type: number
+
+Default: `3000`
+
+The TCP port used by `veta dev`.
+
+## `dev.watch`
+
+Type: array of strings
+
+Default: `[]`
+
+Additional project-relative files or directories watched by `veta dev`. Directories are watched recursively. These paths are added to Veta's built-in watch set.
+
+Example:
+
+```yaml
+dev:
+  watch:
+    - content
+    - docs
+```
 
 ## `tailwindcss.stylesheet`
 

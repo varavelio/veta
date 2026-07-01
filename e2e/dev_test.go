@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -27,15 +26,21 @@ import (
 // TestDevServerServesReloadsAndKeepsProductionOutputClean verifies the dev flow end-to-end.
 func TestDevServerServesReloadsAndKeepsProductionOutputClean(t *testing.T) {
 	projectRoot := t.TempDir()
+	port := freeTCPPort(t)
 	writeProjectFile(t, projectRoot, "veta.yaml", `
 build:
   output: dist
   clean: true
+dev:
+  host: 127.0.0.1
+  port: `+fmt.Sprint(port)+`
+  watch:
+    - content
 `)
-	writeProjectFile(t, projectRoot, "pages/site.js", devPageSource("Initial"))
+	writeProjectFile(t, projectRoot, "content/message.txt", "Initial")
+	writeProjectFile(t, projectRoot, "pages/site.js", devPageSource())
 
-	port := freeTCPPort(t)
-	process := startDevProcess(t, projectRoot, port)
+	process := startDevProcess(t, projectRoot)
 	defer process.stop(t)
 
 	baseURL := fmt.Sprintf("http://127.0.0.1:%d/", port)
@@ -49,7 +54,7 @@ build:
 	defer stream.close()
 	stream.requireLine(t, ": connected")
 
-	writeProjectFile(t, projectRoot, "pages/site.js", devPageSource("Updated"))
+	writeProjectFile(t, projectRoot, "content/message.txt", "Updated")
 	stream.requireLine(t, "event: reload")
 	stream.requireLine(t, "data: reload")
 
@@ -67,7 +72,7 @@ type devProcess struct {
 }
 
 // startDevProcess starts veta dev in a temporary project.
-func startDevProcess(t *testing.T, projectRoot string, port int) *devProcess {
+func startDevProcess(t *testing.T, projectRoot string) *devProcess {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
@@ -75,10 +80,6 @@ func startDevProcess(t *testing.T, projectRoot string, port int) *devProcess {
 		ctx,
 		vetaBinary,
 		"dev",
-		"--host",
-		"127.0.0.1",
-		"--port",
-		strconv.Itoa(port),
 	)
 	command.Dir = projectRoot
 	command.Env = isolatedEnvironment(t, projectRoot)
@@ -327,11 +328,12 @@ func freeTCPPort(t *testing.T) int {
 	return address.Port
 }
 
-// devPageSource returns a simple page generator for dev server tests.
-func devPageSource(message string) string {
-	return fmt.Sprintf(`
-export default function() {
-  return [{ permalink: "/", content: "<html><body><main>%s</main></body></html>" }];
+// devPageSource returns a page generator that reads content watched through dev.watch.
+func devPageSource() string {
+	return `
+export default function({ files }) {
+  const message = files.readFile("content/message.txt").trim();
+  return [{ permalink: "/", content: "<html><body><main>" + message + "</main></body></html>" }];
 }
-`, message)
+`
 }

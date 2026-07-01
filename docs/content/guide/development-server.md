@@ -17,18 +17,29 @@ By default, it serves at:
 http://127.0.0.1:3000/
 ```
 
-## Flags
+## Config
+
+Configure the server in `veta.yaml`:
+
+```yaml
+dev:
+  host: 127.0.0.1
+  port: 3000
+  watch:
+    - content
+```
+
+`host` changes the address Veta binds to.
+
+`port` changes the port.
+
+`watch` adds project-relative files or directories to the watcher. Directories are watched recursively.
+
+The only `veta dev` CLI flag is `--config`, which works like `veta build --config`:
 
 ```sh
 veta dev --config path/to/veta.yaml
-veta dev --host 127.0.0.1 --port 4000
 ```
-
-`--config` works like `veta build --config`.
-
-`--host` changes the address Veta binds to.
-
-`--port` changes the port.
 
 ## Temporary Output
 
@@ -55,7 +66,11 @@ filters/
 public/
 ```
 
+It also watches every path configured in `dev.watch`.
+
 The watcher is intentionally simple and predictable. It rebuilds the whole site rather than trying to cache partial work.
+
+Changes to `dev.host`, `dev.port`, or `dev.watch` require restarting `veta dev`, because those values define the running server and watcher.
 
 ## Live Reload
 

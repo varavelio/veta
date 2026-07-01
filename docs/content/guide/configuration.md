@@ -43,6 +43,12 @@ build:
 html:
   minify: true
 
+dev:
+  host: 127.0.0.1
+  port: 3000
+  watch:
+    - content
+
 tailwindcss:
   stylesheet: styles.css
   minify: true
@@ -78,6 +84,26 @@ html:
 ```
 
 `html.minify` minifies generated `.html` files only. It does not minify XML, Markdown, JSON, text, JavaScript, CSS, or files copied from `public/`.
+
+## `dev`
+
+`dev` configures the local development server.
+
+```yaml
+dev:
+  host: 127.0.0.1
+  port: 3000
+  watch:
+    - content
+```
+
+`host` is the network interface used by `veta dev`.
+
+`port` is the local development server port.
+
+`watch` adds project-relative files or directories to the watcher. Directories are watched recursively. Veta always watches its own project files and directories in addition to these paths.
+
+Use `watch` for content directories that Veta cannot infer, such as `content/`, `posts/`, `docs/`, or files consumed through `files.readFile` and `files.readMarkdownFile`.
 
 ## `tailwindcss`
 

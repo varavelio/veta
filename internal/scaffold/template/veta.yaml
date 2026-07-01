@@ -9,6 +9,11 @@ build:
 html:
   minify: true # Minify generated .html files.
 
+dev:
+  host: 127.0.0.1 # Local development server host.
+  port: 3000 # Local development server port.
+  watch: [] # Additional project-relative files or directories to watch.
+
 tailwindcss:
   stylesheet: styles.css # Compile public/styles.css into dist/styles.css.
   minify: true # Minify the generated stylesheet.

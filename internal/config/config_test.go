@@ -19,6 +19,12 @@ build:
   debug: true
 theme:
   source: " varavelio/veta-theme-clean@v1.0.0 "
+dev:
+  host: " 0.0.0.0 "
+  port: 4000
+  watch:
+    - " content "
+    - docs
 html:
   minify: true
 tailwindcss:
@@ -32,6 +38,9 @@ tailwindcss:
 		require.Equal(t, "public-build", config.Build.Output)
 		require.True(t, config.Build.Clean)
 		require.True(t, config.Build.Debug)
+		require.Equal(t, "0.0.0.0", config.Dev.Host)
+		require.Equal(t, 4000, config.Dev.Port)
+		require.Equal(t, []string{"content", "docs"}, config.Dev.Watch)
 		require.True(t, config.HTML.Minify)
 		require.Equal(t, "varavelio/veta-theme-clean@v1.0.0", config.Theme.Source)
 		require.Equal(t, "css/app.css", config.TailwindCSS.Stylesheet)
@@ -127,6 +136,7 @@ theme:
 `,
 			want: Config{
 				Build: Build{Output: DefaultBuildOutput},
+				Dev:   Dev{Host: DefaultDevHost, Port: DefaultDevPort},
 				Theme: Theme{Source: "./themes/basic"},
 			},
 		},
@@ -140,6 +150,26 @@ build:
 `,
 			want: Config{
 				Build: Build{Output: "public", Clean: true, Debug: true},
+				Dev:   Dev{Host: DefaultDevHost, Port: DefaultDevPort},
+			},
+		},
+		{
+			name: "dev only",
+			content: `
+dev:
+  host: 0.0.0.0
+  port: 4000
+  watch:
+    - content
+    - docs/reference
+`,
+			want: Config{
+				Build: Build{Output: DefaultBuildOutput},
+				Dev: Dev{
+					Host:  "0.0.0.0",
+					Port:  4000,
+					Watch: []string{"content", "docs/reference"},
+				},
 			},
 		},
 		{
@@ -150,6 +180,7 @@ tailwindcss:
 `,
 			want: Config{
 				Build:       Build{Output: DefaultBuildOutput},
+				Dev:         Dev{Host: DefaultDevHost, Port: DefaultDevPort},
 				TailwindCSS: TailwindCSS{Stylesheet: "css/app.css"},
 			},
 		},
@@ -161,6 +192,7 @@ html:
 `,
 			want: Config{
 				Build: Build{Output: DefaultBuildOutput},
+				Dev:   Dev{Host: DefaultDevHost, Port: DefaultDevPort},
 				HTML:  HTML{Minify: true},
 			},
 		},
@@ -172,6 +204,7 @@ tailwindcss:
 `,
 			want: Config{
 				Build:       Build{Output: DefaultBuildOutput},
+				Dev:         Dev{Host: DefaultDevHost, Port: DefaultDevPort},
 				TailwindCSS: TailwindCSS{Minify: true},
 			},
 		},
@@ -214,6 +247,13 @@ theme:
 `,
 		},
 		{
+			name: "unknown dev field",
+			content: `
+dev:
+  hostname: localhost
+`,
+		},
+		{
 			name: "unknown html field",
 			content: `
 html:
@@ -243,6 +283,80 @@ tailwindcss:
 		t.Run(test.name, func(t *testing.T) {
 			_, err := Parse([]byte(test.content))
 			require.ErrorIs(t, err, ErrInvalid)
+		})
+	}
+}
+
+func TestDevValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		wantErr error
+	}{
+		{
+			name: "absolute watch path",
+			content: `
+dev:
+  watch:
+    - /content
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "parent traversal watch path",
+			content: `
+dev:
+  watch:
+    - ../content
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "empty watch path",
+			content: `
+dev:
+  watch:
+    - ""
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "windows volume watch path",
+			content: `
+dev:
+  watch:
+    - C:\content
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "negative port",
+			content: `
+dev:
+  port: -1
+`,
+			wantErr: ErrInvalid,
+		},
+		{
+			name: "too large port",
+			content: `
+dev:
+  port: 65536
+`,
+			wantErr: ErrInvalid,
+		},
+		{
+			name:    "nul host",
+			content: "dev:\n  host: \"bad\x00host\"\n",
+			wantErr: ErrInvalid,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Parse([]byte(test.content))
+			require.Error(t, err)
+			require.True(t, errors.Is(err, test.wantErr), "expected %v, got %v", test.wantErr, err)
 		})
 	}
 }

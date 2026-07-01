@@ -65,6 +65,11 @@ build:
 html:
   minify: true
 
+dev:
+  host: 127.0.0.1
+  port: 3000
+  watch: []
+
 tailwindcss:
   stylesheet: styles.css
   minify: true
@@ -75,6 +80,9 @@ The important defaults are:
 - `build.output` is the directory written by `veta build`.
 - `build.clean` removes the output directory before writing a new build.
 - `html.minify` minifies generated `.html` files.
+- `dev.host` configures the local development server host.
+- `dev.port` configures the local development server port.
+- `dev.watch` is an array of additional directories for the development server to watch, beyond Veta's own files and directories.
 - `tailwindcss.stylesheet` points to `public/styles.css`.
 - `tailwindcss.minify` minifies the generated stylesheet.
 

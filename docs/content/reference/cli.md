@@ -39,14 +39,7 @@ Flags:
 Starts the local development server with live reload.
 
 ```sh
-veta dev [--config FILE] [--host HOST] [--port PORT]
-```
-
-Defaults:
-
-```txt
-host: 127.0.0.1
-port: 3000
+veta dev [--config FILE]
 ```
 
 Examples:
@@ -54,8 +47,9 @@ Examples:
 ```sh
 veta dev
 veta dev --config ./veta.yaml
-veta dev --host 127.0.0.1 --port 4000
 ```
+
+Host, port, and additional watched paths are configured in `veta.yaml` under `dev`.
 
 ## `veta build`
 

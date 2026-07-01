@@ -22,9 +22,16 @@ var fileNames = []string{"veta.yaml", "veta.yml", ".veta.yaml", ".veta.yml"}
 // DefaultBuildOutput is the default build output directory.
 const DefaultBuildOutput = "dist"
 
+// DefaultDevHost is the default local development server host.
+const DefaultDevHost = "127.0.0.1"
+
+// DefaultDevPort is the default local development server port.
+const DefaultDevPort = 3000
+
 // Config contains Veta's tool behavior settings.
 type Config struct {
 	Build       Build       `yaml:"build"`
+	Dev         Dev         `yaml:"dev"`
 	HTML        HTML        `yaml:"html"`
 	Theme       Theme       `yaml:"theme"`
 	TailwindCSS TailwindCSS `yaml:"tailwindcss"`
@@ -35,6 +42,13 @@ type Build struct {
 	Clean  bool   `yaml:"clean"`
 	Debug  bool   `yaml:"debug"`
 	Output string `yaml:"output"`
+}
+
+// Dev contains local development server settings.
+type Dev struct {
+	Host  string   `yaml:"host"`
+	Port  int      `yaml:"port"`
+	Watch []string `yaml:"watch"`
 }
 
 // HTML contains generated HTML output settings.
@@ -65,7 +79,10 @@ func (tailwind TailwindCSS) Enabled() bool {
 
 // Default returns Veta's default tool configuration.
 func Default() Config {
-	return Config{Build: Build{Output: DefaultBuildOutput}}
+	return Config{
+		Build: Build{Output: DefaultBuildOutput},
+		Dev:   Dev{Host: DefaultDevHost, Port: DefaultDevPort},
+	}
 }
 
 // FileNames returns supported Veta configuration file names in priority order.
@@ -181,10 +198,17 @@ func normalize(config Config) (Config, error) {
 	if config.Build.Output == "" {
 		config.Build.Output = DefaultBuildOutput
 	}
+	config.Dev.Host = strings.TrimSpace(config.Dev.Host)
+	if config.Dev.Host == "" {
+		config.Dev.Host = DefaultDevHost
+	}
 	config.Theme.Source = strings.TrimSpace(config.Theme.Source)
 	config.TailwindCSS.Stylesheet = strings.TrimSpace(config.TailwindCSS.Stylesheet)
 
 	if err := validateBuild(config.Build); err != nil {
+		return Config{}, err
+	}
+	if err := validateDev(&config.Dev); err != nil {
 		return Config{}, err
 	}
 	if err := validateTheme(config.Theme); err != nil {
@@ -206,6 +230,42 @@ func validateBuild(build Build) error {
 	if err := validateProjectPath("build.output", build.Output); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// validateDev checks development server configuration values.
+func validateDev(dev *Dev) error {
+	if dev == nil {
+		return nil
+	}
+	if strings.ContainsRune(dev.Host, 0) {
+		return fmt.Errorf("%w: dev.host cannot contain NUL", ErrInvalid)
+	}
+	if dev.Port < 0 || dev.Port > 65535 {
+		return fmt.Errorf("%w: dev.port must be between 0 and 65535", ErrInvalid)
+	}
+	if dev.Port == 0 {
+		dev.Port = DefaultDevPort
+	}
+
+	if len(dev.Watch) == 0 {
+		return nil
+	}
+
+	watch := make([]string, 0, len(dev.Watch))
+	for _, watchPath := range dev.Watch {
+		cleanPath, err := cleanConfigPath(watchPath)
+		if err != nil {
+			return fmt.Errorf(
+				"%w: dev.watch must contain relative project paths: %w",
+				ErrInvalid,
+				err,
+			)
+		}
+		watch = append(watch, cleanPath)
+	}
+	dev.Watch = watch
 
 	return nil
 }

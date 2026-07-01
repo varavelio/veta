@@ -15,14 +15,15 @@ import (
 	"time"
 
 	"github.com/varavelio/veta/internal/build"
+	toolconfig "github.com/varavelio/veta/internal/config"
 )
 
 const (
 	// DefaultHost is the local interface used by veta dev.
-	DefaultHost = "127.0.0.1"
+	DefaultHost = toolconfig.DefaultDevHost
 
 	// DefaultPort is the TCP port used by veta dev.
-	DefaultPort = 3000
+	DefaultPort = toolconfig.DefaultDevPort
 
 	defaultPollInterval = 500 * time.Millisecond
 	defaultDebounce     = 200 * time.Millisecond
@@ -33,9 +34,7 @@ const (
 type Config struct {
 	ConfigFile   string
 	Debounce     time.Duration
-	Host         string
 	PollInterval time.Duration
-	Port         int
 	Stderr       io.Writer
 	Stdout       io.Writer
 }
@@ -80,19 +79,6 @@ func Run(ctx context.Context, config Config) (err error) {
 func normalizeConfig(config Config) (Config, error) {
 	config.Stdout = defaultWriter(config.Stdout)
 	config.Stderr = defaultWriter(config.Stderr)
-	config.Host = strings.TrimSpace(config.Host)
-	if config.Host == "" {
-		config.Host = DefaultHost
-	}
-	if strings.ContainsRune(config.Host, 0) {
-		return Config{}, ErrAddressInvalid
-	}
-	if config.Port < 0 || config.Port > 65535 {
-		return Config{}, fmt.Errorf("%w: port must be between 0 and 65535", ErrAddressInvalid)
-	}
-	if config.Port == 0 {
-		config.Port = DefaultPort
-	}
 	if config.PollInterval <= 0 {
 		config.PollInterval = defaultPollInterval
 	}
@@ -109,11 +95,12 @@ func (server server) run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	devConfig := result.Config.Dev
 
 	listenConfig := net.ListenConfig{}
-	listener, err := listenConfig.Listen(ctx, "tcp", listenAddress(server.config))
+	listener, err := listenConfig.Listen(ctx, "tcp", listenAddress(devConfig))
 	if err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrListenFailed, listenAddress(server.config), err)
+		return fmt.Errorf("%w: %s: %w", ErrListenFailed, listenAddress(devConfig), err)
 	}
 
 	generatedHTML := newGeneratedHTMLFiles(result.GeneratedFiles)
@@ -140,7 +127,7 @@ func (server server) run(ctx context.Context) (err error) {
 	changes, watcherErrors := watchProject(
 		watchCtx,
 		result.Root,
-		server.watchPaths(result.Root),
+		server.watchPaths(result.Root, devConfig.Watch),
 		server.config.PollInterval,
 		server.config.Debounce,
 	)
@@ -258,8 +245,9 @@ func (server server) buildOptions() []build.Option {
 }
 
 // watchPaths returns project paths observed for rebuild triggers.
-func (server server) watchPaths(root string) []string {
+func (server server) watchPaths(root string, configuredPaths []string) []string {
 	paths := defaultWatchPaths()
+	paths = append(paths, configuredPaths...)
 	if configFile, ok := explicitConfigWatchPath(root, server.config.ConfigFile); ok {
 		paths = append(paths, configFile)
 	}
@@ -290,7 +278,7 @@ func explicitConfigWatchPath(root, configFile string) (string, bool) {
 }
 
 // listenAddress returns the TCP address used by the HTTP server.
-func listenAddress(config Config) string {
+func listenAddress(config toolconfig.Dev) string {
 	return net.JoinHostPort(config.Host, strconv.Itoa(config.Port))
 }
 

@@ -27,6 +27,8 @@ func TestCreate(t *testing.T) {
 	require.Contains(t, string(config), "# Veta configuration file.")
 	require.Contains(t, string(config), "https://veta.varavel.com/config")
 	require.Contains(t, string(config), "\nbuild:\n")
+	require.Contains(t, string(config), "\ndev:\n")
+	require.Contains(t, string(config), "watch: []")
 	require.Contains(t, string(config), "\nhtml:\n")
 	require.Contains(t, string(config), "\ntailwindcss:\n")
 	require.Contains(t, string(config), "# theme:")

@@ -39,9 +39,7 @@ type buildCommand struct {
 }
 
 type devCommand struct {
-	ConfigFile string `arg:"-c,--config" help:"configuration file to use"         placeholder:"FILE"`
-	Host       string `arg:"--host"      help:"host to bind (default: 127.0.0.1)" placeholder:"HOST"`
-	Port       int    `arg:"--port"      help:"port to bind (default: 3000)"      placeholder:"PORT"`
+	ConfigFile string `arg:"-c,--config" help:"configuration file to use" placeholder:"FILE"`
 }
 
 type initCommand struct {
@@ -107,15 +105,8 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 
 // runDev starts the local development server from parsed command options.
 func runDev(ctx context.Context, command *devCommand, stdout, stderr io.Writer) error {
-	port := command.Port
-	if port == 0 {
-		port = dev.DefaultPort
-	}
-
 	if err := dev.Run(ctx, dev.Config{
 		ConfigFile: command.ConfigFile,
-		Host:       command.Host,
-		Port:       port,
 		Stderr:     stderr,
 		Stdout:     stdout,
 	}); err != nil {
@@ -258,7 +249,7 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` or ` +
 		return "The build output directory is invalid. Check the output path and run the command again.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, dev.ErrAddressInvalid) || errors.Is(err, dev.ErrListenFailed) {
-		return "The dev server could not start. Check --host and --port, then run `veta dev` again.\n\nDetails: " + err.Error()
+		return "The dev server could not start. Check dev.host and dev.port in veta.yaml, then run `veta dev` again.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, build.ErrRootInvalid) {
 		return "The config search directory is invalid. Run Veta from an existing directory or pass an explicit config file with `veta build --config ./veta.yaml`.\n\nDetails: " + err.Error()

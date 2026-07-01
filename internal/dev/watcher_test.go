@@ -75,7 +75,16 @@ func TestWatchPathsIncludesExplicitConfigFile(t *testing.T) {
 	configFile := filepath.Join(root, "custom.yaml")
 	server := server{config: Config{ConfigFile: configFile}}
 
-	paths := server.watchPaths(root)
+	paths := server.watchPaths(root, nil)
 
 	require.Contains(t, paths, "custom.yaml")
+}
+
+func TestWatchPathsIncludesConfiguredPaths(t *testing.T) {
+	server := server{}
+
+	paths := server.watchPaths(t.TempDir(), []string{"content", "docs/reference"})
+
+	require.Contains(t, paths, "content")
+	require.Contains(t, paths, "docs/reference")
 }

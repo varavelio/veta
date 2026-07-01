@@ -26,6 +26,8 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	config := readProjectFile(t, projectRoot, "veta.yaml")
 	require.Contains(t, config, "# Veta configuration file.")
 	require.Contains(t, config, "https://veta.varavel.com/config")
+	require.Contains(t, config, "\ndev:\n")
+	require.Contains(t, config, "watch: []")
 	require.Contains(t, config, "\nhtml:\n")
 	require.Contains(t, config, "stylesheet: styles.css")
 	require.Contains(t, config, "# theme:")
