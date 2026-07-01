@@ -83,7 +83,7 @@ filters/titlecase.js        -> {{ page.title|titlecase }}
 ```txt
 public/robots.txt           -> dist/robots.txt
 public/images/logo.svg      -> dist/images/logo.svg
-public/styles.css           -> Tailwind input when configured
+public/styles.css           -> Tailwind entrypoint when configured
 ```
 
 Public assets are copied as-is. Generated HTML minification applies only to generated page output, not to copied public files.

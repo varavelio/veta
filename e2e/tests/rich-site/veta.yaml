@@ -3,5 +3,7 @@ build:
   clean: true
 
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
+    - admin.css
   minify: true

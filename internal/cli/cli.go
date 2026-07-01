@@ -272,7 +272,7 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` or ` +
 			err,
 			tailwindcss.ErrPlatformUnsupported,
 		) || errors.Is(err, tailwindcss.ErrBinaryUnavailable) {
-		return "Tailwind CSS failed. Check tailwindcss.stylesheet in veta.yaml.\n\nDetails: " + err.Error()
+		return "Tailwind CSS failed. Check tailwindcss.stylesheets in veta.yaml.\n\nDetails: " + err.Error()
 	}
 	if errors.Is(err, output.ErrDirInvalid) || errors.Is(err, output.ErrPathInvalid) ||
 		errors.Is(err, output.ErrPathDuplicate) || errors.Is(err, output.ErrMinifyFailed) {

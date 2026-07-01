@@ -27,7 +27,9 @@ dev:
 html:
   minify: true
 tailwindcss:
-  stylesheet: " css/app.css "
+  stylesheets:
+    - " css/app.css "
+    - admin.css
   minify: true
 `)},
 		}
@@ -41,7 +43,7 @@ tailwindcss:
 		require.Equal(t, []string{"content", "docs"}, config.Dev.Watch)
 		require.True(t, config.HTML.Minify)
 		require.Equal(t, "varavelio/veta-theme-clean@v1.0.0", config.Theme.Source)
-		require.Equal(t, "css/app.css", config.TailwindCSS.Stylesheet)
+		require.Equal(t, []string{"css/app.css", "admin.css"}, config.TailwindCSS.Stylesheets)
 		require.True(t, config.TailwindCSS.Minify)
 		require.True(t, config.Theme.Enabled())
 		require.True(t, config.TailwindCSS.Enabled())
@@ -173,12 +175,13 @@ dev:
 			name: "tailwind only",
 			content: `
 tailwindcss:
-  stylesheet: css/app.css
+  stylesheets:
+    - css/app.css
 `,
 			want: Config{
 				Build:       Build{Output: DefaultBuildOutput},
 				Dev:         Dev{Host: DefaultDevHost, Port: DefaultDevPort},
-				TailwindCSS: TailwindCSS{Stylesheet: "css/app.css"},
+				TailwindCSS: TailwindCSS{Stylesheets: []string{"css/app.css"}},
 			},
 		},
 		{
@@ -194,7 +197,7 @@ html:
 			},
 		},
 		{
-			name: "tailwind minify without stylesheet",
+			name: "tailwind minify without stylesheets",
 			content: `
 tailwindcss:
   minify: true
@@ -271,7 +274,8 @@ theme:
   source: ./theme
 ---
 tailwindcss:
-  stylesheet: app.css
+  stylesheets:
+    - app.css
 `,
 		},
 	}
@@ -365,18 +369,20 @@ func TestTailwindValidation(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "absolute stylesheet",
+			name: "absolute stylesheet path",
 			content: `
 tailwindcss:
-  stylesheet: /app.css
+  stylesheets:
+    - /app.css
 `,
 			wantErr: ErrPathInvalid,
 		},
 		{
-			name: "parent traversal stylesheet",
+			name: "parent traversal stylesheet path",
 			content: `
 tailwindcss:
-  stylesheet: ../app.css
+  stylesheets:
+    - ../app.css
 `,
 			wantErr: ErrPathInvalid,
 		},
@@ -384,9 +390,29 @@ tailwindcss:
 			name: "windows volume path",
 			content: `
 tailwindcss:
-  stylesheet: C:\public\app.css
+  stylesheets:
+    - C:\public\app.css
 `,
 			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "empty stylesheet path",
+			content: `
+tailwindcss:
+  stylesheets:
+    - ""
+`,
+			wantErr: ErrPathInvalid,
+		},
+		{
+			name: "duplicate stylesheet path",
+			content: `
+tailwindcss:
+  stylesheets:
+    - styles.css
+    - " styles.css "
+`,
+			wantErr: ErrInvalid,
 		},
 	}
 

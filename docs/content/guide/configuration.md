@@ -49,7 +49,8 @@ dev:
     - content
 
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
   minify: true
 
 theme:
@@ -107,15 +108,16 @@ Use `watch` for content directories that Veta cannot infer, such as `content/`, 
 
 ```yaml
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
   minify: true
 ```
 
-`stylesheet` is relative to `public/`. With the config above, Veta reads `public/styles.css` and writes the generated CSS to `dist/styles.css`.
+`stylesheets` lists Tailwind CSS entrypoints relative to `public/`. With the config above, Veta reads `public/styles.css` and writes the generated CSS to `dist/styles.css`.
 
 `minify` passes Tailwind's minification flag to the standalone CLI.
 
-If `tailwindcss.stylesheet` is omitted, Tailwind CSS does not run.
+If `tailwindcss.stylesheets` is omitted or empty, Tailwind CSS does not run.
 
 ## `theme`
 

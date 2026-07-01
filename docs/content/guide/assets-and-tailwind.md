@@ -5,7 +5,7 @@ description: "Use public assets and Veta's embedded Tailwind CSS standalone inte
 
 # Assets And Tailwind CSS
 
-Static assets live in `public/`. Tailwind CSS is configured through `veta.yaml` and uses a stylesheet inside `public/` as its input.
+Static assets live in `public/`. Tailwind CSS is configured through `veta.yaml` and uses one or more stylesheets inside `public/` as entrypoints.
 
 ## Public Assets
 
@@ -18,7 +18,7 @@ public/images/logo.svg      -> dist/images/logo.svg
 
 Public files are copied as-is. Veta does not minify or transform copied public assets.
 
-## Tailwind CSS Input
+## Tailwind CSS Entrypoints
 
 The starter uses `public/styles.css`:
 
@@ -30,21 +30,35 @@ Configure it with:
 
 ```yaml
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
   minify: true
 ```
 
-`stylesheet` is relative to `public/`, so `styles.css` means `public/styles.css`.
+`stylesheets` entries are relative to `public/`, so `styles.css` means `public/styles.css`.
+
+You can configure multiple entrypoints:
+
+```yaml
+tailwindcss:
+  stylesheets:
+    - styles.css
+    - admin.css
+  minify: true
+```
 
 ## Generated CSS Output
 
-Veta writes the compiled stylesheet to the build output using the same path:
+Veta writes each compiled stylesheet to the build output using the same path:
 
 ```txt
 public/styles.css           -> dist/styles.css
+public/admin.css            -> dist/admin.css
 ```
 
 Tailwind scans the materialized output directory, so classes used in generated HTML are included.
+
+If an entrypoint should scan a narrower set of files, configure that in the CSS file with Tailwind's `@source` directive.
 
 ## Minification
 
@@ -54,14 +68,15 @@ This setting is separate from `html.minify`, which only affects generated `.html
 
 ## Disabling Tailwind CSS
 
-Remove `tailwindcss.stylesheet` or leave it blank:
+Remove `tailwindcss.stylesheets` or leave it empty:
 
 ```yaml
 tailwindcss:
+  stylesheets: []
   minify: true
 ```
 
-Without `stylesheet`, Veta does not run Tailwind CSS.
+Without `stylesheets`, Veta does not run Tailwind CSS.
 
 ## Practical Pattern
 

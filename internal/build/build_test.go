@@ -285,11 +285,14 @@ build:
 theme:
   source: "./theme"
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
+    - admin.css
   minify: true
 `)
 	writeProjectFile(t, root, "theme/public/styles.css", `theme css`)
 	writeProjectFile(t, root, "public/styles.css", `@import "tailwindcss";`)
+	writeProjectFile(t, root, "public/admin.css", `@import "tailwindcss";`)
 	writeProjectFile(
 		t,
 		root,
@@ -314,6 +317,11 @@ export default function() {
 	require.Contains(
 		t,
 		readOutputFile(t, root, "dist/styles.css"),
+		"minify=true rendered=true copied=true input=true",
+	)
+	require.Contains(
+		t,
+		readOutputFile(t, root, "dist/admin.css"),
 		"minify=true rendered=true copied=true input=true",
 	)
 }

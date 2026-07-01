@@ -83,13 +83,13 @@ Change one permalink.
 
 ## Tailwind Input Missing
 
-If `tailwindcss.stylesheet: styles.css` is set, Veta expects:
+If `tailwindcss.stylesheets` includes `styles.css`, Veta expects:
 
 ```txt
 public/styles.css
 ```
 
-Create the file or remove `tailwindcss.stylesheet` to disable Tailwind CSS.
+Create the file or remove it from `tailwindcss.stylesheets` to disable that Tailwind CSS entrypoint.
 
 ## Public Asset Collision
 

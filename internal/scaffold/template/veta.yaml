@@ -14,7 +14,8 @@ dev:
   watch: [] # Additional project-relative files or directories to watch.
 
 tailwindcss:
-  stylesheet: styles.css # Compile public/styles.css into dist/styles.css.
+  stylesheets:
+    - styles.css # Compile public/styles.css into dist/styles.css (add more if you want).
   minify: true # Minify the generated stylesheet.
 
 # theme:

@@ -70,7 +70,8 @@ dev:
   watch: []
 
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
   minify: true
 ```
 
@@ -82,7 +83,7 @@ The important defaults are:
 - `dev.host` configures the local development server host.
 - `dev.port` configures the local development server port.
 - `dev.watch` is an array of additional directories for the development server to watch, beyond Veta's own files and directories.
-- `tailwindcss.stylesheet` points to `public/styles.css`.
+- `tailwindcss.stylesheets` points to Tailwind CSS entrypoints under `public/`.
 - `tailwindcss.minify` minifies the generated stylesheet.
 
 ## 4. Edit Site Data
@@ -250,13 +251,13 @@ export default function({ files }) {
 
 ## 9. Add Styles With Tailwind CSS
 
-The starter uses `public/styles.css` as the Tailwind input:
+The starter uses `public/styles.css` as the Tailwind entrypoint:
 
 ```css
 @import "tailwindcss";
 ```
 
-When `tailwindcss.stylesheet: styles.css` is configured, Veta reads `public/styles.css`, runs the embedded Tailwind CSS standalone CLI against the generated output, and writes `dist/styles.css`.
+When `tailwindcss.stylesheets` includes `styles.css`, Veta reads `public/styles.css`, runs the embedded Tailwind CSS standalone CLI against the generated output, and writes `dist/styles.css`.
 
 Use classes directly in templates and components:
 

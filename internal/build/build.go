@@ -284,19 +284,20 @@ func buildTailwindCSS(
 		return nil
 	}
 
-	stylesheet := toolConfig.TailwindCSS.Stylesheet
-	if err := tailwindcss.Build(
-		ctx,
-		files,
-		tailwindcss.Config{
-			Input:   path.Join(output.PublicDirName, stylesheet),
-			Minify:  toolConfig.TailwindCSS.Minify,
-			Output:  filepath.Join(outputDir, filepath.FromSlash(stylesheet)),
-			WorkDir: outputDir,
-		},
-		runConfig.tailwindOptions...,
-	); err != nil {
-		return fmt.Errorf("build tailwindcss: %w", err)
+	for _, stylesheet := range toolConfig.TailwindCSS.Stylesheets {
+		if err := tailwindcss.Build(
+			ctx,
+			files,
+			tailwindcss.Config{
+				Input:   path.Join(output.PublicDirName, stylesheet),
+				Minify:  toolConfig.TailwindCSS.Minify,
+				Output:  filepath.Join(outputDir, filepath.FromSlash(stylesheet)),
+				WorkDir: outputDir,
+			},
+			runConfig.tailwindOptions...,
+		); err != nil {
+			return fmt.Errorf("build tailwindcss %s: %w", stylesheet, err)
+		}
 	}
 
 	return nil

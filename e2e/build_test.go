@@ -45,6 +45,9 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	styles := readProjectFile(t, projectRoot, "dist/styles.css")
 	require.NotContains(t, styles, `@import "tailwindcss"`)
 	require.Greater(t, len(styles), 100)
+	adminStyles := readProjectFile(t, projectRoot, "dist/admin.css")
+	require.NotContains(t, adminStyles, `@import "tailwindcss"`)
+	require.Greater(t, len(adminStyles), 100)
 }
 
 // TestBuildMinifiesGeneratedHTMLOnly verifies html.minify affects generated HTML only.

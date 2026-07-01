@@ -80,7 +80,8 @@ When configured, Tailwind CSS runs after Veta writes the generated site and publ
 
 ```yaml
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
   minify: true
 ```
 

@@ -24,7 +24,8 @@ dev:
     - content
 
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
   minify: true
 
 theme:
@@ -90,22 +91,24 @@ dev:
     - docs
 ```
 
-## `tailwindcss.stylesheet`
+## `tailwindcss.stylesheets`
 
-Type: string
+Type: array of strings
 
-Default: empty
+Default: `[]`
 
-When set, enables Tailwind CSS. The path is relative to `public/`.
+When set, enables Tailwind CSS. Each path is relative to `public/`.
 
 Example:
 
 ```yaml
 tailwindcss:
-  stylesheet: styles.css
+  stylesheets:
+    - styles.css
+    - admin.css
 ```
 
-This reads `public/styles.css` and writes the generated CSS to `dist/styles.css`.
+This reads `public/styles.css` and `public/admin.css`, then writes generated CSS to `dist/styles.css` and `dist/admin.css`.
 
 ## `tailwindcss.minify`
 

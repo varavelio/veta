@@ -67,13 +67,13 @@ func (theme Theme) Enabled() bool {
 
 // TailwindCSS contains Tailwind CSS wrapper settings.
 type TailwindCSS struct {
-	Stylesheet string `yaml:"stylesheet"`
-	Minify     bool   `yaml:"minify"`
+	Stylesheets []string `yaml:"stylesheets"`
+	Minify      bool     `yaml:"minify"`
 }
 
 // Enabled reports whether Tailwind CSS should run.
 func (tailwind TailwindCSS) Enabled() bool {
-	return strings.TrimSpace(tailwind.Stylesheet) != ""
+	return len(tailwind.Stylesheets) > 0
 }
 
 // Default returns Veta's default tool configuration.
@@ -202,7 +202,6 @@ func normalize(config Config) (Config, error) {
 		config.Dev.Host = DefaultDevHost
 	}
 	config.Theme.Source = strings.TrimSpace(config.Theme.Source)
-	config.TailwindCSS.Stylesheet = strings.TrimSpace(config.TailwindCSS.Stylesheet)
 
 	if err := validateBuild(config.Build); err != nil {
 		return Config{}, err
@@ -214,7 +213,7 @@ func normalize(config Config) (Config, error) {
 		return Config{}, err
 	}
 
-	if err := validateTailwindCSS(config.TailwindCSS); err != nil {
+	if err := validateTailwindCSS(&config.TailwindCSS); err != nil {
 		return Config{}, err
 	}
 
@@ -278,13 +277,31 @@ func validateTheme(theme Theme) error {
 	return nil
 }
 
-func validateTailwindCSS(tailwind TailwindCSS) error {
-	if tailwind.Stylesheet == "" {
+func validateTailwindCSS(tailwind *TailwindCSS) error {
+	if tailwind == nil || len(tailwind.Stylesheets) == 0 {
 		return nil
 	}
 
-	if err := validateProjectPath("tailwindcss.stylesheet", tailwind.Stylesheet); err != nil {
-		return err
+	seen := map[string]struct{}{}
+	for index, stylesheet := range tailwind.Stylesheets {
+		stylesheet, err := cleanConfigPath(stylesheet)
+		if err != nil {
+			return fmt.Errorf(
+				"%w: tailwindcss.stylesheets must contain relative project paths: %w",
+				ErrInvalid,
+				err,
+			)
+		}
+		if _, exists := seen[stylesheet]; exists {
+			return fmt.Errorf(
+				"%w: tailwindcss.stylesheets contains duplicate path %q",
+				ErrInvalid,
+				stylesheet,
+			)
+		}
+
+		seen[stylesheet] = struct{}{}
+		tailwind.Stylesheets[index] = stylesheet
 	}
 
 	return nil
