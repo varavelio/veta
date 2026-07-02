@@ -11,11 +11,18 @@
     "vscode": {
       "extensions": [
         "golang.go",
-        "dprint.dprint"
+        "dprint.dprint",
+        "bradlc.vscode-tailwindcss",
+        "samuelcolvin.jinjahtml"
       ],
       "settings": {
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "dprint.dprint",
+
+        "files.associations": {
+          "*.j2": "jinja-html",
+          "*.css": "tailwindcss"
+        },
 
         "[go]": {
           "editor.defaultFormatter": "golang.go"
