@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"slices"
 	"sort"
+	"sync"
 )
 
 // Layer is one filesystem layer in an overlay. Later layers passed to
@@ -26,7 +27,23 @@ type Source struct {
 
 // Overlay merges multiple filesystems into one read-only filesystem.
 type Overlay struct {
-	layers []Layer
+	layers       []Layer
+	findCache    map[string]findResult
+	findMu       sync.RWMutex
+	readDirCache map[string]readDirResult
+	readDirMu    sync.RWMutex
+}
+
+type findResult struct {
+	err        error
+	info       fs.FileInfo
+	layerIndex int
+	ok         bool
+}
+
+type readDirResult struct {
+	entries []fs.DirEntry
+	err     error
 }
 
 // NewOverlay creates a read-only filesystem where later layers override earlier
@@ -48,7 +65,11 @@ func NewOverlay(layers ...Layer) (*Overlay, error) {
 		clone[index] = layer
 	}
 
-	return &Overlay{layers: clone}, nil
+	return &Overlay{
+		layers:       clone,
+		findCache:    map[string]findResult{},
+		readDirCache: map[string]readDirResult{},
+	}, nil
 }
 
 // Open opens a file or a merged directory from the overlay.
@@ -176,25 +197,75 @@ func (overlay *Overlay) Stat(name string) (fs.FileInfo, error) {
 }
 
 func (overlay *Overlay) find(name string) (int, fs.FileInfo, bool, error) {
+	if cached, ok := overlay.cachedFind(name); ok {
+		return cached.layerIndex, cached.info, cached.ok, cached.err
+	}
+
+	result := overlay.findUncached(name)
+	overlay.storeFind(name, result)
+	return result.layerIndex, result.info, result.ok, result.err
+}
+
+func (overlay *Overlay) cachedFind(name string) (findResult, bool) {
+	overlay.findMu.RLock()
+	defer overlay.findMu.RUnlock()
+
+	result, ok := overlay.findCache[name]
+	return result, ok
+}
+
+func (overlay *Overlay) storeFind(name string, result findResult) {
+	overlay.findMu.Lock()
+	defer overlay.findMu.Unlock()
+
+	overlay.findCache[name] = result
+}
+
+func (overlay *Overlay) findUncached(name string) findResult {
 	for index := range slices.Backward(overlay.layers) {
 		info, err := fs.Stat(overlay.layers[index].FS, name)
 		if err == nil {
-			return index, info, true, nil
+			return findResult{info: info, layerIndex: index, ok: true}
 		}
 		if !isNotExist(err) {
-			return 0, nil, false, fmt.Errorf(
+			return findResult{err: fmt.Errorf(
 				"stat %s from layer %s: %w",
 				name,
 				overlay.layers[index].Name,
 				err,
-			)
+			)}
 		}
 	}
 
-	return 0, nil, false, nil
+	return findResult{}
 }
 
 func (overlay *Overlay) readMergedDir(name string) ([]fs.DirEntry, error) {
+	if cached, ok := overlay.cachedReadDir(name); ok {
+		return cloneDirEntries(cached.entries), cached.err
+	}
+
+	entries, err := overlay.readMergedDirUncached(name)
+	overlay.storeReadDir(name, readDirResult{entries: entries, err: err})
+	return cloneDirEntries(entries), err
+}
+
+func (overlay *Overlay) cachedReadDir(name string) (readDirResult, bool) {
+	overlay.readDirMu.RLock()
+	defer overlay.readDirMu.RUnlock()
+
+	result, ok := overlay.readDirCache[name]
+	return result, ok
+}
+
+func (overlay *Overlay) storeReadDir(name string, result readDirResult) {
+	overlay.readDirMu.Lock()
+	defer overlay.readDirMu.Unlock()
+
+	overlay.readDirCache[name] = result
+}
+
+func (overlay *Overlay) readMergedDirUncached(name string) ([]fs.DirEntry, error) {
 	entriesByName := map[string]fs.DirEntry{}
 	for _, layer := range overlay.layers {
 		entries, err := fs.ReadDir(layer.FS, name)
@@ -223,6 +294,10 @@ func (overlay *Overlay) readMergedDir(name string) ([]fs.DirEntry, error) {
 	}
 
 	return entries, nil
+}
+
+func cloneDirEntries(entries []fs.DirEntry) []fs.DirEntry {
+	return append([]fs.DirEntry(nil), entries...)
 }
 
 func isNotExist(err error) bool {

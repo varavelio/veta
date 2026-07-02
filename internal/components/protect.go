@@ -1,6 +1,9 @@
 package components
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 type textRange struct {
 	end   int
@@ -11,6 +14,9 @@ type textRange struct {
 func protectedRanges(content string) []textRange {
 	ranges := fencedCodeRanges(content)
 	ranges = append(ranges, inlineCodeRanges(content, ranges)...)
+	sort.Slice(ranges, func(left, right int) bool {
+		return ranges[left].start < ranges[right].start
+	})
 	return ranges
 }
 
@@ -87,11 +93,13 @@ func nextUnprotectedByte(content string, char byte, start int, ranges []textRang
 
 // protected reports whether index belongs to any protected range.
 func protected(index int, ranges []textRange) bool {
-	for _, textRange := range ranges {
-		if textRange.start <= index && index < textRange.end {
-			return true
-		}
+	position := sort.Search(len(ranges), func(position int) bool {
+		return ranges[position].start > index
+	})
+	if position == 0 {
+		return false
 	}
 
-	return false
+	previous := ranges[position-1]
+	return index < previous.end
 }

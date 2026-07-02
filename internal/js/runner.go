@@ -52,6 +52,13 @@ type Runner struct {
 	consoleMu        sync.Mutex
 	executionTimeout time.Duration
 	httpTimeout      time.Duration
+	programs         map[programCacheKey]*goja.Program
+	programsMu       sync.RWMutex
+}
+
+type programCacheKey struct {
+	code string
+	name string
 }
 
 // New creates a Runner with the provided options.
@@ -63,6 +70,7 @@ func New(options ...Option) *Runner {
 		consoleOutput:    os.Stdout,
 		executionTimeout: defaultExecutionTimeout,
 		httpTimeout:      defaultHTTPTimeout,
+		programs:         map[programCacheKey]*goja.Program{},
 	}
 	for _, option := range options {
 		option(runner)
@@ -113,9 +121,7 @@ func (r *Runner) execute(
 	arguments func(*goja.Runtime, *goja.Object) []goja.Value,
 ) (Result, error) {
 	name := source.name()
-	programSource := buildProgramSource(source)
-
-	program, err := goja.Compile(name, programSource, true)
+	program, err := r.compile(source, name)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: compile javascript: %w", name, err)
 	}
@@ -150,6 +156,36 @@ func (r *Runner) execute(
 	}
 
 	return Result{runtime: vm, value: value}, nil
+}
+
+func (r *Runner) compile(source Source, name string) (*goja.Program, error) {
+	key := programCacheKey{name: name, code: source.Code}
+	if program, ok := r.cachedProgram(key); ok {
+		return program, nil
+	}
+
+	program, err := goja.Compile(name, buildProgramSource(source), true)
+	if err != nil {
+		return nil, err
+	}
+
+	r.storeProgram(key, program)
+	return program, nil
+}
+
+func (r *Runner) cachedProgram(key programCacheKey) (*goja.Program, bool) {
+	r.programsMu.RLock()
+	defer r.programsMu.RUnlock()
+
+	program, ok := r.programs[key]
+	return program, ok
+}
+
+func (r *Runner) storeProgram(key programCacheKey, program *goja.Program) {
+	r.programsMu.Lock()
+	defer r.programsMu.Unlock()
+
+	r.programs[key] = program
 }
 
 // defaultExecutionTimeoutValue returns the maximum duration for one JavaScript

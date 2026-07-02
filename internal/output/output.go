@@ -121,8 +121,7 @@ func (writer *Writer) WriteSite(files []File, projectFiles fs.FS) error {
 	merged := make([]File, 0, len(normalized)+len(publicFiles))
 	merged = append(merged, normalized...)
 	merged = append(merged, publicFiles...)
-	merged, err = normalizeFiles(merged)
-	if err != nil {
+	if err := checkDuplicatePaths(merged); err != nil {
 		return err
 	}
 
@@ -174,10 +173,15 @@ func (writer *Writer) prepare() error {
 
 // writeFiles writes already-normalized files.
 func (writer *Writer) writeFiles(files []File) error {
+	createdDirs := map[string]struct{}{}
 	for _, file := range files {
 		target := filepath.Join(writer.dir, filepath.FromSlash(file.Path))
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return fmt.Errorf("create output parent for %s: %w", file.Path, err)
+		parent := filepath.Dir(target)
+		if _, exists := createdDirs[parent]; !exists {
+			if err := os.MkdirAll(parent, 0o755); err != nil {
+				return fmt.Errorf("create output parent for %s: %w", file.Path, err)
+			}
+			createdDirs[parent] = struct{}{}
 		}
 		if err := os.WriteFile(target, file.Content, 0o644); err != nil {
 			return fmt.Errorf("write output file %s: %w", file.Path, err)
@@ -243,6 +247,19 @@ func normalizeFiles(files []File) ([]File, error) {
 	}
 
 	return normalized, nil
+}
+
+func checkDuplicatePaths(files []File) error {
+	seen := map[string]struct{}{}
+	for _, file := range files {
+		if _, exists := seen[file.Path]; exists {
+			return fmt.Errorf("%w: %s", ErrPathDuplicate, file.Path)
+		}
+
+		seen[file.Path] = struct{}{}
+	}
+
+	return nil
 }
 
 // cleanOutputPath validates a slash-separated output path.

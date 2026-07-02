@@ -46,7 +46,7 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 		}
 	}
 
-	loader := &templateLoader{files: files}
+	loader := newTemplateLoader(files)
 	set := pongo2.NewSet("veta", loader)
 	maps.Copy(set.Globals, config.globals)
 

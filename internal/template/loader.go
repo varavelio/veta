@@ -10,10 +10,25 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type templateLoader struct {
-	files fs.FS
+	files        fs.FS
+	resolveCache map[string]resolveResult
+	resolveMu    sync.RWMutex
+}
+
+type resolveResult struct {
+	name string
+	err  error
+}
+
+func newTemplateLoader(files fs.FS) *templateLoader {
+	return &templateLoader{
+		files:        files,
+		resolveCache: map[string]resolveResult{},
+	}
 }
 
 func (loader *templateLoader) Abs(base, name string) string {
@@ -50,6 +65,31 @@ func (loader *templateLoader) Get(name string) (io.Reader, error) {
 }
 
 func (loader *templateLoader) resolve(name string) (string, error) {
+	if cached, ok := loader.cachedResolve(name); ok {
+		return cached.name, cached.err
+	}
+
+	resolvedName, err := loader.resolveUncached(name)
+	loader.storeResolve(name, resolveResult{name: resolvedName, err: err})
+	return resolvedName, err
+}
+
+func (loader *templateLoader) cachedResolve(name string) (resolveResult, bool) {
+	loader.resolveMu.RLock()
+	defer loader.resolveMu.RUnlock()
+
+	cached, ok := loader.resolveCache[name]
+	return cached, ok
+}
+
+func (loader *templateLoader) storeResolve(name string, result resolveResult) {
+	loader.resolveMu.Lock()
+	defer loader.resolveMu.Unlock()
+
+	loader.resolveCache[name] = result
+}
+
+func (loader *templateLoader) resolveUncached(name string) (string, error) {
 	cleanName, err := cleanTemplateName(name)
 	if err != nil {
 		return "", err

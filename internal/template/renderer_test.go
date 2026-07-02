@@ -3,6 +3,7 @@ package template
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -314,6 +315,36 @@ func TestRendererIgnoresHiddenAndTemporaryTemplates(t *testing.T) {
 	got, err := renderer.Render("partials/card", nil)
 	require.NoError(t, err)
 	require.Equal(t, "card", got)
+}
+
+func TestRendererCachesTemplateResolution(t *testing.T) {
+	files := &countingReadDirFS{files: fstest.MapFS{
+		"pages/home.j2": {Data: []byte("Hello {{ name }}")},
+	}}
+	renderer, err := New(files)
+	require.NoError(t, err)
+
+	for range 2 {
+		got, err := renderer.Render("pages/home", Context{"name": "Veta"})
+		require.NoError(t, err)
+		require.Equal(t, "Hello Veta", got)
+	}
+
+	require.Equal(t, 1, files.readDirCalls)
+}
+
+type countingReadDirFS struct {
+	files        fstest.MapFS
+	readDirCalls int
+}
+
+func (files *countingReadDirFS) Open(name string) (fs.File, error) {
+	return files.files.Open(name)
+}
+
+func (files *countingReadDirFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	files.readDirCalls++
+	return files.files.ReadDir(name)
 }
 
 func TestRendererContextErrors(t *testing.T) {

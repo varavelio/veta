@@ -136,6 +136,36 @@ func TestOverlayWalkDir(t *testing.T) {
 	)
 }
 
+func TestOverlayCachesFindAndReadDir(t *testing.T) {
+	theme := &countingFS{files: fstest.MapFS{
+		"templates/base.j2":       {Data: []byte("theme base")},
+		"templates/theme-only.j2": {Data: []byte("theme only")},
+	}}
+	project := &countingFS{files: fstest.MapFS{
+		"templates/base.j2": {Data: []byte("project base")},
+	}}
+	overlay := newTestOverlay(t, theme, project)
+
+	for range 2 {
+		info, err := fs.Stat(overlay, "templates/base.j2")
+		require.NoError(t, err)
+		require.Equal(t, "base.j2", info.Name())
+
+		entries, err := fs.ReadDir(overlay, "templates")
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			[]string{"base.j2", "theme-only.j2"},
+			entryNames(entries),
+		)
+	}
+
+	require.Equal(t, 2, project.statCalls)
+	require.Equal(t, 0, theme.statCalls)
+	require.Equal(t, 1, project.readDirCalls)
+	require.Equal(t, 1, theme.readDirCalls)
+}
+
 func TestOverlayErrors(t *testing.T) {
 	_, err := NewOverlay()
 	require.ErrorIs(t, err, ErrLayerRequired)
@@ -169,6 +199,26 @@ func newTestOverlay(t *testing.T, theme, project fs.FS) *Overlay {
 	require.NoError(t, err)
 
 	return overlay
+}
+
+type countingFS struct {
+	files        fstest.MapFS
+	readDirCalls int
+	statCalls    int
+}
+
+func (files *countingFS) Open(name string) (fs.File, error) {
+	return files.files.Open(name)
+}
+
+func (files *countingFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	files.readDirCalls++
+	return fs.ReadDir(files.files, name)
+}
+
+func (files *countingFS) Stat(name string) (fs.FileInfo, error) {
+	files.statCalls++
+	return fs.Stat(files.files, name)
 }
 
 func entryNames(entries []fs.DirEntry) []string {

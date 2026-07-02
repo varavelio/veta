@@ -165,6 +165,25 @@ func TestRunnerRuntimeIsolation(t *testing.T) {
 	second, err := runner.ExecuteString("isolation.js", code)
 	require.NoError(t, err)
 	require.Equal(t, int64(1), second.Export())
+	require.Len(t, runner.programs, 1)
+}
+
+func TestRunnerCompileCacheKeysByNameAndCode(t *testing.T) {
+	runner := New()
+
+	first, err := runner.ExecuteString("value.js", `export default function() { return 1; }`)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), first.Export())
+
+	second, err := runner.ExecuteString("value.js", `export default function() { return 2; }`)
+	require.NoError(t, err)
+	require.Equal(t, int64(2), second.Export())
+
+	third, err := runner.ExecuteString("other.js", `export default function() { return 1; }`)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), third.Export())
+
+	require.Len(t, runner.programs, 3)
 }
 
 // TestRunnerRuntimeSnapshot verifies that runner configuration is copied before
