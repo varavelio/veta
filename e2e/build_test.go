@@ -85,6 +85,34 @@ func TestBuildSupportsLoadDataInPongo(t *testing.T) {
 	require.Contains(t, index, `Loaded Badge: <p>Component <strong>slot</strong>.</p>`)
 }
 
+// TestBuildSupportsTemplateHelpers verifies portable URLs, regex replacement,
+// and Base64 filters in a real build.
+func TestBuildSupportsTemplateHelpers(t *testing.T) {
+	projectRoot := copyTestProject(t, "template-helpers")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Veta built 2 pages to dist in ")
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, `<link rel="stylesheet" href="styles.css?v=1#main">`)
+	require.Contains(t, index, `<img src="images/logo.svg" alt="Logo">`)
+	require.Contains(t, index, `<a data-link="root" href=".">Root</a>`)
+	require.Contains(t, index, `<a data-link="docs" href="docs/">Docs</a>`)
+	require.Contains(t, index, `<a data-link="self" href=".">Self</a>`)
+	require.Contains(t, index, `<p data-slug="Hello-Veta-">Hello World</p>`)
+	require.Contains(t, index, `<p data-encoded="aGVsbG8=">hello</p>`)
+
+	docs := readProjectFile(t, projectRoot, "dist/docs/intro/index.html")
+	require.Contains(t, docs, `<link rel="stylesheet" href="../../styles.css?v=1#main">`)
+	require.Contains(t, docs, `<img src="../../images/logo.svg" alt="Logo">`)
+	require.Contains(t, docs, `<a data-link="root" href="../../">Root</a>`)
+	require.Contains(t, docs, `<a data-link="docs" href="../">Docs</a>`)
+	require.Contains(t, docs, `<a data-link="self" href=".">Self</a>`)
+	require.Contains(t, docs, `<p data-slug="Docs-Intro-">Hello World</p>`)
+	require.Contains(t, docs, `<p data-encoded="aGVsbG8=">hello</p>`)
+}
+
 // TestBuildMinifiesGeneratedHTMLOnly verifies html.minify affects generated HTML only.
 func TestBuildMinifiesGeneratedHTMLOnly(t *testing.T) {
 	projectRoot := t.TempDir()

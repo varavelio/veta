@@ -69,3 +69,10 @@ Templates, includes, and components can call `load_data` to read local or remote
 ```
 
 See [Template Functions](../api/template-functions.md) for details.
+
+Templates, includes, and components can also call `url` to generate current-page-relative links:
+
+```html
+<a href="{{ url(page.permalink) }}">{{ page.title }}</a>
+<link rel="stylesheet" href="{{ url("/styles.css") }}">
+```

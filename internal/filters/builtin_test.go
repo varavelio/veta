@@ -98,6 +98,23 @@ func TestMarkdownFilter(t *testing.T) {
 	}
 }
 
+// TestBase64Filters verifies the built-in Base64 filters.
+func TestBase64Filters(t *testing.T) {
+	encoded, err := base64EncodeFilter("hello", nil)
+	require.NoError(t, err)
+	require.Equal(t, "aGVsbG8=", encoded)
+
+	decoded, err := base64DecodeFilter(encoded, nil)
+	require.NoError(t, err)
+	require.Equal(t, "hello", decoded)
+}
+
+// TestBase64DecodeFilterErrors verifies invalid Base64 input fails clearly.
+func TestBase64DecodeFilterErrors(t *testing.T) {
+	_, err := base64DecodeFilter("not base64", nil)
+	require.ErrorContains(t, err, "decode base64 filter")
+}
+
 func TestParseFilters(t *testing.T) {
 	tests := []struct {
 		name   string

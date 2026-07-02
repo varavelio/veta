@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -31,6 +32,21 @@ func jsonFilter(input, _ any) (any, error) {
 	}
 
 	return SafeHTML(content), nil
+}
+
+// base64EncodeFilter returns the Base64 encoding of the input string.
+func base64EncodeFilter(input, _ any) (any, error) {
+	return base64.StdEncoding.EncodeToString(fmt.Append(nil, input)), nil
+}
+
+// base64DecodeFilter decodes a Base64 input string.
+func base64DecodeFilter(input, _ any) (any, error) {
+	content, err := base64.StdEncoding.DecodeString(fmt.Sprint(input))
+	if err != nil {
+		return nil, fmt.Errorf("decode base64 filter: %w", err)
+	}
+
+	return string(content), nil
 }
 
 // parseJSONFilter parses a JSON string into template data.

@@ -133,6 +133,40 @@ func TestRendererGlobals(t *testing.T) {
 	require.Equal(t, "Hello Veta", got)
 }
 
+func TestRendererRegexReplaceGlobal(t *testing.T) {
+	files := fstest.MapFS{
+		"page.j2": {Data: []byte(strings.Join([]string{
+			`{% set slug = regex_replace(page.title, "[^a-zA-Z0-9]+", "-") %}`,
+			`{{ slug }} {{ regex_replace("World Hello", "(\\w+) (\\w+)", "$2 $1") }}`,
+		}, ""))},
+	}
+	renderer, err := New(files, WithRegexReplace())
+	require.NoError(t, err)
+
+	got, err := renderer.Render("page", Context{"page": map[string]any{"title": "Hello, Veta!"}})
+	require.NoError(t, err)
+	require.Equal(t, "Hello-Veta- Hello World", got)
+}
+
+func TestRendererBase64Filters(t *testing.T) {
+	files := fstest.MapFS{
+		"page.j2": {Data: []byte(`{{ "hello"|base64_encode }} {{ "aGVsbG8="|base64_decode }}`)},
+	}
+	renderer, err := New(files,
+		WithFilter("base64_encode", func(input, _ any) (any, error) {
+			return "aGVsbG8=", nil
+		}),
+		WithFilter("base64_decode", func(input, _ any) (any, error) {
+			return "hello", nil
+		}),
+	)
+	require.NoError(t, err)
+
+	got, err := renderer.Render("page", nil)
+	require.NoError(t, err)
+	require.Equal(t, "aGVsbG8= hello", got)
+}
+
 func TestRendererLoadData(t *testing.T) {
 	files := fstest.MapFS{
 		"page.j2": {Data: []byte(strings.Join([]string{

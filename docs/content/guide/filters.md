@@ -15,9 +15,27 @@ Serializes a value as JSON:
 
 ```html
 <script type="application/json">
-  {{ data.site|json }}
+  {{ data.site | json }}
 </script>
 ```
+
+### `base64_encode`
+
+Encodes a string as Base64:
+
+```html
+{{ "hello" | base64_encode }}
+```
+
+### `base64_decode`
+
+Decodes a Base64 string:
+
+```html
+{{ "aGVsbG8=" | base64_decode }}
+```
+
+Invalid Base64 input fails the build.
 
 ### `markdown`
 
@@ -58,7 +76,7 @@ export default function({ data }, input) {
 Use it in a template:
 
 ```html
-<h1>{{ page.title|titlecase }}</h1>
+<h1>{{ page.title | titlecase }}</h1>
 ```
 
 The filter file name becomes the filter name. `filters/titlecase.js` becomes `titlecase`.
@@ -68,7 +86,7 @@ The filter file name becomes the filter name. `filters/titlecase.js` becomes `ti
 Filters can receive one parameter:
 
 ```html
-{{ page.title|prefix:"Post: " }}
+{{ page.title | prefix:"Post: " }}
 ```
 
 ```js

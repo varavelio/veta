@@ -498,6 +498,7 @@ func newTemplateRenderer(
 				URL:  request.URL,
 			})
 		}),
+		template.WithRegexReplace(),
 	}
 	for name, filter := range filterSet.Functions() {
 		templateOptions = append(

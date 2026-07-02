@@ -112,6 +112,8 @@ func Load(files fs.FS, options ...Option) (Set, error) {
 // Builtin returns Veta's built-in filters.
 func Builtin(markdownRenderer MarkdownRenderer) Set {
 	return Set{filters: map[string]Func{
+		"base64_decode":  base64DecodeFilter,
+		"base64_encode":  base64EncodeFilter,
 		"json":           jsonFilter,
 		"markdown":       markdownFilter(markdownRenderer),
 		"parse_json":     parseJSONFilter,

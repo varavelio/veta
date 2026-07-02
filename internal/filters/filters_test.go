@@ -37,6 +37,8 @@ func TestLoad(t *testing.T) {
 	require.Equal(
 		t,
 		[]string{
+			"base64_decode",
+			"base64_encode",
 			"json",
 			"markdown",
 			"parse_json",
@@ -68,7 +70,16 @@ func TestLoadMissingDirectory(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		[]string{"json", "markdown", "parse_json", "parse_markdown", "parse_toml", "parse_yaml"},
+		[]string{
+			"base64_decode",
+			"base64_encode",
+			"json",
+			"markdown",
+			"parse_json",
+			"parse_markdown",
+			"parse_toml",
+			"parse_yaml",
+		},
 		set.Names(),
 	)
 }

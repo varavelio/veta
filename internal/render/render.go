@@ -256,7 +256,13 @@ func baseTemplateContext(
 		"pages": pages,
 		"page":  page,
 		"props": props,
+		"url":   NewURLFunc(pagePermalink(page)),
 	}
+}
+
+func pagePermalink(page map[string]any) string {
+	permalink, _ := pageStringField(page, "permalink")
+	return permalink
 }
 
 // rawPageContent returns the raw content string for template-less pages.

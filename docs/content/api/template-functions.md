@@ -7,6 +7,37 @@ description: "Load local and remote text directly from Pongo templates with load
 
 Veta registers template helpers for Pongo templates and components.
 
+## `url`
+
+`url` returns a portable URL for an internal root-relative path from the current page.
+
+```html
+<link rel="stylesheet" href="{{ url("/styles.css") }}">
+<img src="{{ url("/images/logo.svg") }}" alt="Logo">
+<a href="{{ url(page.permalink) }}">Current page</a>
+```
+
+From `/docs/intro/`, `url("/styles.css")` returns `../../styles.css`. From `/`, it returns `styles.css`.
+
+External URLs, fragment-only URLs, and already-relative URLs are returned unchanged.
+
+## `regex_replace`
+
+`regex_replace` replaces text with a Go regular expression:
+
+```html
+{{ regex_replace("World Hello", "(\\w+) (\\w+)", "$2 $1") }}
+```
+
+The result can be rendered directly or assigned with `set`:
+
+```html
+{% set slug = regex_replace(page.title, "[^a-zA-Z0-9]+", "-") %}
+<h1 id="{{ slug }}">{{ page.title }}</h1>
+```
+
+Invalid regular expressions fail the build.
+
 ## `load_data`
 
 `load_data` reads a local project file or a remote URL as text from a template, include, or component.

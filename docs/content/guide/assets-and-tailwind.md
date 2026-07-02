@@ -18,6 +18,13 @@ public/images/logo.svg      -> dist/images/logo.svg
 
 Public files are copied as-is. Veta does not minify or transform copied public assets.
 
+Use the `url` template function when linking copied assets from templates. It returns a path relative to the current page, so the generated site can be served from a domain root, a subdirectory, or static storage without a configured base URL:
+
+```html
+<link rel="stylesheet" href="{{ url("/styles.css") }}">
+<img src="{{ url("/images/logo.svg") }}" alt="Logo">
+```
+
 ## Tailwind CSS Entrypoints
 
 The starter uses `public/styles.css`:
