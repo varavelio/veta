@@ -61,7 +61,7 @@ template: "templates/base.html";
 If extensionless lookup is ambiguous, include the extension:
 
 ```js
-template: "base.pongo";
+template: "base.j2";
 ```
 
 ## Duplicate Output Path

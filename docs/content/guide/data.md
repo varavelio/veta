@@ -40,6 +40,22 @@ data/theme/colors.toml      -> data.theme.colors
 
 Data file stems must be valid JavaScript-style identifiers. Prefer names like `site.json`, `navigation.yaml`, and `theme/colors.toml`. Avoid names like `site-name.json` because hyphens do not produce ergonomic template keys.
 
+## Site Data Convention
+
+Use `data/site.yaml` for project-level values such as site name, description, brand settings, and other values shared across templates:
+
+```yaml
+name: "My Site"
+description: "A site built with Veta."
+
+brand:
+  color: "purple"
+```
+
+This convention is optional, but it gives projects and themes a predictable place for site-wide settings.
+
+Reusable themes should put configurable defaults in `data/site_defaults.yaml` instead of `data/site.yaml`. Projects can then provide `data/site.yaml` with only the values they want to customize. See [Themes](./themes.md) for the recommended theme defaults pattern.
+
 ## JSON Data
 
 ```json

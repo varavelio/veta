@@ -52,8 +52,8 @@ All attribute values are strings.
 Component tags are derived from file paths:
 
 ```txt
-components/note.html        -> <note>
-components/ui/card.pongo    -> <ui-card>
+components/note.j2       -> <note>
+components/ui/card.j2    -> <ui-card>
 ```
 
 Valid component tags start with a lowercase letter and can contain lowercase letters, numbers, and hyphens. Double hyphens are rejected.
@@ -88,14 +88,14 @@ props
 Components are Pongo templates, so they can use inheritance too:
 
 ```html
-{# components/shell.pongo #}
+{# components/shell.j2 #}
 <div class="shell {% block class %}{% endblock %}">
   {% block body %}{{ props.content }}{% endblock %}
 </div>
 ```
 
 ```html
-{# components/panel.pongo #} {% extends "./shell.pongo" %} {% block class
+{# components/panel.j2 #} {% extends "./shell.j2" %} {% block class
 %}panel{% endblock %}
 ```
 

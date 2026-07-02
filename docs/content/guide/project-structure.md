@@ -44,7 +44,7 @@ The directory is intentionally flat. Do not put nested folders under `pages/`.
 }
 ```
 
-That can resolve `templates/base.html`, `templates/base.pongo`, or another non-ignored file with the same stem.
+That can resolve `templates/base.html`, `templates/base.j2`, or another non-ignored file with the same stem.
 
 ## `includes/`
 
@@ -63,8 +63,8 @@ Pongo can include project files from other directories too, but `includes/` is V
 `components/` contains reusable component templates. Component tags are derived from file paths:
 
 ```txt
-components/note.html        -> <note>
-components/ui/card.pongo    -> <ui-card>
+components/note.j2       -> <note>
+components/ui/card.j2    -> <ui-card>
 ```
 
 Components are used inside page content and receive attributes through `props`.

@@ -55,7 +55,6 @@ You MUST follow the following instructions:
 ## Testing & Quality
 
 - End-to-end tests live under `e2e/`, run through `task test:e2e`, and use real CLI executions against temporary projects. Keep reusable helpers in the e2e harness and put larger scenario inputs under `e2e/tests/<name>` instead of embedding sprawling project fixtures in test functions.
-- For e2e fixtures that intentionally exercise Pongo control tags such as `{% block %}` and `{% extends %}`, prefer non-markup extensions like `.pongo` so dprint does not rewrite template directives as plain HTML.
 - Before considering any task complete, run `task ci`, which executes all project checks.
 - Verify there are no errors. If there is any error, fix it and continue until the task is complete and `task ci` passes.
 

@@ -20,10 +20,18 @@ Veta resolves the name relative to `templates/`.
 
 ## Template Names
 
+Veta supports any template extension, but `.j2` is the recommended convention for templates, includes, and components. Pongo uses Jinja-style syntax, and many editors and formatters already recognize `.j2` files well.
+
+```txt
+templates/base.j2
+includes/nav.j2
+components/card.j2
+```
+
 You can include the file extension:
 
 ```js
-template: "base.html";
+template: "base.j2";
 ```
 
 Or omit it:
@@ -32,7 +40,7 @@ Or omit it:
 template: "base";
 ```
 
-When the extension is omitted, Veta scans for a non-ignored file with the same stem. For example, `base` can resolve to `templates/base.html` or `templates/base.pongo`.
+When the extension is omitted, Veta scans for a non-ignored file with the same stem. For example, `base` can resolve to `templates/base.j2`.
 
 If more than one file matches the same extensionless name, Veta reports an ambiguous template error.
 
@@ -66,7 +74,7 @@ Example:
 Pongo inheritance works inside `templates/`:
 
 ```html
-{# templates/base.pongo #}
+{# templates/base.j2 #}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -79,7 +87,7 @@ Pongo inheritance works inside `templates/`:
 ```
 
 ```html
-{# templates/pages/article.pongo #} {% extends "../base.pongo" %} {% block title
+{# templates/pages/article.j2 #} {% extends "../base.j2" %} {% block title
 %}{{ page.title }} | {{ block.Super }}{% endblock %} {% block main %}
 <article>{{ page.content }}</article>
 {% endblock %}

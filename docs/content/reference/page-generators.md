@@ -49,7 +49,7 @@ Examples:
 
 ```js
 template: "base";
-template: "pages/article.pongo";
+template: "pages/article.j2";
 ```
 
 Do not prefix with `templates/`.

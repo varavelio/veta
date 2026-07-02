@@ -35,11 +35,11 @@ Veta composes the theme and project into one filesystem. Project files win over 
 Example:
 
 ```txt
-theme/templates/base.pongo
-templates/base.pongo
+theme/templates/base.j2
+templates/base.j2
 ```
 
-The project's `templates/base.pongo` overrides the theme template.
+The project's `templates/base.j2` overrides the theme template.
 
 This lets a project use most of a theme while customizing selected files.
 
@@ -83,3 +83,55 @@ data/theme.json
 ```
 
 The project file can customize names, colors, navigation, or other theme-facing values.
+
+## Theme Configuration Defaults
+
+When building reusable themes, prefer exposing user-configurable defaults through `data/site_defaults.yaml` in the theme. Projects can then override only the values they care about with `data/site.yaml`:
+
+```txt
+theme/data/site_defaults.yaml
+data/site.yaml
+```
+
+This keeps the theme defaults and project overrides available as separate template values:
+
+```txt
+data.site_defaults
+data.site
+```
+
+Example theme defaults:
+
+```yaml
+# theme/data/site_defaults.yaml
+name: "Clean Theme"
+description: "A clean Veta site."
+
+brand:
+  color: "blue"
+  logo: "/images/logo.svg"
+```
+
+Example project overrides:
+
+```yaml
+# data/site.yaml
+name: "My Site"
+
+brand:
+  color: "purple"
+```
+
+Then theme templates can prefer project values and fall back to theme defaults:
+
+```html
+{% if data.site and data.site.name %}
+  {{ data.site.name }}
+{% else %}
+  {{ data.site_defaults.name }}
+{% endif %}
+```
+
+Use this pattern when you want partial project customization. If a theme provides `data/site.yaml` and the project also provides `data/site.yaml`, the project file replaces the theme file completely.
+
+Veta does not deep-merge data files automatically. Keep fallbacks explicit in templates so theme behavior stays easy to understand.
