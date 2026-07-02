@@ -85,7 +85,7 @@ Use it in a template:
 
 ```html
 {% for item in data.navigation.main %}
-<a href="{{ item.href }}">{{ item.label }}</a>
+  <a href="{{ item.href }}">{{ item.label }}</a>
 {% endfor %}
 ```
 

@@ -155,8 +155,9 @@ Open `templates/base.html`:
   </head>
   <body>
     <nav>
-      {% include "includes/brand.html" %} {% for item in pages %}
-      <a href="{{ item.permalink }}">{{ item.title }}</a>
+      {% include "includes/brand.html" %}
+      {% for item in pages %}
+        <a href="{{ item.permalink }}">{{ item.title }}</a>
       {% endfor %}
     </nav>
 

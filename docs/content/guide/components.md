@@ -95,8 +95,12 @@ Components are Pongo templates, so they can use inheritance too:
 ```
 
 ```html
-{# components/panel.j2 #} {% extends "./shell.j2" %} {% block class
-%}panel{% endblock %}
+{# components/panel.j2 #}
+{% extends "./shell.j2" %}
+
+{% block class %}
+  panel
+{% endblock %}
 ```
 
 Use relative paths with `./` or `../` inside component templates.
@@ -108,7 +112,8 @@ Component templates can include shared Pongo fragments from `includes/`:
 ```html
 {# components/note.html #}
 <aside class="note">
-  {% include "includes/brand.html" %} {{ props.content }}
+  {% include "includes/brand.html" %}
+  {{ props.content }}
 </aside>
 ```
 

@@ -61,7 +61,7 @@ Example:
 <title>{{ page.title }} - {{ data.site.name }}</title>
 
 {% for item in pages %}
-<a href="{{ item.permalink }}">{{ item.title }}</a>
+  <a href="{{ item.permalink }}">{{ item.title }}</a>
 {% endfor %}
 
 <main>{{ page.content }}</main>
@@ -87,9 +87,15 @@ Pongo inheritance works inside `templates/`:
 ```
 
 ```html
-{# templates/pages/article.j2 #} {% extends "../base.j2" %} {% block title
-%}{{ page.title }} | {{ block.Super }}{% endblock %} {% block main %}
-<article>{{ page.content }}</article>
+{# templates/pages/article.j2 #}
+{% extends "../base.j2" %}
+
+{% block title %}
+  {{ page.title }} | {{ block.Super }}
+{% endblock %}
+
+{% block main %}
+  <article>{{ page.content }}</article>
 {% endblock %}
 ```
 
@@ -114,8 +120,8 @@ Pongo can include files from other project directories, but `includes/` is Veta'
 Templates, includes, and components can load local or remote data with `load_data`:
 
 ```html
-{% set navigation = load_data("data/navigation.yaml")|parse_yaml %} {% set site
-= load_data("data/site.json")|parse_json %}
+{% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
+{% set site = load_data("data/site.json")|parse_json %}
 ```
 
 Use `load_data` for template-specific data. Use global `data/` files for data shared across the whole site. See [Template Functions](../api/template-functions.md) for the full API.

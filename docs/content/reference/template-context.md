@@ -28,7 +28,7 @@ Array of all normalized pages.
 
 ```html
 {% for item in pages %}
-<a href="{{ item.permalink }}">{{ item.title }}</a>
+  <a href="{{ item.permalink }}">{{ item.title }}</a>
 {% endfor %}
 ```
 
@@ -64,8 +64,8 @@ In component templates, `props` contains tag attributes and `props.content`:
 Templates, includes, and components can call `load_data` to read local or remote data:
 
 ```html
-{% set navigation = load_data("data/navigation.yaml")|parse_yaml %} {% set site
-= load_data("data/site.json")|parse_json %}
+{% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
+{% set site = load_data("data/site.json")|parse_json %}
 ```
 
 See [Template Functions](../api/template-functions.md) for details.
