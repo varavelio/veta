@@ -181,7 +181,7 @@ func TestRunInitCommand(t *testing.T) {
 	}
 	for _, file := range []string{
 		"veta.yaml",
-		"data/site.json",
+		"data/site.yaml",
 		"pages/site.js",
 		"templates/base.j2",
 		"components/note.j2",
