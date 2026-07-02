@@ -12,29 +12,29 @@ import (
 
 func TestOverlayReadFileUsesHighestPriorityLayer(t *testing.T) {
 	theme := fstest.MapFS{
-		"templates/base.pongo":       {Data: []byte("theme base")},
-		"templates/theme-only.pongo": {Data: []byte("theme only")},
+		"templates/base.j2":       {Data: []byte("theme base")},
+		"templates/theme-only.j2": {Data: []byte("theme only")},
 	}
 	project := fstest.MapFS{
-		"templates/base.pongo": {Data: []byte("project base")},
+		"templates/base.j2": {Data: []byte("project base")},
 	}
 	overlay := newTestOverlay(t, theme, project)
 
-	content, err := fs.ReadFile(overlay, "templates/base.pongo")
+	content, err := fs.ReadFile(overlay, "templates/base.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project base", string(content))
 
-	content, err = fs.ReadFile(overlay, "templates/theme-only.pongo")
+	content, err = fs.ReadFile(overlay, "templates/theme-only.j2")
 	require.NoError(t, err)
 	require.Equal(t, "theme only", string(content))
 
-	source, ok := overlay.Source("templates/base.pongo")
+	source, ok := overlay.Source("templates/base.j2")
 	require.True(t, ok)
-	require.Equal(t, Source{Layer: "project", Path: "templates/base.pongo"}, source)
+	require.Equal(t, Source{Layer: "project", Path: "templates/base.j2"}, source)
 
-	info, err := fs.Stat(overlay, "templates/base.pongo")
+	info, err := fs.Stat(overlay, "templates/base.j2")
 	require.NoError(t, err)
-	require.Equal(t, "base.pongo", info.Name())
+	require.Equal(t, "base.j2", info.Name())
 	require.False(t, info.IsDir())
 
 	info, err = fs.Stat(overlay, "templates")
@@ -44,13 +44,13 @@ func TestOverlayReadFileUsesHighestPriorityLayer(t *testing.T) {
 
 func TestOverlayReadDirMergesDirectories(t *testing.T) {
 	theme := fstest.MapFS{
-		"templates/base.pongo":       {Data: []byte("base")},
-		"templates/shared.pongo":     {Data: []byte("theme shared")},
-		"templates/theme-only.pongo": {Data: []byte("theme only")},
+		"templates/base.j2":       {Data: []byte("base")},
+		"templates/shared.j2":     {Data: []byte("theme shared")},
+		"templates/theme-only.j2": {Data: []byte("theme only")},
 	}
 	project := fstest.MapFS{
-		"templates/project-only.pongo": {Data: []byte("project only")},
-		"templates/shared.pongo":       {Data: []byte("project shared")},
+		"templates/project-only.j2": {Data: []byte("project only")},
+		"templates/shared.j2":       {Data: []byte("project shared")},
 	}
 	overlay := newTestOverlay(t, theme, project)
 
@@ -58,19 +58,19 @@ func TestOverlayReadDirMergesDirectories(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		[]string{"base.pongo", "project-only.pongo", "shared.pongo", "theme-only.pongo"},
+		[]string{"base.j2", "project-only.j2", "shared.j2", "theme-only.j2"},
 		entryNames(entries),
 	)
 
-	content, err := fs.ReadFile(overlay, "templates/shared.pongo")
+	content, err := fs.ReadFile(overlay, "templates/shared.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project shared", string(content))
 }
 
 func TestOverlayOpenMergedDirectory(t *testing.T) {
 	overlay := newTestOverlay(t,
-		fstest.MapFS{"templates/a.pongo": {Data: []byte("a")}},
-		fstest.MapFS{"templates/b.pongo": {Data: []byte("b")}},
+		fstest.MapFS{"templates/a.j2": {Data: []byte("a")}},
+		fstest.MapFS{"templates/b.j2": {Data: []byte("b")}},
 	)
 
 	file, err := overlay.Open("templates")
@@ -84,11 +84,11 @@ func TestOverlayOpenMergedDirectory(t *testing.T) {
 
 	first, err := dirFile.ReadDir(1)
 	require.NoError(t, err)
-	require.Equal(t, []string{"a.pongo"}, entryNames(first))
+	require.Equal(t, []string{"a.j2"}, entryNames(first))
 
 	second, err := dirFile.ReadDir(1)
 	require.NoError(t, err)
-	require.Equal(t, []string{"b.pongo"}, entryNames(second))
+	require.Equal(t, []string{"b.j2"}, entryNames(second))
 
 	third, err := dirFile.ReadDir(1)
 	require.ErrorIs(t, err, io.EOF)
@@ -111,8 +111,8 @@ func TestOverlayFileBeatsLowerPriorityDirectory(t *testing.T) {
 
 func TestOverlayWalkDir(t *testing.T) {
 	overlay := newTestOverlay(t,
-		fstest.MapFS{"templates/base.pongo": {Data: []byte("base")}},
-		fstest.MapFS{"components/ui/button.pongo": {Data: []byte("button")}},
+		fstest.MapFS{"templates/base.j2": {Data: []byte("base")}},
+		fstest.MapFS{"components/ui/button.j2": {Data: []byte("button")}},
 	)
 
 	var paths []string
@@ -128,9 +128,9 @@ func TestOverlayWalkDir(t *testing.T) {
 			".",
 			"components",
 			"components/ui",
-			"components/ui/button.pongo",
+			"components/ui/button.j2",
 			"templates",
-			"templates/base.pongo",
+			"templates/base.j2",
 		},
 		paths,
 	)

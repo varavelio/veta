@@ -1,7 +1,0 @@
-<!doctype html>
-<html lang="en">
-  <body data-page="{{ page.permalink }}">
-    <nav>{% for item in pages %}<a href="{{ item.permalink }}">{{ item.title }}</a>{% endfor %}</nav>
-    <article>{{ page.content }}</article>
-  </body>
-</html>

@@ -60,7 +60,7 @@ func TestRendererRender(t *testing.T) {
 
 func TestRendererLayoutsAndIncludes(t *testing.T) {
 	files := fstest.MapFS{
-		"layouts/base.pongo": {Data: []byte(strings.Join([]string{
+		"layouts/base.j2": {Data: []byte(strings.Join([]string{
 			"<html>",
 			"<head><title>{{ page.title }}</title></head>",
 			"<body>",
@@ -69,7 +69,7 @@ func TestRendererLayoutsAndIncludes(t *testing.T) {
 			"</body>",
 			"</html>",
 		}, ""))},
-		"pages/home.pongo": {Data: []byte(strings.Join([]string{
+		"pages/home.j2": {Data: []byte(strings.Join([]string{
 			"{% extends \"layouts/base\" %}",
 			"{% block content %}<main>{{ page.content }}</main>{% endblock %}",
 		}, ""))},
@@ -97,7 +97,7 @@ func TestRendererLayoutsAndIncludes(t *testing.T) {
 
 func TestRendererFilters(t *testing.T) {
 	files := fstest.MapFS{
-		"page.pongo": {Data: []byte(`{{ page.title|surround:"!" }} {{ page.content|trusted }}`)},
+		"page.j2": {Data: []byte(`{{ page.title|surround:"!" }} {{ page.content|trusted }}`)},
 	}
 	renderer, err := New(files,
 		WithFilter("surround", func(input, parameter any) (any, error) {
@@ -121,7 +121,7 @@ func TestRendererFilters(t *testing.T) {
 
 func TestRendererGlobals(t *testing.T) {
 	files := fstest.MapFS{
-		"page.pongo": {Data: []byte(`{{ greet(page.title) }}`)},
+		"page.j2": {Data: []byte(`{{ greet(page.title) }}`)},
 	}
 	renderer, err := New(files, WithGlobal("greet", func(value string) string {
 		return "Hello " + value
@@ -135,7 +135,7 @@ func TestRendererGlobals(t *testing.T) {
 
 func TestRendererLoadData(t *testing.T) {
 	files := fstest.MapFS{
-		"page.pongo": {Data: []byte(strings.Join([]string{
+		"page.j2": {Data: []byte(strings.Join([]string{
 			`{% set site = load_data("data/site.json")|parse_json %}`,
 			`{% set raw = load_data("data/raw.txt") %}`,
 			`{% set remote = load_data("https://example.test/data.json")|parse_json %}`,
@@ -179,7 +179,7 @@ func (html testSafeHTML) SafeHTML() string {
 
 func TestRendererStructuralSafeHTML(t *testing.T) {
 	files := fstest.MapFS{
-		"page.pongo": {Data: []byte(`{{ content }}`)},
+		"page.j2": {Data: []byte(`{{ content }}`)},
 	}
 	renderer, err := New(files)
 	require.NoError(t, err)
@@ -191,7 +191,7 @@ func TestRendererStructuralSafeHTML(t *testing.T) {
 
 func TestRendererAutoescapesByDefault(t *testing.T) {
 	files := fstest.MapFS{
-		"page.pongo": {Data: []byte(`{{ page.content }}`)},
+		"page.j2": {Data: []byte(`{{ page.content }}`)},
 	}
 	renderer, err := New(files)
 	require.NoError(t, err)
@@ -283,7 +283,7 @@ func TestRendererIgnoresHiddenAndTemporaryTemplates(t *testing.T) {
 }
 
 func TestRendererContextErrors(t *testing.T) {
-	files := fstest.MapFS{"page.pongo": {Data: []byte("ok")}}
+	files := fstest.MapFS{"page.j2": {Data: []byte("ok")}}
 	renderer, err := New(files)
 	require.NoError(t, err)
 
@@ -292,7 +292,7 @@ func TestRendererContextErrors(t *testing.T) {
 }
 
 func TestRendererOptionErrors(t *testing.T) {
-	files := fstest.MapFS{"page.pongo": {Data: []byte("ok")}}
+	files := fstest.MapFS{"page.j2": {Data: []byte("ok")}}
 
 	_, err := New(nil)
 	require.ErrorIs(t, err, ErrTemplateFSRequired)

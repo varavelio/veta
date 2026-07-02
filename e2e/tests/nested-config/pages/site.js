@@ -2,7 +2,7 @@ export default function({ data }) {
   return [
     {
       permalink: "/",
-      template: "base.html",
+      template: "base.j2",
       title: "Home",
       content: `# ${data.site.name}`,
     },

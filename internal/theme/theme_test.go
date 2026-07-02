@@ -18,7 +18,7 @@ import (
 
 func TestResolveWithoutTheme(t *testing.T) {
 	projectFiles := fstest.MapFS{
-		"templates/base.pongo": {Data: []byte("project")},
+		"templates/base.j2": {Data: []byte("project")},
 	}
 
 	site, err := Resolve(projectFiles, "")
@@ -27,15 +27,15 @@ func TestResolveWithoutTheme(t *testing.T) {
 	require.Equal(t, projectFiles, site.Project)
 	require.Nil(t, site.Theme)
 
-	content, err := fs.ReadFile(site.Files, "templates/base.pongo")
+	content, err := fs.ReadFile(site.Files, "templates/base.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project", string(content))
 }
 
 func TestResolveLocalTheme(t *testing.T) {
 	root := t.TempDir()
-	writeThemeFile(t, root, "themes/basic/templates/base.pongo", "theme base")
-	writeThemeFile(t, root, "themes/basic/templates/theme-only.pongo", "theme only")
+	writeThemeFile(t, root, "themes/basic/templates/base.j2", "theme base")
+	writeThemeFile(t, root, "themes/basic/templates/theme-only.j2", "theme only")
 	writeThemeFile(
 		t,
 		root,
@@ -45,8 +45,8 @@ func TestResolveLocalTheme(t *testing.T) {
 	writeThemeFile(t, root, "themes/basic/private/secret.txt", "secret")
 
 	projectFiles := fstest.MapFS{
-		"templates/base.pongo":         {Data: []byte("project base")},
-		"templates/project-only.pongo": {Data: []byte("project only")},
+		"templates/base.j2":         {Data: []byte("project base")},
+		"templates/project-only.j2": {Data: []byte("project only")},
 	}
 
 	site, err := Resolve(projectFiles, "themes/basic", WithRoot(root))
@@ -54,15 +54,15 @@ func TestResolveLocalTheme(t *testing.T) {
 	require.NotNil(t, site.Theme)
 	require.Equal(t, filepath.Join(root, "themes/basic"), site.Source)
 
-	content, err := fs.ReadFile(site.Files, "templates/base.pongo")
+	content, err := fs.ReadFile(site.Files, "templates/base.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project base", string(content))
 
-	content, err = fs.ReadFile(site.Files, "templates/theme-only.pongo")
+	content, err = fs.ReadFile(site.Files, "templates/theme-only.j2")
 	require.NoError(t, err)
 	require.Equal(t, "theme only", string(content))
 
-	content, err = fs.ReadFile(site.Files, "templates/project-only.pongo")
+	content, err = fs.ReadFile(site.Files, "templates/project-only.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project only", string(content))
 
@@ -76,10 +76,10 @@ func TestResolveLocalTheme(t *testing.T) {
 func TestResolveRemoteTheme(t *testing.T) {
 	var requests atomic.Int64
 	archive := themeArchive(t, map[string]string{
-		"veta-theme-basic-main/templates/base.pongo":       "theme base",
-		"veta-theme-basic-main/templates/theme-only.pongo": "theme only",
-		"veta-theme-basic-main/pages/ignored.js":           "ignored",
-		"veta-theme-basic-main/private/secret.txt":         "secret",
+		"veta-theme-basic-main/templates/base.j2":       "theme base",
+		"veta-theme-basic-main/templates/theme-only.j2": "theme only",
+		"veta-theme-basic-main/pages/ignored.js":        "ignored",
+		"veta-theme-basic-main/private/secret.txt":      "secret",
 	})
 	server := httptest.NewServer(
 		http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -93,8 +93,8 @@ func TestResolveRemoteTheme(t *testing.T) {
 	defer server.Close()
 
 	projectFiles := fstest.MapFS{
-		"templates/base.pongo":         {Data: []byte("project base")},
-		"templates/project-only.pongo": {Data: []byte("project only")},
+		"templates/base.j2":         {Data: []byte("project base")},
+		"templates/project-only.j2": {Data: []byte("project only")},
 	}
 	cacheDir := t.TempDir()
 
@@ -109,11 +109,11 @@ func TestResolveRemoteTheme(t *testing.T) {
 	require.Equal(t, int64(1), requests.Load())
 	require.FileExists(t, filepath.Join(filepath.Dir(site.Source), archiveFileName))
 
-	content, err := fs.ReadFile(site.Files, "templates/base.pongo")
+	content, err := fs.ReadFile(site.Files, "templates/base.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project base", string(content))
 
-	content, err = fs.ReadFile(site.Files, "templates/theme-only.pongo")
+	content, err = fs.ReadFile(site.Files, "templates/theme-only.j2")
 	require.NoError(t, err)
 	require.Equal(t, "theme only", string(content))
 

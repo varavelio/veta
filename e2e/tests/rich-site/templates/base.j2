@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -12,7 +12,8 @@
         <a href="{{ item.href }}">{{ item.label }}</a>
       {% endfor %}
     </header>
-    <div data-pages="{% for item in pages %}{{ item.permalink }};{% endfor %}"></div>
+    <div data-pages="{% for item in pages %}{{ item.permalink }};{% endfor %}">
+    </div>
     <main>{{ page.content }}</main>
     <footer>{{ data.github.repo }} · {{ data.theme.brand.name }}</footer>
   </body>

@@ -37,10 +37,10 @@ export default function(context, input) {
 	writeProjectFile(
 		t,
 		root,
-		"components/card.pongo",
+		"components/card.j2",
 		`<section class="card">{{ props.content }}</section>`,
 	)
-	writeProjectFile(t, root, "templates/base.pongo", strings.Join([]string{
+	writeProjectFile(t, root, "templates/base.j2", strings.Join([]string{
 		`<!doctype html>`,
 		`<title>{{ page.title }}</title>`,
 		`<nav>{% for item in pages %}{{ item.permalink }};{% endfor %}</nav>`,
@@ -50,7 +50,7 @@ export default function(context, input) {
 	writeProjectFile(
 		t,
 		root,
-		"templates/sitemap.pongo",
+		"templates/sitemap.j2",
 		`<sitemap>{{ page.content }}{% for item in pages %}<url>{{ item.permalink }}</url>{% endfor %}</sitemap>`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `
@@ -126,7 +126,7 @@ theme:
 	writeProjectFile(
 		t,
 		root,
-		"theme/templates/base.pongo",
+		"theme/templates/base.j2",
 		`<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
 	)
 	writeProjectFile(t, root, "theme/data/theme.json", `{"name":"Theme"}`)
@@ -155,7 +155,7 @@ build:
   output: public-build
   clean: true
 `)
-	writeProjectFile(t, root, "templates/base.pongo", `{{ page.content }}`)
+	writeProjectFile(t, root, "templates/base.j2", `{{ page.content }}`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
   return [{ permalink: "/", template: "base", content: "Hello" }];
@@ -175,10 +175,10 @@ build:
   output: custom-dist
   clean: true
 `)
-	writeProjectFile(t, root, "templates/base.pongo", `{{ page.content }}`)
+	writeProjectFile(t, root, "templates/base.j2", `{{ page.content }}`)
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
-  return [{ permalink: "/", template: "base.pongo", content: "Hello" }];
+  return [{ permalink: "/", template: "base.j2", content: "Hello" }];
 }
 `)
 
@@ -221,8 +221,8 @@ export default function() {
 func TestRunUsesRemoteTheme(t *testing.T) {
 	var requests atomic.Int64
 	archive := buildThemeArchive(t, map[string]string{
-		"veta-theme-remote-main/templates/base.pongo": `<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
-		"veta-theme-remote-main/data/theme.json":      `{"name":"Remote"}`,
+		"veta-theme-remote-main/templates/base.j2": `<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
+		"veta-theme-remote-main/data/theme.json":   `{"name":"Remote"}`,
 	})
 	server := httptest.NewServer(
 		http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -296,7 +296,7 @@ tailwindcss:
 	writeProjectFile(
 		t,
 		root,
-		"templates/base.pongo",
+		"templates/base.j2",
 		`<html><head><link href="/styles.css" rel="stylesheet"></head><body>{{ page.content }}</body></html>`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `

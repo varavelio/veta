@@ -1,5 +1,0 @@
-<div class="component-shell {% block shell_class %}base{% endblock %}" data-tone="{{ props.tone }}">
-  <header>{% block heading %}Base component{% endblock %}</header>
-  <div class="component-body">{% block body %}{{ props.content }}{% endblock %}</div>
-  <footer>{% block footer %}base-footer{% endblock %}</footer>
-</div>

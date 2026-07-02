@@ -8,7 +8,7 @@ export default function() {
     },
     {
       permalink: "/theme-only/",
-      template: "theme-only.pongo",
+      template: "theme-only.j2",
       title: "Theme only",
       content: "Theme template page",
     },

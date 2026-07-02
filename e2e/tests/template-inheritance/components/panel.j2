@@ -1,4 +1,4 @@
-{% extends "./shell.pongo" %}
+{% extends "./shell.j2" %}
 {% block shell_class %}panel {{ block.Super }}{% endblock %}
 {% block heading %}Panel: {{ props.title }}{% endblock %}
 {% block footer %}{{ block.Super }} / child-footer{% endblock %}

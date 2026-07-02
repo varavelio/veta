@@ -92,7 +92,7 @@ func TestProcessorRender(t *testing.T) {
 // HTML and code examples are left untouched.
 func TestProcessorRenderIgnoresUnregisteredAndProtectedTags(t *testing.T) {
 	processor, err := New(fstest.MapFS{
-		"components/card.pongo": {Data: []byte("card")},
+		"components/card.j2": {Data: []byte("card")},
 	}, &recordingRenderer{})
 	require.NoError(t, err)
 
@@ -176,8 +176,8 @@ func TestProcessorIgnoresHiddenAndTemporaryFiles(t *testing.T) {
 // TestProcessorConflicts verifies top-down component conflict resolution.
 func TestProcessorConflicts(t *testing.T) {
 	processor, err := New(fstest.MapFS{
-		"components/ui-table.pongo": {Data: []byte("root")},
-		"components/ui/table.pongo": {Data: []byte("nested")},
+		"components/ui-table.j2": {Data: []byte("root")},
+		"components/ui/table.j2": {Data: []byte("nested")},
 	}, &recordingRenderer{})
 	require.NoError(t, err)
 
@@ -186,9 +186,9 @@ func TestProcessorConflicts(t *testing.T) {
 		[]Component{
 			{
 				Depth:    0,
-				Path:     "components/ui-table.pongo",
+				Path:     "components/ui-table.j2",
 				Tag:      "ui-table",
-				Template: "components/ui-table.pongo",
+				Template: "components/ui-table.j2",
 			},
 		},
 		processor.Components(),
@@ -197,9 +197,9 @@ func TestProcessorConflicts(t *testing.T) {
 		t,
 		[]Conflict{
 			{
-				Ignored: "components/ui/table.pongo",
+				Ignored: "components/ui/table.j2",
 				Tag:     "ui-table",
-				Winner:  "components/ui-table.pongo",
+				Winner:  "components/ui-table.j2",
 			},
 		},
 		processor.Conflicts(),
@@ -265,10 +265,10 @@ func TestNewErrors(t *testing.T) {
 	_, err := New(nil, nil)
 	require.ErrorIs(t, err, ErrFSRequired)
 
-	_, err = New(fstest.MapFS{"components/card.pongo": {Data: []byte("card")}}, nil)
+	_, err = New(fstest.MapFS{"components/card.j2": {Data: []byte("card")}}, nil)
 	require.ErrorIs(t, err, ErrRendererRequired)
 
-	_, err = New(fstest.MapFS{"components/Bad.pongo": {Data: []byte("bad")}}, &recordingRenderer{})
+	_, err = New(fstest.MapFS{"components/Bad.j2": {Data: []byte("bad")}}, &recordingRenderer{})
 	require.ErrorIs(t, err, ErrComponentNameInvalid)
 }
 
@@ -285,7 +285,7 @@ func TestRenderErrors(t *testing.T) {
 	}
 
 	processor, err := New(
-		fstest.MapFS{"components/card.pongo": {Data: []byte("card")}},
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
 		&recordingRenderer{},
 	)
 	require.NoError(t, err)

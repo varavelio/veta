@@ -32,7 +32,7 @@ func TestLoad(t *testing.T) {
 		`)},
 		"pages/docs.js": {Data: []byte(`
 			export default function() {
-				return [{ permalink: "docs/intro", template: "docs/page.pongo", content: "Intro", title: "Intro" }];
+				return [{ permalink: "docs/intro", template: "docs/page.j2", content: "Intro", title: "Intro" }];
 			}
 		`)},
 	}
@@ -86,14 +86,14 @@ func TestLoad(t *testing.T) {
 				"index":      int64(0),
 				"outputPath": "docs/intro/index.html",
 				"permalink":  "/docs/intro/",
-				"template":   "docs/page.pongo",
+				"template":   "docs/page.j2",
 				"title":      "Intro",
 			},
 			Generator:  "docs.js",
 			Index:      0,
 			OutputPath: "docs/intro/index.html",
 			Permalink:  "/docs/intro/",
-			Template:   "docs/page.pongo",
+			Template:   "docs/page.j2",
 		},
 	}}, manifest)
 }

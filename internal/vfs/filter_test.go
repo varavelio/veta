@@ -11,17 +11,17 @@ import (
 
 func TestAllowTopDirs(t *testing.T) {
 	theme := fstest.MapFS{
-		"README.md":                    {Data: []byte("ignored")},
-		"components/youtube.pongo":     {Data: []byte("youtube")},
-		"data/theme.json":              {Data: []byte("{}")},
-		"pages/malicious.js":           {Data: []byte("ignored")},
-		"public/app.css":               {Data: []byte("body{}")},
-		"templates/layouts/base.pongo": {Data: []byte("base")},
+		"README.md":                 {Data: []byte("ignored")},
+		"components/youtube.j2":     {Data: []byte("youtube")},
+		"data/theme.json":           {Data: []byte("{}")},
+		"pages/malicious.js":        {Data: []byte("ignored")},
+		"public/app.css":            {Data: []byte("body{}")},
+		"templates/layouts/base.j2": {Data: []byte("base")},
 	}
 	filtered, err := AllowTopDirs(theme, "templates", "components", "filters", "data", "public")
 	require.NoError(t, err)
 
-	content, err := fs.ReadFile(filtered, "templates/layouts/base.pongo")
+	content, err := fs.ReadFile(filtered, "templates/layouts/base.j2")
 	require.NoError(t, err)
 	require.Equal(t, "base", string(content))
 
@@ -38,23 +38,23 @@ func TestAllowTopDirs(t *testing.T) {
 
 func TestAllowTopDirsWorksWithOverlay(t *testing.T) {
 	theme := fstest.MapFS{
-		"pages/ignored.js":           {Data: []byte("ignored")},
-		"templates/base.pongo":       {Data: []byte("theme")},
-		"templates/theme-only.pongo": {Data: []byte("theme only")},
+		"pages/ignored.js":        {Data: []byte("ignored")},
+		"templates/base.j2":       {Data: []byte("theme")},
+		"templates/theme-only.j2": {Data: []byte("theme only")},
 	}
 	filteredTheme, err := AllowTopDirs(theme, "templates")
 	require.NoError(t, err)
 
 	overlay := newTestOverlay(t, filteredTheme, fstest.MapFS{
-		"pages/site.js":        {Data: []byte("allowed locally")},
-		"templates/base.pongo": {Data: []byte("project")},
+		"pages/site.js":     {Data: []byte("allowed locally")},
+		"templates/base.j2": {Data: []byte("project")},
 	})
 
-	content, err := fs.ReadFile(overlay, "templates/base.pongo")
+	content, err := fs.ReadFile(overlay, "templates/base.j2")
 	require.NoError(t, err)
 	require.Equal(t, "project", string(content))
 
-	content, err = fs.ReadFile(overlay, "templates/theme-only.pongo")
+	content, err = fs.ReadFile(overlay, "templates/theme-only.j2")
 	require.NoError(t, err)
 	require.Equal(t, "theme only", string(content))
 

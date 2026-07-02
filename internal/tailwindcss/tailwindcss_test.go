@@ -27,8 +27,8 @@ func TestBuild(t *testing.T) {
 	err := Build(
 		context.Background(),
 		fstest.MapFS{
-			"public/styles.css":    {Data: []byte(`@import "tailwindcss";`)},
-			"templates/base.pongo": {Data: []byte(`<div class="text-red-500"></div>`)},
+			"public/styles.css": {Data: []byte(`@import "tailwindcss";`)},
+			"templates/base.j2": {Data: []byte(`<div class="text-red-500"></div>`)},
 		},
 		Config{
 			Input:   "public/styles.css",

@@ -1,0 +1,15 @@
+{% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
+{% set site = load_data("data/site.json")|parse_json %}
+<!DOCTYPE html>
+<html lang="en">
+  <body>
+    <h1>{{ site.title }}</h1>
+    <nav>
+      {% for item in navigation.items %}
+        <a href="{{ item.href }}">{{ item.label }}</a>
+      {% endfor %}
+    </nav>
+    {% include "includes/snippet.j2" %}
+    <main>{{ page.content }}</main>
+  </body>
+</html>

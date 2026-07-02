@@ -183,8 +183,8 @@ func TestRunInitCommand(t *testing.T) {
 		"veta.yaml",
 		"data/site.json",
 		"pages/site.js",
-		"templates/base.html",
-		"components/note.html",
+		"templates/base.j2",
+		"components/note.j2",
 		"public/styles.css",
 		"public/robots.txt",
 	} {

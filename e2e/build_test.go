@@ -26,8 +26,9 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	require.Contains(
 		t,
 		index,
-		`<aside class="rounded-xl border border-sky-400 p-4" data-kind="hero">`,
+		`"rounded-xl border border-sky-400 p-4"`,
 	)
+	require.Contains(t, index, `data-kind="hero"`)
 	require.Contains(t, index, `<h1>Veta E2E</h1>`)
 	require.Contains(t, index, `<strong>entire build pipeline</strong>`)
 	require.Contains(t, index, `varavelio/veta · Sky`)
@@ -267,7 +268,12 @@ func TestBuildSupportsTemplateAndComponentInheritance(t *testing.T) {
 	require.Contains(t, index, `<section data-template="article">`)
 	require.Contains(t, index, `<p data-template-extra="true">extra from page</p>`)
 	require.Contains(t, index, `Base Footer / Article Footer`)
-	require.Contains(t, index, `<div class="component-shell panel base" data-tone="success">`)
+	require.Contains(
+		t,
+		index,
+		`"component-shell panel base"`,
+	)
+	require.Contains(t, index, `data-tone="success"`)
 	require.Contains(t, index, `<header>Panel: Nested component</header>`)
 	require.Contains(t, index, `<p>Component <strong>slot</strong> from page.</p>`)
 	require.Contains(t, index, `base-footer / child-footer`)

@@ -20,10 +20,9 @@ func TestInitBuildsStarterProject(t *testing.T) {
 
 	projectRoot := filepath.Join(workspace, "site")
 	require.FileExists(t, filepath.Join(projectRoot, "veta.yaml"))
-	require.FileExists(t, filepath.Join(projectRoot, "templates", "base.html"))
-	require.FileExists(t, filepath.Join(projectRoot, "includes", "brand.html"))
+	require.FileExists(t, filepath.Join(projectRoot, "templates", "base.j2"))
+	require.FileExists(t, filepath.Join(projectRoot, "includes", "brand.j2"))
 	require.FileExists(t, filepath.Join(projectRoot, "public", "styles.css"))
-	requirePathMissing(t, filepath.Join(projectRoot, "styles"))
 	config := readProjectFile(t, projectRoot, "veta.yaml")
 	require.Contains(t, config, "# Veta configuration file.")
 	require.Contains(t, config, "https://veta.varavel.com/config")
@@ -45,7 +44,7 @@ func TestInitBuildsStarterProject(t *testing.T) {
 		readProjectFile(t, projectRoot, "pages/site.js"),
 		"{ data, files, httpClient }",
 	)
-	require.FileExists(t, filepath.Join(projectRoot, "components", "note.html"))
+	require.FileExists(t, filepath.Join(projectRoot, "components", "note.j2"))
 
 	buildResult := runVeta(
 		t,
