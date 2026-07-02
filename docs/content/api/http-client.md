@@ -23,7 +23,7 @@ httpClient.head(url, options);
 Example:
 
 ```js
-export default function({ httpClient }) {
+export default function({ httpClient, parse }) {
   const response = httpClient.get(
     "https://api.github.com/repos/varavelio/veta",
     {
@@ -37,7 +37,7 @@ export default function({ httpClient }) {
     throw new Error(`GitHub returned ${response.status}`);
   }
 
-  return JSON.parse(response.body);
+  return parse.json(response.body);
 }
 ```
 
@@ -58,16 +58,20 @@ The method is trimmed and uppercased. Empty methods or methods containing whites
     "X-Trace": ["one", "two"]
   },
   body: "raw body",
-  json: { message: "hello" },
   timeoutMs: 5000
 }
 ```
 
 `body` must be a string.
 
-`json` is serialized to JSON and sets `Content-Type: application/json` when the header is not already provided.
+For JSON request bodies, use `JSON.stringify` and set the content type yourself:
 
-Use either `body` or `json`, not both.
+```js
+httpClient.post("https://example.com/api", {
+  body: JSON.stringify({ message: "hello" }),
+  headers: { "Content-Type": "application/json" },
+});
+```
 
 `timeoutMs` must be a positive number. The default timeout is 30 seconds.
 
@@ -87,6 +91,8 @@ Use either `body` or `json`, not both.
 ```
 
 `ok` is `true` for status codes from 200 through 299.
+
+`body` is always a string. Use `parse.json`, `parse.yaml`, or another parser when you need structured data.
 
 ## Development Advice
 

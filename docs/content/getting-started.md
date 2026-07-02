@@ -228,11 +228,11 @@ This post is stored as Markdown.
 Generate pages from those files:
 
 ```js
-export default function({ files }) {
+export default function({ files, parse }) {
   const posts = files.listFiles("content/posts/**/*.md");
 
   return posts.map((path) => {
-    const post = files.readMarkdownFile(path);
+    const post = parse.markdown(files.readFile(path));
 
     return {
       permalink: files.toPermalink(path, { stripPrefix: "content" }),
@@ -244,13 +244,12 @@ export default function({ files }) {
 }
 ```
 
-`readMarkdownFile` returns:
+`parse.markdown` returns:
 
 ```js
 {
   content: "# Hello World\n\nThis post is stored as Markdown.\n",
-  frontmatter: { title: "Hello World", date: "2026-06-30", tags: ["intro"] },
-  path: "content/posts/hello.md"
+  frontmatter: { title: "Hello World", date: "2026-06-30", tags: ["intro"] }
 }
 ```
 

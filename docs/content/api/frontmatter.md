@@ -1,11 +1,11 @@
 ---
 title: "Markdown Frontmatter"
-description: "Parse YAML and TOML frontmatter with files.readMarkdownFile."
+description: "Parse YAML and TOML frontmatter with parse.markdown and parse_markdown."
 ---
 
 # Markdown Frontmatter
 
-`files.readMarkdownFile(path)` supports optional frontmatter at the start of a Markdown file.
+`parse.markdown(text)` in JavaScript and `parse_markdown` in Pongo templates support optional frontmatter at the start of a Markdown string.
 
 Supported delimiters:
 
@@ -52,7 +52,7 @@ Body.
 ## Return Shape
 
 ```js
-const post = files.readMarkdownFile("content/posts/hello.md");
+const post = parse.markdown(files.readFile("content/posts/hello.md"));
 ```
 
 ```js
@@ -62,8 +62,7 @@ const post = files.readMarkdownFile("content/posts/hello.md");
     title: "Hello",
     draft: false,
     tags: ["guide", "intro"]
-  },
-  path: "content/posts/hello.md"
+  }
 }
 ```
 
@@ -82,8 +81,7 @@ Returns:
 ```js
 {
   content: "# Plain Markdown\n\nNo frontmatter.\n",
-  frontmatter: {},
-  path: "content/plain.md"
+  frontmatter: {}
 }
 ```
 

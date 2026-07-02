@@ -1,12 +1,12 @@
-export default function({ baseURL, httpClient }) {
+export default function({ baseURL, httpClient, parse }) {
   const get = httpClient.get(baseURL + "/get?name=veta", {
     headers: { "X-Test": "yes" },
     timeoutMs: 1000,
   });
 
   const post = httpClient.post(baseURL + "/post", {
-    headers: { "X-Trace": ["one", "two"] },
-    json: { count: 2, name: "Veta" },
+    body: JSON.stringify({ count: 2, name: "Veta" }),
+    headers: { "Content-Type": "application/json", "X-Trace": ["one", "two"] },
   });
 
   const put = httpClient.request("PUT", baseURL + "/echo", {
@@ -24,7 +24,7 @@ export default function({ baseURL, httpClient }) {
       status: deleted.status,
     },
     get: {
-      body: JSON.parse(get.body),
+      body: parse.json(get.body),
       header: get.headers["X-Response"][0],
       ok: get.ok,
       status: get.status,
@@ -37,16 +37,16 @@ export default function({ baseURL, httpClient }) {
       status: head.status,
     },
     post: {
-      body: JSON.parse(JSON.parse(post.body).body),
-      contentType: JSON.parse(post.body).contentType,
+      body: parse.json(parse.json(post.body).body),
+      contentType: parse.json(post.body).contentType,
       ok: post.ok,
       status: post.status,
-      traces: JSON.parse(post.body).traces,
+      traces: parse.json(post.body).traces,
     },
     put: {
-      body: JSON.parse(put.body).body,
-      contentType: JSON.parse(put.body).contentType,
-      method: JSON.parse(put.body).method,
+      body: parse.json(put.body).body,
+      contentType: parse.json(put.body).contentType,
+      method: parse.json(put.body).method,
       statusText: put.statusText,
     },
   };

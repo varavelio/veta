@@ -1,5 +1,5 @@
-export default function({ files }) {
-  const markdownPage = files.readMarkdownFile("content/markdown-page.md");
+export default function({ files, parse }) {
+  const markdownPage = parse.markdown(files.readFile("content/markdown-page.md"));
   const fileFragment = files.readFile("content/raw-fragment.txt");
 
   return [
@@ -7,7 +7,7 @@ export default function({ files }) {
       permalink: "/markdown/",
       template: "page",
       title: markdownPage.frontmatter.title,
-      source: "readMarkdownFile",
+      source: "parse.markdown",
       content: markdownPage.content,
     },
     {

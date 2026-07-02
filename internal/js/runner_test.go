@@ -39,7 +39,11 @@ func TestRunnerExecute(t *testing.T) {
 		require.NoError(t, result.ExportTo(&got))
 		require.Equal(t, "Hello, Veta", got["title"])
 		require.Equal(t, true, got["hasFileAPI"])
-		require.Equal(t, []any{"console", "env", "files", "httpClient", "siteName"}, got["keys"])
+		require.Equal(
+			t,
+			[]any{"console", "env", "files", "httpClient", "parse", "siteName"},
+			got["keys"],
+		)
 	})
 
 	t.Run("does not expose a named runtime global", func(t *testing.T) {
@@ -319,42 +323,6 @@ func TestRunnerFileAPIErrors(t *testing.T) {
 			want: "read file content/missing.md",
 		},
 		{
-			name: "missing markdown path",
-			code: `
-				export default function({ files }) {
-					return files.readMarkdownFile();
-				}
-			`,
-			want: "files.readMarkdownFile path is required",
-		},
-		{
-			name: "missing json path",
-			code: `
-				export default function({ files }) {
-					return files.readJsonFile();
-				}
-			`,
-			want: "files.readJsonFile path is required",
-		},
-		{
-			name: "missing yaml path",
-			code: `
-				export default function({ files }) {
-					return files.readYamlFile();
-				}
-			`,
-			want: "files.readYamlFile path is required",
-		},
-		{
-			name: "missing toml path",
-			code: `
-				export default function({ files }) {
-					return files.readTomlFile();
-				}
-			`,
-			want: "files.readTomlFile path is required",
-		},
-		{
 			name: "missing glob",
 			code: `
 				export default function({ files }) {
@@ -558,15 +526,6 @@ func TestRunnerHTTPClientErrors(t *testing.T) {
 				}
 			`,
 			want: "http header name cannot be empty",
-		},
-		{
-			name: "body json conflict",
-			code: `
-				export default function({ baseURL, httpClient }) {
-					return httpClient.post(baseURL + "/post", { body: "raw", json: { ok: true } });
-				}
-			`,
-			want: ErrHTTPBodyConflict.Error(),
 		},
 		{
 			name: "unsupported body type",

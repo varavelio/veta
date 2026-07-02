@@ -51,9 +51,9 @@ Component template:
 Veta does not automatically discover Markdown pages. Use JavaScript generators to read files and create pages:
 
 ```js
-export default function({ files }) {
+export default function({ files, parse }) {
   return files.listFiles("content/posts/**/*.md").map((path) => {
-    const post = files.readMarkdownFile(path);
+    const post = parse.markdown(files.readFile(path));
 
     return {
       permalink: files.toPermalink(path, { stripPrefix: "content" }),
@@ -104,10 +104,10 @@ author = "Veta"
 Post body.
 ```
 
-## `readMarkdownFile` Return Value
+## `parse.markdown` Return Value
 
 ```js
-const post = files.readMarkdownFile("content/posts/hello.md");
+const post = parse.markdown(files.readFile("content/posts/hello.md"));
 ```
 
 Returns:
@@ -119,8 +119,7 @@ Returns:
     title: "Hello World",
     draft: false,
     tags: ["guide", "intro"]
-  },
-  path: "content/posts/hello.md"
+  }
 }
 ```
 

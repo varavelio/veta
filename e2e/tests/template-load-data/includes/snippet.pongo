@@ -1,2 +1,2 @@
-{% set snippet = load_data("content/snippet.txt", "text") %}
+{% set snippet = load_data("content/snippet.txt") %}
 <p data-snippet="include">{{ snippet }}</p>

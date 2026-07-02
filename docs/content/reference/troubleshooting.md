@@ -111,9 +111,9 @@ Veta JavaScript is synchronous. Do not use `async` default exports or return pro
 Use synchronous `httpClient` calls instead:
 
 ```js
-export default function({ httpClient }) {
+export default function({ httpClient, parse }) {
   const response = httpClient.get("https://example.com/data.json");
-  return JSON.parse(response.body);
+  return parse.json(response.body);
 }
 ```
 

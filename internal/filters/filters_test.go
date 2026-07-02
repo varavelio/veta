@@ -34,7 +34,19 @@ func TestLoad(t *testing.T) {
 		},
 	}, WithMarkdownRenderer(testMarkdownRenderer{}), WithScriptRunner(runner))
 	require.NoError(t, err)
-	require.Equal(t, []string{"json", "markdown", "upper"}, set.Names())
+	require.Equal(
+		t,
+		[]string{
+			"json",
+			"markdown",
+			"parse_json",
+			"parse_markdown",
+			"parse_toml",
+			"parse_yaml",
+			"upper",
+		},
+		set.Names(),
+	)
 
 	upper, ok := set.Get("upper")
 	require.True(t, ok)
@@ -54,7 +66,11 @@ func TestLoad(t *testing.T) {
 func TestLoadMissingDirectory(t *testing.T) {
 	set, err := Load(fstest.MapFS{}, WithMarkdownRenderer(testMarkdownRenderer{}))
 	require.NoError(t, err)
-	require.Equal(t, []string{"json", "markdown"}, set.Names())
+	require.Equal(
+		t,
+		[]string{"json", "markdown", "parse_json", "parse_markdown", "parse_toml", "parse_yaml"},
+		set.Names(),
+	)
 }
 
 // TestLoadErrors verifies filter loading validation.

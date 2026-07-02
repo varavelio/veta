@@ -26,15 +26,9 @@ var (
 	// ErrNoResult indicates that a zero Result was used.
 	ErrNoResult = errors.New("javascript result is empty")
 
-	// ErrHTTPBodyConflict indicates that an HTTP request received both body and
-	// json options.
-	ErrHTTPBodyConflict = errors.New("http request options cannot define both body and json")
-
 	// ErrHTTPBodyUnsupported indicates that an HTTP request body has an
 	// unsupported type.
-	ErrHTTPBodyUnsupported = errors.New(
-		"http request body must be a string; use json for JSON bodies",
-	)
+	ErrHTTPBodyUnsupported = errors.New("http request body must be a string")
 
 	// ErrHTTPHeadersUnsupported indicates that HTTP headers were not provided as
 	// an object.

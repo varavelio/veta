@@ -109,9 +109,9 @@ Two page objects cannot write the same output path. Veta reports an error if gen
 Use the JavaScript file API to generate content-driven pages:
 
 ```js
-export default function({ files }) {
+export default function({ files, parse }) {
   return files.listFiles("content/posts/**/*.md").map((path) => {
-    const post = files.readMarkdownFile(path);
+    const post = parse.markdown(files.readFile(path));
 
     return {
       permalink: files.toPermalink(path, { stripPrefix: "content" }),

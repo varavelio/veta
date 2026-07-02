@@ -1,5 +1,5 @@
-{% set navigation = load_data("data/navigation.yaml") %}
-{% set site = load_data("data/site.json") %}
+{% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
+{% set site = load_data("data/site.json")|parse_json %}
 <!doctype html>
 <html lang="en">
 <body>

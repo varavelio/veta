@@ -64,8 +64,8 @@ In component templates, `props` contains tag attributes and `props.content`:
 Templates, includes, and components can call `load_data` to read local or remote data:
 
 ```html
-{% set navigation = load_data("data/navigation.yaml") %} {% set site =
-load_data("data/site.json") %}
+{% set navigation = load_data("data/navigation.yaml")|parse_yaml %} {% set site
+= load_data("data/site.json")|parse_json %}
 ```
 
 See [Template Functions](../api/template-functions.md) for details.

@@ -5,6 +5,7 @@
     "env",
     "files",
     "httpClient",
+    "parse",
     "siteName"
   ],
   "title": "Hello, Veta"

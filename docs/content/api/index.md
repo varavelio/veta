@@ -10,6 +10,7 @@ Veta exposes a small synchronous JavaScript API to data files, page generators, 
 - [JavaScript API](./javascript.md)
 - [File API](./files.md)
 - [HTTP Client](./http-client.md)
+- [Parse API](./parse.md)
 - [Template Functions](./template-functions.md)
 - [Environment And Console](./environment-and-console.md)
 - [Markdown Frontmatter](./frontmatter.md)

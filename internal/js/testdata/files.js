@@ -1,22 +1,22 @@
-export default function({ files }) {
+export default function({ files, parse }) {
   const markdownFiles = files.listFiles("content/**/*.md");
 
   return {
     allFiles: files.listFiles("."),
     indexContent: files.readFile("./content/index.md"),
-    json: files.readJsonFile("data/site.json"),
+    json: parse.json(files.readFile("data/site.json")),
     markdownFiles,
     markdownPages: markdownFiles.map((path) => {
-      const file = files.readMarkdownFile(path);
+      const file = parse.markdown(files.readFile(path));
       return {
         content: file.content,
         frontmatter: file.frontmatter,
-        path: file.path,
+        path,
         permalink: files.toPermalink(path, { stripPrefix: "content" }),
       };
     }),
     textContent: files.readFile("content/drafts/ignore.txt"),
-    toml: files.readTomlFile("data/theme.toml"),
-    yaml: files.readYamlFile("data/navigation.yaml"),
+    toml: parse.toml(files.readFile("data/theme.toml")),
+    yaml: parse.yaml(files.readFile("data/navigation.yaml")),
   };
 }

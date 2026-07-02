@@ -1,4 +1,4 @@
-{% set badge = load_data("data/badge.toml") %}
+{% set badge = load_data("data/badge.toml")|parse_toml %}
 <aside data-badge="{{ badge.tone }}">
   {{ badge.label }}: {{ props.content }}
 </aside>

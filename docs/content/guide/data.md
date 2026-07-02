@@ -95,7 +95,7 @@ Use it in a template:
 JavaScript data files export a default function and return a value:
 
 ```js
-export default function({ env, httpClient }) {
+export default function({ env, httpClient, parse }) {
   if (env.VETA_MODE === "development") {
     return { stars: 0, repo: "local/mock" };
   }
@@ -103,7 +103,7 @@ export default function({ env, httpClient }) {
   const response = httpClient.get(
     "https://api.github.com/repos/varavelio/veta",
   );
-  const repo = JSON.parse(response.body);
+  const repo = parse.json(response.body);
 
   return {
     repo: repo.full_name,
@@ -145,7 +145,7 @@ const posts = files.listFiles("content/posts/**/*.md");
 Templates can also load local or remote data on demand with `load_data`:
 
 ```html
-{% set navigation = load_data("data/navigation.yaml") %}
+{% set navigation = load_data("data/navigation.yaml") | parse_yaml %}
 ```
 
 Use `load_data` for data that is only needed by a specific template, include, or component.

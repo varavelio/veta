@@ -24,10 +24,23 @@ Serializes a value as JSON:
 Renders a string as Markdown:
 
 ```html
-{{ page.summary|markdown }}
+{{ page.summary | markdown }}
 ```
 
 The output is trusted HTML.
+
+### Parse Filters
+
+Parse filters convert strings into structured template values:
+
+```html
+{% set site = load_data("data/site.json") | parse_json %} {% set navigation =
+load_data("data/navigation.yaml") | parse_yaml %} {% set theme =
+load_data("data/theme.toml") | parse_toml %} {% set post =
+load_data("content/post.md") | parse_markdown %}
+```
+
+`parse_markdown` parses YAML or TOML frontmatter and returns `{ content, frontmatter }`. It does not render Markdown to HTML; use `markdown` for rendering.
 
 ## Custom JavaScript Filters
 

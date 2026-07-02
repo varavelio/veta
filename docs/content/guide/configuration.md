@@ -100,7 +100,7 @@ dev:
 
 `watch` adds project-relative files or directories to the watcher. Directories are watched recursively. Veta always watches its own project files and directories in addition to these paths.
 
-Use `watch` for content directories that Veta cannot infer, such as `content/`, `posts/`, `docs/`, or files consumed through `files.readFile` and `files.readMarkdownFile`.
+Use `watch` for content directories that Veta cannot infer, such as `content/`, `posts/`, `docs/`, or files consumed through `files.readFile`.
 
 ## `tailwindcss`
 

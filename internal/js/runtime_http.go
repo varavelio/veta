@@ -3,7 +3,6 @@ package js
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -174,28 +173,12 @@ func (api *httpClientAPI) requestOptions(value goja.Value) (httpRequestOptions, 
 	options.headers = headers
 
 	bodyValue := object.Get("body")
-	jsonValue := object.Get("json")
-	if !isJavaScriptNullish(bodyValue) && !isJavaScriptNullish(jsonValue) {
-		return httpRequestOptions{}, ErrHTTPBodyConflict
-	}
-
 	if !isJavaScriptNullish(bodyValue) {
 		body, err := httpBody(bodyValue)
 		if err != nil {
 			return httpRequestOptions{}, err
 		}
 		options.body = body
-	}
-
-	if !isJavaScriptNullish(jsonValue) {
-		body, err := json.Marshal(jsonValue.Export())
-		if err != nil {
-			return httpRequestOptions{}, fmt.Errorf("serialize http json body: %w", err)
-		}
-		options.body = body
-		if options.headers.Get("Content-Type") == "" {
-			options.headers.Set("Content-Type", "application/json")
-		}
 	}
 
 	timeoutValue := object.Get("timeoutMs")

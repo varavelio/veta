@@ -122,6 +122,14 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime, console *goja.Object) (*goja
 		return nil, fmt.Errorf("set %s.httpClient: %w", runtimeObjectName, err)
 	}
 
+	parseAPI, err := r.newParseAPI(vm)
+	if err != nil {
+		return nil, err
+	}
+	if err := runtimeValue.Set("parse", parseAPI); err != nil {
+		return nil, fmt.Errorf("set %s.parse: %w", runtimeObjectName, err)
+	}
+
 	return runtimeValue, nil
 }
 

@@ -6,13 +6,13 @@ function escapeHTML(value) {
     .replace(/"/g, "&quot;");
 }
 
-export default function({ files }) {
-  const site = files.readJsonFile("data/site.json");
-  const navigation = files.readYamlFile("data/navigation.yaml");
-  const theme = files.readTomlFile("data/theme.toml");
-  const yamlPost = files.readMarkdownFile("content/articles/yaml.md");
-  const tomlPost = files.readMarkdownFile("content/articles/toml.md");
-  const plainPost = files.readMarkdownFile("content/snippets/plain.md");
+export default function({ files, parse }) {
+  const site = parse.json(files.readFile("data/site.json"));
+  const navigation = parse.yaml(files.readFile("data/navigation.yaml"));
+  const theme = parse.toml(files.readFile("data/theme.toml"));
+  const yamlPost = parse.markdown(files.readFile("content/articles/yaml.md"));
+  const tomlPost = parse.markdown(files.readFile("content/articles/toml.md"));
+  const plainPost = parse.markdown(files.readFile("content/snippets/plain.md"));
   const note = files.readFile("content/plain.txt").trim();
   const markdownFiles = files.listFiles("content/**/*.md");
   const permalinks = markdownFiles.map((file) => files.toPermalink(file, { stripPrefix: "content" }));
@@ -36,7 +36,7 @@ export default function({ files }) {
     <p>${escapeHTML(tomlPost.frontmatter.meta.author)}</p>
     <pre>${escapeHTML(tomlPost.content)}</pre>
   </article>
-  <p data-plain-path="${escapeHTML(plainPost.path)}">${escapeHTML(plainPost.content.trim())}</p>
+  <p data-plain-path="content/snippets/plain.md">${escapeHTML(plainPost.content.trim())}</p>
   <p data-note="${escapeHTML(note)}">${escapeHTML(markdownFiles.join(";"))}</p>
   <p data-permalinks="${escapeHTML(permalinks.join(";"))}"></p>
 </body>

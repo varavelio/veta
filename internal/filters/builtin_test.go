@@ -97,3 +97,56 @@ func TestMarkdownFilter(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFilters(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter Func
+		input  string
+		want   any
+	}{
+		{
+			name:   "parse json",
+			filter: parseJSONFilter,
+			input:  `{"name":"Veta","count":2}`,
+			want:   map[string]any{"name": "Veta", "count": int64(2)},
+		},
+		{
+			name:   "parse yaml",
+			filter: parseYAMLFilter,
+			input:  "items:\n  - label: Docs\n",
+			want:   map[string]any{"items": []any{map[string]any{"label": "Docs"}}},
+		},
+		{
+			name:   "parse toml",
+			filter: parseTOMLFilter,
+			input:  "name = \"Clean\"\n",
+			want:   map[string]any{"name": "Clean"},
+		},
+		{
+			name:   "parse markdown",
+			filter: parseMarkdownFilter,
+			input:  "---\ntitle: Hello\n---\n\n# Body\n",
+			want: map[string]any{
+				"content":     "# Body\n",
+				"frontmatter": map[string]any{"title": "Hello"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := test.filter(test.input, nil)
+			require.NoError(t, err)
+			require.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestParseFiltersErrors(t *testing.T) {
+	_, err := parseJSONFilter("{", nil)
+	require.ErrorContains(t, err, "parse json filter")
+
+	_, err = parseMarkdownFilter("---\ntitle: [broken\n---\nBody\n", nil)
+	require.ErrorContains(t, err, "parse markdown filter")
+}

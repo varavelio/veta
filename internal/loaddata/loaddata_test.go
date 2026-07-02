@@ -24,17 +24,17 @@ func TestLoaderLoadPath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Hello Veta", text)
 
-	jsonValue, err := loader.Load(Request{Path: "data/site.json"})
+	jsonText, err := loader.Load(Request{Path: "data/site.json"})
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"name": "Veta", "count": int64(2)}, jsonValue)
+	require.Equal(t, `{"name":"Veta","count":2}`, jsonText)
 
-	yamlValue, err := loader.Load(Request{Path: "data/nav.yaml"})
+	yamlText, err := loader.Load(Request{Path: "data/nav.yaml"})
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"items": []any{map[string]any{"label": "Docs"}}}, yamlValue)
+	require.Equal(t, "items:\n  - label: Docs\n", yamlText)
 
-	tomlValue, err := loader.Load(Request{Path: "data/theme.toml"})
+	tomlText, err := loader.Load(Request{Path: "data/theme.toml"})
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"name": "Clean"}, tomlValue)
+	require.Equal(t, "name = \"Clean\"\n", tomlText)
 }
 
 func TestLoaderLoadURL(t *testing.T) {
@@ -51,7 +51,7 @@ func TestLoaderLoadURL(t *testing.T) {
 
 	value, err := loader.Load(Request{URL: server.URL})
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"name": "Veta"}, value)
+	require.Equal(t, `{"name":"Veta"}`, value)
 }
 
 func TestLoaderFunction(t *testing.T) {
@@ -71,15 +71,15 @@ func TestLoaderFunction(t *testing.T) {
 
 	value, err := loader.Function()("data/site.json")
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"name": "Veta"}, value)
+	require.Equal(t, `{"name":"Veta"}`, value)
 
-	text, err := loader.Function()("data/raw.txt", "text")
+	text, err := loader.Function()("data/raw.txt")
 	require.NoError(t, err)
 	require.Equal(t, "Raw", text)
 
-	remote, err := loader.Function()(server.URL, "json", 5000)
+	remote, err := loader.Function()(server.URL)
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"remote": true}, remote)
+	require.Equal(t, `{"remote":true}`, remote)
 }
 
 func TestLoaderErrors(t *testing.T) {
@@ -112,12 +112,6 @@ func TestLoaderErrors(t *testing.T) {
 			request: Request{URL: server.URL, Timeout: -time.Second},
 			want:    ErrRequestInvalid,
 		},
-		{
-			name:    "bad format",
-			request: Request{Path: "data/bad.json", Format: "csv"},
-			want:    ErrFormatInvalid,
-		},
-		{name: "bad json", request: Request{Path: "data/bad.json"}, want: nil},
 		{name: "http status", request: Request{URL: server.URL}, want: ErrHTTPStatus},
 	}
 

@@ -24,6 +24,7 @@ Common context keys:
 ```txt
 files
 httpClient
+parse
 env
 console
 ```
@@ -116,9 +117,9 @@ Veta executes JavaScript synchronously. Promise-like return values are rejected.
 Use synchronous calls only:
 
 ```js
-export default function({ httpClient }) {
+export default function({ httpClient, parse }) {
   const response = httpClient.get("https://example.com/data.json");
-  return JSON.parse(response.body);
+  return parse.json(response.body);
 }
 ```
 
@@ -134,5 +135,6 @@ export default async function() {
 
 - [File API](./files.md)
 - [HTTP Client](./http-client.md)
+- [Parse API](./parse.md)
 - [Environment And Console](./environment-and-console.md)
 - [Frontmatter](./frontmatter.md)

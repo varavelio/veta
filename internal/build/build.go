@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/varavelio/veta/internal/components"
 	"github.com/varavelio/veta/internal/config"
@@ -494,15 +493,9 @@ func newTemplateRenderer(
 	}
 	templateOptions := []template.Option{
 		template.WithLoadData(func(request template.LoadDataRequest) (any, error) {
-			if request.TimeoutMs < 0 {
-				return nil, fmt.Errorf("load_data timeout_ms cannot be negative")
-			}
-
 			return dataLoader.Load(loaddata.Request{
-				Path:    request.Path,
-				URL:     request.URL,
-				Format:  request.Format,
-				Timeout: time.Duration(request.TimeoutMs) * time.Millisecond,
+				Path: request.Path,
+				URL:  request.URL,
 			})
 		}),
 	}

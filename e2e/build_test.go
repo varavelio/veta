@@ -288,7 +288,7 @@ func TestBuildRendersComponentsFromMultipleContentSources(t *testing.T) {
 	require.Contains(
 		t,
 		markdownPage,
-		`<body data-source="readMarkdownFile" data-permalink="/markdown/">`,
+		`<body data-source="parse.markdown" data-permalink="/markdown/">`,
 	)
 	require.Contains(
 		t,

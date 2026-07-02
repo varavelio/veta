@@ -1,6 +1,6 @@
 ---
 title: "File API"
-description: "Read project files, parse structured data, read Markdown frontmatter, list files, and create permalinks from JavaScript."
+description: "Read project files as text, list files, and create permalinks from JavaScript."
 ---
 
 # File API
@@ -31,55 +31,11 @@ Reads a file as a UTF-8 string.
 
 ```js
 const robots = files.readFile("public/robots.txt");
+const site = parse.json(files.readFile("data/site.json"));
+const post = parse.markdown(files.readFile("content/posts/hello.md"));
 ```
 
-## `files.readJsonFile(path)`
-
-Reads and parses one JSON value.
-
-```js
-const site = files.readJsonFile("data/site.json");
-```
-
-JSON numbers are normalized into JavaScript-safe values. Multiple JSON values in one file are rejected.
-
-## `files.readYamlFile(path)`
-
-Reads and parses one YAML document.
-
-```js
-const navigation = files.readYamlFile("data/navigation.yaml");
-```
-
-Multiple YAML documents in one file are rejected.
-
-## `files.readTomlFile(path)`
-
-Reads and parses one TOML document.
-
-```js
-const theme = files.readTomlFile("data/theme.toml");
-```
-
-## `files.readMarkdownFile(path)`
-
-Reads a Markdown file and parses optional YAML or TOML frontmatter.
-
-```js
-const post = files.readMarkdownFile("content/posts/hello.md");
-```
-
-Return shape:
-
-```js
-{
-  content: "# Hello\n\nPost body.\n",
-  frontmatter: { title: "Hello" },
-  path: "content/posts/hello.md"
-}
-```
-
-See [Frontmatter](./frontmatter.md) for details.
+See [Parse API](./parse.md) and [Frontmatter](./frontmatter.md) for parsing structured content.
 
 ## `files.toPermalink(path, options)`
 
