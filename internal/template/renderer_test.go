@@ -136,27 +136,72 @@ func TestRendererGlobals(t *testing.T) {
 func TestRendererLoadData(t *testing.T) {
 	files := fstest.MapFS{
 		"page.pongo": {Data: []byte(strings.Join([]string{
-			`{% load_data path="data/site.json" as site %}`,
-			`{% load_data path="data/raw.txt" format="text" as raw %}`,
-			`{{ site.name }} {{ raw }} {{ load_data("data/site.json").name }}`,
+			`{% set site = load_data("data/site.json") %}`,
+			`{% set raw = load_data("data/raw.txt", "text") %}`,
+			`{% set remote = load_data("https://example.test/data.json", "json", 5000) %}`,
+			`{{ site.name }} {{ raw }} {{ load_data("data/site.json").name }} {{ remote.timeout }}`,
 		}, ""))},
 	}
 	renderer, err := New(files, WithLoadData(func(request LoadDataRequest) (any, error) {
-		switch request.Path {
-		case "data/site.json":
+		switch {
+		case request.Path == "data/site.json":
+			require.Empty(t, request.Format)
+			require.Zero(t, request.TimeoutMs)
 			return map[string]any{"name": "Veta"}, nil
-		case "data/raw.txt":
+		case request.Path == "data/raw.txt":
 			require.Equal(t, "text", request.Format)
 			return "Raw", nil
+		case request.URL == "https://example.test/data.json":
+			require.Equal(t, "json", request.Format)
+			require.Equal(t, 5000, request.TimeoutMs)
+			return map[string]any{"timeout": "OK"}, nil
 		default:
-			return nil, fmt.Errorf("unexpected path %s", request.Path)
+			return nil, fmt.Errorf("unexpected request %+v", request)
 		}
 	}))
 	require.NoError(t, err)
 
 	got, err := renderer.Render("page", nil)
 	require.NoError(t, err)
-	require.Equal(t, "Veta Raw Veta", got)
+	require.Equal(t, "Veta Raw Veta OK", got)
+}
+
+func TestRendererLoadDataErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		source  string
+		wantErr string
+	}{
+		{
+			name:    "rejects too many arguments",
+			source:  `{% set value = load_data("data/site.json", "json", 1000, "extra") %}`,
+			wantErr: "load_data accepts source, optional format, and optional timeout_ms",
+		},
+		{
+			name:    "requires format string",
+			source:  `{% set value = load_data("data/site.json", 10) %}`,
+			wantErr: "load_data format must be a string",
+		},
+		{
+			name:    "rejects negative timeout",
+			source:  `{% set value = load_data("https://example.test/data.json", "json", -1) %}`,
+			wantErr: "load_data timeout_ms cannot be negative",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			files := fstest.MapFS{"page.pongo": {Data: []byte(test.source)}}
+			renderer, err := New(files, WithLoadData(func(request LoadDataRequest) (any, error) {
+				return map[string]any{}, nil
+			}))
+			require.NoError(t, err)
+
+			_, err = renderer.Render("page", nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), test.wantErr)
+		})
+	}
 }
 
 type testSafeHTML string

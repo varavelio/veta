@@ -123,25 +123,67 @@ func (loader *Loader) Load(request Request) (any, error) {
 	return loader.loadURL(request)
 }
 
-// Function returns a positional helper suitable for Pongo function calls.
-func (loader *Loader) Function() func(string, ...string) (any, error) {
-	return func(source string, formats ...string) (any, error) {
-		format := ""
-		if len(formats) > 1 {
+// Function returns a positional helper suitable for template function calls.
+func (loader *Loader) Function() func(string, ...any) (any, error) {
+	return func(source string, arguments ...any) (any, error) {
+		if len(arguments) > 2 {
 			return nil, fmt.Errorf(
-				"%w: load_data accepts at most one format argument",
+				"%w: load_data accepts source, optional format, and optional timeout_ms",
 				ErrRequestInvalid,
 			)
 		}
-		if len(formats) == 1 {
-			format = formats[0]
+
+		request := Request{Path: source}
+		if len(arguments) >= 1 {
+			format, ok := arguments[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("%w: format must be a string", ErrRequestInvalid)
+			}
+			request.Format = format
+		}
+		if len(arguments) == 2 {
+			timeout, err := durationFromMilliseconds(arguments[1])
+			if err != nil {
+				return nil, err
+			}
+			request.Timeout = timeout
 		}
 
 		if isRemoteURL(source) {
-			return loader.Load(Request{URL: source, Format: format})
+			request.Path = ""
+			request.URL = source
 		}
 
-		return loader.Load(Request{Path: source, Format: format})
+		return loader.Load(request)
+	}
+}
+
+func durationFromMilliseconds(value any) (time.Duration, error) {
+	integer := reflect.ValueOf(value)
+	if !integer.IsValid() {
+		return 0, fmt.Errorf("%w: timeout_ms must be an integer", ErrRequestInvalid)
+	}
+
+	switch integer.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		milliseconds := integer.Int()
+		if milliseconds < 0 {
+			return 0, fmt.Errorf("%w: timeout_ms cannot be negative", ErrRequestInvalid)
+		}
+		return time.Duration(milliseconds) * time.Millisecond, nil
+	case reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64,
+		reflect.Uintptr:
+		milliseconds := integer.Uint()
+		if milliseconds > uint64(math.MaxInt64/int64(time.Millisecond)) {
+			return 0, fmt.Errorf("%w: timeout_ms is too large", ErrRequestInvalid)
+		}
+		return time.Duration(milliseconds) * time.Millisecond, nil
+	default:
+		return 0, fmt.Errorf("%w: timeout_ms must be an integer", ErrRequestInvalid)
 	}
 }
 

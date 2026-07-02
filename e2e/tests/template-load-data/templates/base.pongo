@@ -1,4 +1,4 @@
-{% load_data path="data/navigation.yaml" as navigation %}
+{% set navigation = load_data("data/navigation.yaml") %}
 {% set site = load_data("data/site.json") %}
 <!doctype html>
 <html lang="en">

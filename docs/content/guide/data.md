@@ -145,7 +145,7 @@ const posts = files.listFiles("content/posts/**/*.md");
 Templates can also load local or remote data on demand with `load_data`:
 
 ```html
-{% load_data path="data/navigation.yaml" as navigation %}
+{% set navigation = load_data("data/navigation.yaml") %}
 ```
 
 Use `load_data` for data that is only needed by a specific template, include, or component.

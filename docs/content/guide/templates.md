@@ -106,7 +106,7 @@ Pongo can include files from other project directories, but `includes/` is Veta'
 Templates, includes, and components can load local or remote data with `load_data`:
 
 ```html
-{% load_data path="data/navigation.yaml" as navigation %} {% set site =
+{% set navigation = load_data("data/navigation.yaml") %} {% set site =
 load_data("data/site.json") %}
 ```
 

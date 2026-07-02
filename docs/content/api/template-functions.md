@@ -11,16 +11,16 @@ Veta registers template helpers for Pongo templates and components.
 
 `load_data` reads a local project file or a remote URL from a template, include, or component.
 
-Use the tag form when you want named options:
+Use `load_data` inside native Pongo expressions. Assign values with Pongo's built-in `set` tag:
 
 ```html
-{% load_data path="data/navigation.yaml" as navigation %} {% for item in
+{% set navigation = load_data("data/navigation.yaml") %} {% for item in
 navigation.items %}
 <a href="{{ item.href }}">{{ item.label }}</a>
 {% endfor %}
 ```
 
-Use the function form inside expressions. Pongo function calls use positional arguments, so the optional second argument is the format:
+The optional second argument is the format:
 
 ```html
 {% set site = load_data("data/site.json") %} {% set readme =
@@ -35,7 +35,7 @@ load_data("content/readme.md", "text") %}
 Local paths are project-relative and can read files from the composed project and theme filesystem:
 
 ```html
-{% load_data path="data/badge.toml" as badge %} {{ badge.label }}
+{% set badge = load_data("data/badge.toml") %} {{ badge.label }}
 ```
 
 Local paths must be relative. Absolute paths, Windows drive paths, empty paths, and paths containing `..` are rejected.
@@ -45,16 +45,16 @@ Local paths must be relative. Absolute paths, Windows drive paths, empty paths, 
 Remote URLs use HTTP `GET`:
 
 ```html
-{% load_data url="https://api.github.com/repos/varavelio/veta" format="json" as
-repo %} {{ repo.stargazers_count }}
+{% set repo = load_data("https://api.github.com/repos/varavelio/veta", "json")
+%} {{ repo.stargazers_count }}
 ```
 
 Only `http` and `https` URLs are allowed. Non-2xx responses fail the build.
 
-You can set a timeout in milliseconds on the tag form:
+You can set a timeout in milliseconds with the optional third argument:
 
 ```html
-{% load_data url="https://example.com/data.json" timeout_ms=5000 as value %}
+{% set value = load_data("https://example.com/data.json", "json", 5000) %}
 ```
 
 ### Formats
@@ -69,9 +69,10 @@ Supported formats are:
 When `format` is omitted, Veta detects it from the local file extension, remote `Content-Type`, or remote URL extension. Unknown extensions fall back to `text`.
 
 ```html
-{% load_data path="content/message.txt" format="text" as message %} {% load_data
-path="data/site.json" as site %} {% load_data path="data/navigation.yaml" as
-navigation %} {% load_data path="data/theme.toml" as theme %}
+{% set message = load_data("content/message.txt", "text") %} {% set site =
+load_data("data/site.json") %} {% set navigation =
+load_data("data/navigation.yaml") %} {% set theme = load_data("data/theme.toml")
+%}
 ```
 
 Structured formats return normal template values:

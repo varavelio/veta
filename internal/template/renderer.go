@@ -48,9 +48,6 @@ func New(files fs.FS, options ...Option) (*Renderer, error) {
 
 	loader := &templateLoader{files: files}
 	set := pongo2.NewSet("veta", loader)
-	if err := set.RegisterTag("load_data", parseLoadDataTag); err != nil {
-		return nil, fmt.Errorf("register template tag load_data: %w", err)
-	}
 	maps.Copy(set.Globals, config.globals)
 
 	for name, filter := range config.filters {

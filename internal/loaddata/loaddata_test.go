@@ -55,12 +55,31 @@ func TestLoaderLoadURL(t *testing.T) {
 }
 
 func TestLoaderFunction(t *testing.T) {
-	loader, err := New(fstest.MapFS{"data/site.json": {Data: []byte(`{"name":"Veta"}`)}})
+	server := httptest.NewServer(
+		http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+			response.Header().Set("Content-Type", "application/json")
+			_, _ = response.Write([]byte(`{"remote":true}`))
+		}),
+	)
+	defer server.Close()
+
+	loader, err := New(fstest.MapFS{
+		"data/site.json": {Data: []byte(`{"name":"Veta"}`)},
+		"data/raw.txt":   {Data: []byte(`Raw`)},
+	})
 	require.NoError(t, err)
 
 	value, err := loader.Function()("data/site.json")
 	require.NoError(t, err)
 	require.Equal(t, map[string]any{"name": "Veta"}, value)
+
+	text, err := loader.Function()("data/raw.txt", "text")
+	require.NoError(t, err)
+	require.Equal(t, "Raw", text)
+
+	remote, err := loader.Function()(server.URL, "json", 5000)
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{"remote": true}, remote)
 }
 
 func TestLoaderErrors(t *testing.T) {
