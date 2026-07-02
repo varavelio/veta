@@ -4,6 +4,9 @@
   "json": {
   },
   "markdown": {
+    "tags": {
+      "html": "text"
+    }
   },
   "malva": {
   },
@@ -20,7 +23,6 @@
     "**/out",
     "**/gen",
     "**/site",
-    "**/internal/scaffold/template"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.96.1.wasm",
