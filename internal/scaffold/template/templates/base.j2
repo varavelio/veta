@@ -11,12 +11,14 @@
     <nav class="mb-10 flex gap-4 text-sm">
       {% include "includes/brand.html" %}
       {% for item in pages %}
-      <a class="text-zinc-600 hover:text-zinc-950" href="{{ item.permalink }}">
-        {{ item.title }}
-      </a>
+        <a
+          class="text-zinc-600 hover:text-zinc-950"
+          href="{{ item.permalink }}"
+        >
+          {{ item.title }}
+        </a>
       {% endfor %}
     </nav>
-
     <main>
       <h1 class="mt-2 text-4xl font-bold tracking-tight">{{ page.title }}</h1>
       <div class="mt-6 leading-7">
