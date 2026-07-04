@@ -14,6 +14,7 @@ import (
 	"github.com/varavelio/veta/internal/config"
 	"github.com/varavelio/veta/internal/data"
 	"github.com/varavelio/veta/internal/filters"
+	"github.com/varavelio/veta/internal/functions"
 	"github.com/varavelio/veta/internal/js"
 	"github.com/varavelio/veta/internal/loaddata"
 	"github.com/varavelio/veta/internal/markdown"
@@ -59,6 +60,10 @@ type runConfig struct {
 }
 
 type filterScriptRunner struct {
+	runner *js.Runner
+}
+
+type functionScriptRunner struct {
 	runner *js.Runner
 }
 
@@ -200,7 +205,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		return Result{}, err
 	}
 
-	templateRenderer, err := newTemplateRenderer(
+	templateRenderer, functionSet, err := newTemplateRenderer(
 		site.Files,
 		markdownRenderer,
 		runConfig,
@@ -212,6 +217,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	componentProcessor, err := components.New(
 		site.Files,
 		templateRenderer,
+		components.WithFunctions(functionSet),
 		components.WithSlotRenderer(func(content string, _ any) (string, error) {
 			return markdownRenderer.Render(content)
 		}),
@@ -221,6 +227,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	}
 	documentRenderer, err := render.New(
 		render.WithContentProcessor(componentProcessor),
+		render.WithFunctions(functionSet),
 		render.WithMarkdownRenderer(markdownRenderer),
 		render.WithTemplateRenderer(pageTemplateRenderer{renderer: templateRenderer}),
 	)
@@ -311,6 +318,24 @@ func (runner filterScriptRunner) Run(source filters.Source, input, parameter any
 		js.Source{Name: source.Name, Code: source.Code},
 		input,
 		parameter,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Export(), nil
+}
+
+// Run executes a JavaScript template function source with a contextual runtime.
+func (runner functionScriptRunner) Run(
+	source functions.Source,
+	context functions.Context,
+	args ...any,
+) (any, error) {
+	result, err := runner.runner.CallWithRuntime(
+		js.Runtime(functions.Runtime(context)),
+		js.Source{Name: source.Name, Code: source.Code},
+		args...,
 	)
 	if err != nil {
 		return nil, err
@@ -476,7 +501,7 @@ func newTemplateRenderer(
 	markdownRenderer *markdown.Renderer,
 	config runConfig,
 	runtime js.Runtime,
-) (*template.Renderer, error) {
+) (*template.Renderer, functions.Set, error) {
 	filterRunner := filterScriptRunner{runner: js.New(baseJSOptions(config, runtime)...)}
 	filterSet, err := filters.Load(
 		files,
@@ -484,22 +509,29 @@ func newTemplateRenderer(
 		filters.WithScriptRunner(filterRunner),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("load filters: %w", err)
+		return nil, functions.Set{}, fmt.Errorf("load filters: %w", err)
 	}
 
 	dataLoader, err := loaddata.New(files)
 	if err != nil {
-		return nil, fmt.Errorf("create load_data loader: %w", err)
+		return nil, functions.Set{}, fmt.Errorf("create load_data loader: %w", err)
 	}
-	templateOptions := []template.Option{
-		template.WithLoadData(func(request template.LoadDataRequest) (any, error) {
+	functionRunner := functionScriptRunner{runner: js.New(baseJSOptions(config, nil)...)}
+	functionSet, err := functions.Load(
+		files,
+		functions.WithLoadData(func(request functions.LoadDataRequest) (any, error) {
 			return dataLoader.Load(loaddata.Request{
 				Path: request.Path,
 				URL:  request.URL,
 			})
 		}),
-		template.WithRegexReplace(),
+		functions.WithScriptRunner(functionRunner),
+	)
+	if err != nil {
+		return nil, functions.Set{}, fmt.Errorf("load functions: %w", err)
 	}
+
+	templateOptions := []template.Option{}
 	for name, filter := range filterSet.Functions() {
 		templateOptions = append(
 			templateOptions,
@@ -509,10 +541,10 @@ func newTemplateRenderer(
 
 	templateRenderer, err := template.New(files, templateOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("create template renderer: %w", err)
+		return nil, functions.Set{}, fmt.Errorf("create template renderer: %w", err)
 	}
 
-	return templateRenderer, nil
+	return templateRenderer, functionSet, nil
 }
 
 // renderPages converts page manifest pages into renderer pages.
