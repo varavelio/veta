@@ -66,14 +66,13 @@ func defaultRuntime() Runtime {
 }
 
 // newVM creates an isolated JavaScript runtime for one source execution.
-func (r *Runner) newVM() (*goja.Runtime, *goja.Object, error) {
+func (r *Runner) newVM(runtime Runtime) (*goja.Runtime, *goja.Object, error) {
 	vm := goja.New()
-	console, err := r.installConsole(vm)
-	if err != nil {
+	if _, err := r.installConsole(vm); err != nil {
 		return nil, nil, err
 	}
 
-	runtimeValue, err := r.newRuntimeObject(vm, console)
+	runtimeValue, err := r.newRuntimeObject(vm, runtime)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,9 +85,9 @@ func (r *Runner) newVM() (*goja.Runtime, *goja.Object, error) {
 }
 
 // newRuntimeObject converts the configured Go runtime API into a Goja object.
-func (r *Runner) newRuntimeObject(vm *goja.Runtime, console *goja.Object) (*goja.Object, error) {
+func (r *Runner) newRuntimeObject(vm *goja.Runtime, runtime Runtime) (*goja.Object, error) {
 	runtimeValue := vm.NewObject()
-	for name, value := range r.runtimeSnapshot() {
+	for name, value := range r.runtimeSnapshotWith(runtime) {
 		if err := runtimeValue.Set(name, value); err != nil {
 			return nil, fmt.Errorf("set %s.%s: %w", runtimeObjectName, name, err)
 		}
@@ -102,10 +101,6 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime, console *goja.Object) (*goja
 	if err := runtimeValue.Set("files", fileAPI); err != nil {
 		return nil, fmt.Errorf("set %s.files: %w", runtimeObjectName, err)
 	}
-	if err := runtimeValue.Set("console", console); err != nil {
-		return nil, fmt.Errorf("set %s.console: %w", runtimeObjectName, err)
-	}
-
 	environment, err := r.newEnvironmentObject(vm)
 	if err != nil {
 		return nil, err
@@ -135,11 +130,17 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime, console *goja.Object) (*goja
 
 // runtimeSnapshot returns a copy of the runtime API configured on the runner.
 func (r *Runner) runtimeSnapshot() Runtime {
+	return r.runtimeSnapshotWith(nil)
+}
+
+func (r *Runner) runtimeSnapshotWith(runtime Runtime) Runtime {
 	if r == nil || r.runtime == nil {
-		return defaultRuntime()
+		return cloneRuntime(runtime)
 	}
 
-	return cloneRuntime(r.runtime)
+	snapshot := cloneRuntime(r.runtime)
+	maps.Copy(snapshot, runtime)
+	return snapshot
 }
 
 // cloneRuntime copies a runtime API map so executions cannot mutate runner

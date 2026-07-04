@@ -41,7 +41,7 @@ func TestRunnerExecute(t *testing.T) {
 		require.Equal(t, true, got["hasFileAPI"])
 		require.Equal(
 			t,
-			[]any{"console", "env", "files", "httpClient", "parse", "siteName"},
+			[]any{"env", "files", "httpClient", "parse", "siteName"},
 			got["keys"],
 		)
 	})
@@ -102,6 +102,22 @@ func TestRunnerCall(t *testing.T) {
 	require.Equal(t, "Veta", got["siteName"])
 	require.Equal(t, "hello", got["input"])
 	require.Equal(t, map[string]any{"suffix": "world"}, got["parameter"])
+}
+
+// TestRunnerCallWithRuntime verifies per-call runtime values are exposed through
+// the default export context argument.
+func TestRunnerCallWithRuntime(t *testing.T) {
+	runner := New(WithRuntime(Runtime{"siteName": "Veta"}))
+
+	result, err := runner.CallWithRuntime(Runtime{
+		"page": map[string]any{"title": "Home"},
+	}, Source{Name: "function.js", Code: `
+		export default function(runtime, suffix) {
+			return runtime.siteName + ":" + runtime.page.title + ":" + suffix;
+		}
+	`}, "ok")
+	require.NoError(t, err)
+	require.Equal(t, "Veta:Home:ok", result.Export())
 }
 
 // TestRunnerExecutionTimeout verifies that runaway JavaScript is interrupted.
@@ -251,13 +267,16 @@ func TestRunnerConsole(t *testing.T) {
 	runner := New(WithConsoleOutput(&output))
 
 	result, err := runner.ExecuteString("console.js", `
-		export default function({ console }) {
+		export default function(context) {
 			console.log("hello", 123);
 			console.info("ready");
 			console.warn("careful");
 			console.error("broken");
 			console.debug("details", undefined, null);
 			console.log({ name: "Veta", count: 2 }, [1, 2]);
+			if (context.console !== undefined) {
+				throw new Error("context.console should not exist");
+			}
 			return "ok";
 		}
 	`)
@@ -279,7 +298,7 @@ func TestRunnerConsoleNilOutput(t *testing.T) {
 	runner := New(WithConsoleOutput(nil))
 
 	result, err := runner.ExecuteString("console.js", `
-		export default function({ console }) {
+		export default function() {
 			console.log("ignored");
 			return true;
 		}

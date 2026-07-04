@@ -3,7 +3,6 @@
   "functionResult": "Veta:7",
   "nestedAnswer": 42,
   "runtimeKeys": [
-    "console",
     "env",
     "files",
     "httpClient",

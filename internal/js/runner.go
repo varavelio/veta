@@ -96,7 +96,7 @@ func (r *Runner) ExecuteString(name, code string) (Result, error) {
 
 // Execute runs a Veta JavaScript source synchronously.
 func (r *Runner) Execute(source Source) (Result, error) {
-	return r.execute(source, func(vm *goja.Runtime, runtimeValue *goja.Object) []goja.Value {
+	return r.execute(source, nil, func(vm *goja.Runtime, runtimeValue *goja.Object) []goja.Value {
 		return []goja.Value{runtimeValue}
 	})
 }
@@ -104,20 +104,35 @@ func (r *Runner) Execute(source Source) (Result, error) {
 // Call runs a Veta JavaScript source and invokes its default export with the
 // runtime context followed by args.
 func (r *Runner) Call(source Source, args ...any) (Result, error) {
-	return r.execute(source, func(vm *goja.Runtime, runtimeValue *goja.Object) []goja.Value {
-		values := make([]goja.Value, 0, len(args)+1)
-		values = append(values, runtimeValue)
-		for _, arg := range args {
-			values = append(values, vm.ToValue(arg))
-		}
+	return r.call(nil, source, args...)
+}
 
-		return values
-	})
+// CallWithRuntime runs a Veta JavaScript source with per-call runtime values and
+// invokes its default export with the runtime context followed by args.
+func (r *Runner) CallWithRuntime(runtime Runtime, source Source, args ...any) (Result, error) {
+	return r.call(runtime, source, args...)
+}
+
+func (r *Runner) call(runtime Runtime, source Source, args ...any) (Result, error) {
+	return r.execute(
+		source,
+		runtime,
+		func(vm *goja.Runtime, runtimeValue *goja.Object) []goja.Value {
+			values := make([]goja.Value, 0, len(args)+1)
+			values = append(values, runtimeValue)
+			for _, arg := range args {
+				values = append(values, vm.ToValue(arg))
+			}
+
+			return values
+		},
+	)
 }
 
 // execute runs source and invokes the default export with caller-provided arguments.
 func (r *Runner) execute(
 	source Source,
+	runtime Runtime,
 	arguments func(*goja.Runtime, *goja.Object) []goja.Value,
 ) (Result, error) {
 	name := source.name()
@@ -126,7 +141,7 @@ func (r *Runner) execute(
 		return Result{}, fmt.Errorf("%s: compile javascript: %w", name, err)
 	}
 
-	vm, runtimeValue, err := r.newVM()
+	vm, runtimeValue, err := r.newVM(runtime)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: initialize javascript runtime: %w", name, err)
 	}
