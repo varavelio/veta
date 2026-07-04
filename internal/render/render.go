@@ -3,6 +3,8 @@ package render
 import (
 	"fmt"
 	"maps"
+
+	"github.com/varavelio/veta/internal/functions"
 )
 
 // TemplateRenderer renders a template by name.
@@ -48,6 +50,7 @@ type Document struct {
 // Renderer composes pages with injected renderers.
 type Renderer struct {
 	contentProcessor ContentProcessor
+	functions        functions.Set
 	markdownRenderer MarkdownRenderer
 	templateRenderer TemplateRenderer
 }
@@ -82,6 +85,14 @@ func WithContentProcessor(processor ContentProcessor) Option {
 func WithMarkdownRenderer(markdownRenderer MarkdownRenderer) Option {
 	return func(renderer *Renderer) error {
 		renderer.markdownRenderer = markdownRenderer
+		return nil
+	}
+}
+
+// WithFunctions configures template functions injected into render contexts.
+func WithFunctions(functionSet functions.Set) Option {
+	return func(renderer *Renderer) error {
+		renderer.functions = functionSet
 		return nil
 	}
 }
@@ -149,7 +160,7 @@ func (renderer *Renderer) renderPageContent(
 		return nil
 	}
 
-	context := baseTemplateContext(data, pages, pageContext, map[string]any{})
+	context := renderer.baseTemplateContext(data, pages, pageContext, map[string]any{})
 	if content, ok := pageStringField(pageContext, "content"); ok {
 		if renderer.contentProcessor != nil {
 			processedContent, err := renderer.contentProcessor.Render(content, context)
@@ -192,7 +203,7 @@ func (renderer *Renderer) renderPageDocument(
 		return Document{}, ErrTemplateRendererRequired
 	}
 
-	context := baseTemplateContext(data, pages, pageContext, map[string]any{})
+	context := renderer.baseTemplateContext(data, pages, pageContext, map[string]any{})
 	output, err := renderer.templateRenderer.Render(page.Template, context)
 	if err != nil {
 		return Document{}, fmt.Errorf("render page template %s: %w", page.Template, err)
@@ -243,7 +254,7 @@ func pagesRequireTemplateRenderer(pages []Page) bool {
 }
 
 // baseTemplateContext returns the only root keys exposed to templates.
-func baseTemplateContext(
+func (renderer *Renderer) baseTemplateContext(
 	data any,
 	pages []map[string]any,
 	page, props map[string]any,
@@ -251,18 +262,15 @@ func baseTemplateContext(
 	if props == nil {
 		props = map[string]any{}
 	}
-	return map[string]any{
+	context := map[string]any{
 		"data":  data,
 		"pages": pages,
 		"page":  page,
 		"props": props,
-		"url":   NewURLFunc(pagePermalink(page)),
 	}
-}
+	functions.Inject(context, renderer.functions)
 
-func pagePermalink(page map[string]any) string {
-	permalink, _ := pageStringField(page, "permalink")
-	return permalink
+	return context
 }
 
 // rawPageContent returns the raw content string for template-less pages.
