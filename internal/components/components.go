@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+
+	"github.com/varavelio/veta/internal/functions"
 )
 
 // DirName is the project directory containing component templates.
@@ -45,6 +47,7 @@ type Conflict struct {
 type Processor struct {
 	components   map[string]Component
 	conflicts    []Conflict
+	functions    functions.Set
 	renderer     TemplateRenderer
 	slotRenderer SlotRenderer
 }
@@ -53,6 +56,7 @@ type Processor struct {
 type Option func(*processorConfig) error
 
 type processorConfig struct {
+	functions    functions.Set
 	slotRenderer SlotRenderer
 }
 
@@ -78,9 +82,18 @@ func New(files fs.FS, renderer TemplateRenderer, options ...Option) (*Processor,
 	return &Processor{
 		components:   registry,
 		conflicts:    conflicts,
+		functions:    config.functions,
 		renderer:     renderer,
 		slotRenderer: config.slotRenderer,
 	}, nil
+}
+
+// WithFunctions configures template functions available inside components.
+func WithFunctions(functionSet functions.Set) Option {
+	return func(config *processorConfig) error {
+		config.functions = functionSet
+		return nil
+	}
 }
 
 // WithExtensions is retained for compatibility.
@@ -177,7 +190,7 @@ func (processor *Processor) renderComponent(
 
 	output, err := processor.renderer.Render(
 		component.Template,
-		componentContext(context, token.attributes, renderedContent),
+		processor.componentContext(context, token.attributes, renderedContent),
 	)
 	if err != nil {
 		return "", fmt.Errorf("render component %s: %w", token.name, err)
@@ -187,19 +200,26 @@ func (processor *Processor) renderComponent(
 }
 
 // componentContext builds the context passed to component templates.
-func componentContext(base any, props map[string]string, content string) map[string]any {
+func (processor *Processor) componentContext(
+	base any,
+	props map[string]string,
+	content string,
+) map[string]any {
 	componentProps := make(map[string]any, len(props)+1)
 	for key, value := range props {
 		componentProps[key] = value
 	}
 	componentProps["content"] = SafeHTML(content)
 
-	return map[string]any{
+	context := map[string]any{
 		"data":  contextValue(base, "data"),
 		"pages": contextValue(base, "pages"),
 		"page":  contextValue(base, "page"),
 		"props": componentProps,
 	}
+	functions.Inject(context, processor.functions)
+
+	return context
 }
 
 // contextValue extracts a named value from a context map.
