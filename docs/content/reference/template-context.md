@@ -61,7 +61,7 @@ In component templates, `props` contains tag attributes and `props.content`:
 
 ## Template Helpers
 
-Templates, includes, and components can call `load_data` to read local or remote data:
+Templates, includes, and components can call built-in and custom template functions. `load_data` reads local or remote data:
 
 ```html
 {% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
@@ -70,9 +70,15 @@ Templates, includes, and components can call `load_data` to read local or remote
 
 See [Template Functions](../api/template-functions.md) for details.
 
-Templates, includes, and components can also call `url` to generate current-page-relative links:
+They can also call `url` to generate current-page-relative links:
 
 ```html
 <a href="{{ url(page.permalink) }}">{{ page.title }}</a>
 <link rel="stylesheet" href="{{ url("/styles.css") }}">
+```
+
+Custom functions from `functions/*.js` are available by file stem:
+
+```html
+{{ excerpt(page.content, 120) }}
 ```

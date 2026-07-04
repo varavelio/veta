@@ -126,6 +126,23 @@ Templates, includes, and components can load local or remote data with `load_dat
 
 Use `load_data` for template-specific data. Use global `data/` files for data shared across the whole site. See [Template Functions](../api/template-functions.md) for the full API.
 
+## Functions
+
+Templates, includes, and components can call built-in functions such as `url`, `regex_replace`, and `load_data`. Projects can add custom JavaScript functions in `functions/`:
+
+```js
+// functions/excerpt.js
+export default function({ page }, value, length) {
+  return String(value || page.title).slice(0, Number(length));
+}
+```
+
+```html
+{{ excerpt(page.content, 120) }}
+```
+
+See [Template Functions](../api/template-functions.md) for details.
+
 ## Filters
 
 Veta registers built-in filters and custom filters:

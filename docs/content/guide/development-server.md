@@ -64,6 +64,7 @@ templates/
 includes/
 components/
 filters/
+functions/
 public/
 ```
 

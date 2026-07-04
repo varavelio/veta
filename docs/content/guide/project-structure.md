@@ -13,6 +13,7 @@ A Veta project is a folder with a `veta.yaml` configuration file and optional fe
   components/
   data/
   filters/
+  functions/
   includes/
   pages/
   public/
@@ -87,6 +88,14 @@ Nested directories become nested keys.
 
 ```txt
 filters/titlecase.js        -> {{ page.title|titlecase }}
+```
+
+## `functions/`
+
+`functions/` contains custom JavaScript template functions. The directory is flat and every function file must end in `.js`.
+
+```txt
+functions/excerpt.js        -> {{ excerpt(page.content, 120) }}
 ```
 
 ## `public/`

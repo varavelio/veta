@@ -25,7 +25,7 @@ Do not commit secrets into `data/` or `pages/`.
 
 ## `console`
 
-The console API is available as `console` in the context and as a JavaScript global.
+The console API is available as a JavaScript global. It is not part of the default export context object.
 
 Supported methods:
 
@@ -40,7 +40,7 @@ console.warn
 Example:
 
 ```js
-export default function({ console }) {
+export default function() {
   console.info("Generating pages");
   return [];
 }

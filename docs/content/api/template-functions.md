@@ -1,11 +1,19 @@
 ---
 title: "Template Functions"
-description: "Load local and remote text directly from Pongo templates with load_data."
+description: "Use built-in and custom functions from Pongo templates, includes, and components."
 ---
 
 # Template Functions
 
-Veta registers template helpers for Pongo templates and components.
+Veta registers template functions for Pongo templates, includes, and components.
+
+Built-in functions are always available:
+
+- `url`
+- `regex_replace`
+- `load_data`
+
+Custom functions live in `functions/*.js` and use the file stem as the template function name.
 
 ## `url`
 
@@ -101,3 +109,25 @@ Parsed values return normal template values:
 ```html
 {{ site.title }} {{ navigation.items.0.label }} {{ theme.colors.primary }}
 ```
+
+## Custom Functions
+
+Custom functions are synchronous JavaScript files in `functions/`. Each file must export one default function:
+
+```js
+// functions/excerpt.js
+export default function({ page }, value, length) {
+  console.log("excerpt", page.permalink);
+  return String(value).slice(0, Number(length));
+}
+```
+
+Use the file stem as the function name:
+
+```html
+{{ excerpt(page.content, 120) }}
+```
+
+The first argument is the JavaScript runtime context. Template functions receive `data`, `pages`, `page`, `props`, `files`, `httpClient`, `parse`, and `env`. `console` is available as a JavaScript global, not as `context.console`.
+
+Function files are flat. Nested directories under `functions/` are not supported. A custom function can override a built-in function by using the same file stem.

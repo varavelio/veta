@@ -11,6 +11,7 @@ Veta uses JavaScript for three kinds of project files:
 data/*.js       -> global data producers
 pages/*.js      -> page generators
 filters/*.js    -> template filters
+functions/*.js  -> template functions
 ```
 
 JavaScript files are self-contained and synchronous. They do not use imports, module loading, or asynchronous promises. Each file must export one default function.
@@ -26,7 +27,6 @@ files
 httpClient
 parse
 env
-console
 ```
 
 Additional context keys depend on where the file runs.
@@ -36,7 +36,7 @@ Additional context keys depend on where the file runs.
 Data files run while global data is being loaded, so they do not receive `data`.
 
 ```js
-export default function({ env, files, httpClient, console }) {
+export default function({ env, files, httpClient }) {
   return {
     mode: env.VETA_MODE || "production",
   };
@@ -56,7 +56,7 @@ data/github.js -> data.github
 Page generators receive loaded global data:
 
 ```js
-export default function({ data, files, httpClient, env, console }) {
+export default function({ data, files, httpClient, env }) {
   return [
     {
       permalink: "/",
@@ -81,6 +81,22 @@ export default function({ data }, input, parameter) {
 }
 ```
 
+## `functions/*.js`
+
+Template functions receive the runtime context followed by explicit template arguments:
+
+```js
+export default function({ page, data, files, parse }, value, length) {
+  return String(value || page.title).slice(0, Number(length));
+}
+```
+
+Use the file stem as a function in templates, includes, and components:
+
+```html
+{{ excerpt(page.content, 120) }}
+```
+
 Use it in a template:
 
 ```html
@@ -99,10 +115,10 @@ export default function({ files }) {
 
 ## Console
 
-The `console` object is available both globally and through context:
+The `console` object is available as a JavaScript global:
 
 ```js
-export default function({ console }) {
+export default function() {
   console.log("Generating pages");
   return [];
 }
