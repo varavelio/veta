@@ -117,6 +117,48 @@ func TestBuildSupportsTemplateHelpers(t *testing.T) {
 	require.Contains(t, docs, `hello`)
 }
 
+// TestBuildSupportsCustomTemplateFunctions verifies functions/*.js and built-in
+// template functions in page templates and components.
+func TestBuildSupportsCustomTemplateFunctions(t *testing.T) {
+	projectRoot := copyTestProject(t, "custom-functions")
+
+	result := runVeta(t, projectRoot, "build")
+	result.requireSuccess(t)
+	require.Contains(t, result.stdout, "Veta built 2 pages to dist in ")
+	require.Contains(t, result.stderr, "[js log] excerpt /")
+	require.Contains(t, result.stderr, "[js log] excerpt /docs/intro/")
+
+	index := readProjectFile(t, projectRoot, "dist/index.html")
+	require.Contains(t, index, `<link rel="stylesheet" href='styles.css'>`)
+	require.Contains(t, index, `data-page="/"`)
+	require.Contains(t, index, `data-slug="Home-Page"`)
+	require.Contains(t, index, `class="active"`)
+	require.Contains(t, index, `href="."`)
+	require.Contains(t, index, `>Home Page</a>`)
+	require.Contains(t, index, `href="docs/intro/"`)
+	require.Contains(t, index, `>Docs Intro</a>`)
+	require.Contains(t, index, `data-site="Custom Functions Site"`)
+	require.Contains(t, index, `&lt;p&gt;This cont`)
+	require.Contains(t, index, `This content comes from the custom functions fixture.`)
+	require.Contains(t, index, `data-badge='Loaded: Data Badge'`)
+	require.Contains(t, index, `data-component-label="Content Badge"`)
+	require.Contains(t, index, `data-component-url='styles.css'`)
+	require.Contains(t, index, `Home`)
+
+	docs := readProjectFile(t, projectRoot, "dist/docs/intro/index.html")
+	require.Contains(t, docs, `<link rel="stylesheet" href='../../styles.css'>`)
+	require.Contains(t, docs, `data-page="/docs/intro/"`)
+	require.Contains(t, docs, `data-slug="Docs-Intro"`)
+	require.Contains(t, docs, `href="../../"`)
+	require.Contains(t, docs, `>Home Page</a>`)
+	require.Contains(t, docs, `class="active"`)
+	require.Contains(t, docs, `href="."`)
+	require.Contains(t, docs, `>Docs Intro</a>`)
+	require.Contains(t, docs, `&lt;p&gt;Nested pa`)
+	require.Contains(t, docs, `Nested page`)
+	require.Contains(t, docs, `data-component-url='../../styles.css'`)
+}
+
 // TestBuildMinifiesGeneratedHTMLOnly verifies html.minify affects generated HTML only.
 func TestBuildMinifiesGeneratedHTMLOnly(t *testing.T) {
 	projectRoot := t.TempDir()

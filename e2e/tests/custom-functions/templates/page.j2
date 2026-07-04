@@ -1,0 +1,24 @@
+{% set loaded_site = load_data("data/site.yaml")|parse_yaml %}
+{% set slug = regex_replace(page.title, "[^a-zA-Z0-9]+", "-") %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{{ page.title }} | {{ data.site.name }}</title>
+    <link rel="stylesheet" href='{{ url("/styles.css") }}'>
+  </head>
+  <body data-page="{{ page.permalink }}" data-slug="{{ slug }}">
+    <nav>
+      {% for item in pages %}
+        <a
+          class="{{ active(item.permalink) }}"
+          href="{{ url(item.permalink) }}"
+        >{{ item.title }}</a>
+      {% endfor %}
+    </nav>
+    <main>
+      <p data-site="{{ loaded_site.name }}">{{ excerpt(page.content, 12) }}</p>
+      <p data-badge='{{ badge_label("Loaded") }}'></p>
+      {{ page.content }}
+    </main>
+  </body>
+</html>
