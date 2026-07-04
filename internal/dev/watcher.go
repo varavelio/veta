@@ -19,6 +19,7 @@ var watchedDirectories = []string{
 	"includes",
 	"components",
 	"filters",
+	"functions",
 	"public",
 }
 

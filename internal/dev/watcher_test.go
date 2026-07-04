@@ -89,8 +89,9 @@ func TestWatchPathsIncludesConfiguredPaths(t *testing.T) {
 	require.Contains(t, paths, "docs/reference")
 }
 
-func TestDefaultWatchPathsIncludesIncludes(t *testing.T) {
+func TestDefaultWatchPathsIncludesTemplateDirectories(t *testing.T) {
 	paths := defaultWatchPaths()
 
 	require.Contains(t, paths, "includes")
+	require.Contains(t, paths, "functions")
 }
