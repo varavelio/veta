@@ -2,6 +2,7 @@ package data
 
 import (
 	"errors"
+	"io/fs"
 	"testing"
 	"testing/fstest"
 
@@ -82,6 +83,45 @@ func TestLoadMissingDataDirectory(t *testing.T) {
 	values, err := Load(fstest.MapFS{})
 	require.NoError(t, err)
 	require.Equal(t, Values{}, values)
+}
+
+// TestLoadLayers verifies logical data overrides and per-layer duplicate
+// validation.
+func TestLoadLayers(t *testing.T) {
+	t.Run("later layer overrides a different extension", func(t *testing.T) {
+		themeFiles := fstest.MapFS{
+			"data/brand.json": {Data: []byte(`{"name":"Base Theme"}`)},
+			"data/site.js":    {Data: []byte(`this losing script must not execute`)},
+		}
+		projectFiles := fstest.MapFS{
+			"data/site.yaml": {Data: []byte("name: Project\n")},
+		}
+
+		values, err := LoadLayers([]fs.FS{themeFiles, projectFiles})
+		require.NoError(t, err)
+		require.Equal(t, Values{
+			"brand": map[string]any{"name": "Base Theme"},
+			"site":  map[string]any{"name": "Project"},
+		}, values)
+	})
+
+	t.Run("duplicate in lower layer remains an error", func(t *testing.T) {
+		themeFiles := fstest.MapFS{
+			"data/site.json": {Data: []byte(`{}`)},
+			"data/site.yaml": {Data: []byte(`{}`)},
+		}
+		projectFiles := fstest.MapFS{
+			"data/site.toml": {Data: []byte(`name = "Project"`)},
+		}
+
+		_, err := LoadLayers([]fs.FS{themeFiles, projectFiles})
+		require.ErrorIs(t, err, ErrKeyDuplicate)
+	})
+
+	t.Run("requires at least one filesystem", func(t *testing.T) {
+		_, err := LoadLayers([]fs.FS{nil})
+		require.ErrorIs(t, err, ErrFSRequired)
+	})
 }
 
 // TestLoadAcceptsJSONCompatibleTopLevelValues verifies that global data may be

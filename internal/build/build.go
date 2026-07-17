@@ -187,7 +187,10 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	}
 
 	markdownRenderer := markdown.New()
-	siteData, err := data.Load(site.Files, data.WithJSOptions(baseJSOptions(runConfig, nil)...))
+	siteData, err := data.LoadLayers(
+		[]fs.FS{site.Theme, site.Project},
+		data.WithJSOptions(baseJSOptions(runConfig, nil)...),
+	)
 	if err != nil {
 		return Result{}, fmt.Errorf("load data: %w", err)
 	}

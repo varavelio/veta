@@ -127,11 +127,13 @@ theme:
 		t,
 		root,
 		"theme/templates/base.j2",
-		`<html><body>{{ page.content }} {{ data.theme.name }}</body></html>`,
+		`<html><body>{{ page.content }} {{ data.theme.name }} {{ data.brand.name }}</body></html>`,
 	)
-	writeProjectFile(t, root, "theme/data/theme.json", `{"name":"Theme"}`)
+	writeProjectFile(t, root, "theme/data/brand.json", `{"name":"Theme brand"}`)
+	writeProjectFile(t, root, "theme/data/theme.js", `this losing script must not execute`)
 	writeProjectFile(t, root, "theme/public/theme.css", `theme`)
 	writeProjectFile(t, root, "theme/pages/ignored.js", `export default function() { return []; }`)
+	writeProjectFile(t, root, "data/theme.yaml", "name: Project data\n")
 	writeProjectFile(t, root, "pages/site.js", `
 export default function() {
   return [{ permalink: "/", template: "base", content: "Hello" }];
@@ -142,7 +144,8 @@ export default function() {
 	require.NoError(t, err)
 	index := readOutputFile(t, root, "dist/index.html")
 	require.Contains(t, index, "<p>Hello</p>")
-	require.Contains(t, index, "Theme")
+	require.Contains(t, index, "Project data")
+	require.Contains(t, index, "Theme brand")
 	require.Equal(t, "theme", readOutputFile(t, root, "dist/theme.css"))
 }
 

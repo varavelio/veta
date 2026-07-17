@@ -84,6 +84,18 @@ data/theme.json
 
 The project file can customize names, colors, navigation, or other theme-facing values.
 
+Data overrides use the relative path without its extension. The project may
+therefore replace a theme data file while choosing a different supported format:
+
+```txt
+theme:   data/site.json
+project: data/site.yaml
+```
+
+Both files represent `data.site`, so only the project YAML file is loaded. Veta
+still rejects multiple files for the same data key within the project or within
+the theme, such as `data/site.json` and `data/site.yaml` side by side.
+
 ## Theme Configuration Defaults
 
 When building reusable themes, prefer exposing user-configurable defaults through `data/site_defaults.yaml` in the theme. Projects can then override only the values they care about with `data/site.yaml`:
@@ -132,6 +144,6 @@ Then theme templates can prefer project values and fall back to theme defaults:
 {% endif %}
 ```
 
-Use this pattern when you want partial project customization. If a theme provides `data/site.yaml` and the project also provides `data/site.yaml`, the project file replaces the theme file completely.
+Use this pattern when you want partial project customization. If a theme and the project both provide the same logical data path, the project file replaces the theme file completely, even when their extensions differ.
 
 Veta does not deep-merge data files automatically. Keep fallbacks explicit in templates so theme behavior stays easy to understand.
