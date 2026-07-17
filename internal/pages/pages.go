@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/varavelio/veta/internal/js"
+	"github.com/varavelio/veta/internal/sourcefile"
 )
 
 // DirName is the project directory containing page generator scripts.
@@ -80,6 +81,9 @@ func Load(files fs.FS, options ...Option) (Manifest, error) {
 	for _, entry := range entries {
 		if entry.IsDir() {
 			return Manifest{}, fmt.Errorf("%w: %s/%s", ErrNestedUnsupported, DirName, entry.Name())
+		}
+		if !sourcefile.Allowed(entry.Name()) {
+			continue
 		}
 
 		if err := validateGeneratorFileName(entry.Name()); err != nil {

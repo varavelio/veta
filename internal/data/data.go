@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/varavelio/veta/internal/js"
+	"github.com/varavelio/veta/internal/sourcefile"
 )
 
 // DirName is the project directory containing global data files.
@@ -58,6 +59,9 @@ func Load(files fs.FS, options ...Option) (Values, error) {
 			return err
 		}
 		if name == DirName || entry.IsDir() {
+			return nil
+		}
+		if !sourcefile.Allowed(path.Base(name)) {
 			return nil
 		}
 

@@ -13,6 +13,11 @@ import (
 // namespace.
 func TestLoad(t *testing.T) {
 	files := fstest.MapFS{
+		"data/.draft.json":             {Data: []byte(`invalid`)},
+		"data/github.test.js":          {Data: []byte(`invalid`)},
+		"data/navigation-old.yaml":     {Data: []byte(`invalid`)},
+		"data/shop/products.test.json": {Data: []byte(`invalid`)},
+		"data/theme.backup.toml":       {Data: []byte(`invalid`)},
 		"data/github.js": {Data: []byte(`
 			export default function({ env }) {
 				return {
@@ -118,11 +123,6 @@ func TestLoadErrors(t *testing.T) {
 				"data/site.yaml": {Data: []byte(`{}`)},
 			},
 			wantErr: ErrKeyDuplicate,
-		},
-		{
-			name:    "invalid key",
-			files:   fstest.MapFS{"data/site-name.json": {Data: []byte(`{}`)}},
-			wantErr: ErrKeyInvalid,
 		},
 		{
 			name: "file conflicts with nested namespace",

@@ -8,6 +8,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/varavelio/veta/internal/sourcefile"
 )
 
 // DirName is the project directory containing custom template function scripts.
@@ -72,6 +74,9 @@ func Load(files fs.FS, options ...Option) (Set, error) {
 	for _, entry := range entries {
 		if entry.IsDir() {
 			return Set{}, fmt.Errorf("%w: %s/%s", ErrNestedUnsupported, DirName, entry.Name())
+		}
+		if !sourcefile.Allowed(entry.Name()) {
+			continue
 		}
 		if config.runner == nil {
 			return Set{}, ErrRunnerRequired

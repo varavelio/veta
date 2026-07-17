@@ -12,6 +12,9 @@ import (
 // TestLoad verifies that page generators produce a deterministic manifest.
 func TestLoad(t *testing.T) {
 	files := fstest.MapFS{
+		"pages/.draft.js":     {Data: []byte(`invalid`)},
+		"pages/blog.test.js":  {Data: []byte(`invalid`)},
+		"pages/draft-page.js": {Data: []byte(`invalid`)},
 		"pages/blog.js": {Data: []byte(`
 			export default function({ data }) {
 				return [
@@ -35,6 +38,7 @@ func TestLoad(t *testing.T) {
 				return [{ permalink: "docs/intro", template: "docs/page.j2", content: "Intro", title: "Intro" }];
 			}
 		`)},
+		"pages/notes.test.yaml": {Data: []byte(`invalid`)},
 	}
 
 	manifest, err := Load(files, WithJSOptions(js.WithRuntime(js.Runtime{

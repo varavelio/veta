@@ -33,6 +33,9 @@ func (failingScriptRunner) Run(Source, Context, ...any) (any, error) {
 func TestLoad(t *testing.T) {
 	runner := &testScriptRunner{}
 	set, err := Load(fstest.MapFS{
+		"functions/.draft.js":      {Data: []byte(`invalid`)},
+		"functions/custom.test.js": {Data: []byte(`invalid`)},
+		"functions/not-valid.js":   {Data: []byte(`invalid`)},
 		"functions/custom.js": {
 			Data: []byte(`export default function() { return "custom"; }`),
 		},
@@ -86,12 +89,6 @@ func TestLoadErrors(t *testing.T) {
 		WithScriptRunner(&testScriptRunner{}),
 	)
 	require.ErrorIs(t, err, ErrFormatUnsupported)
-
-	_, err = Load(
-		fstest.MapFS{"functions/bad name.js": {Data: []byte("")}},
-		WithScriptRunner(&testScriptRunner{}),
-	)
-	require.ErrorIs(t, err, ErrNameInvalid)
 }
 
 // TestScriptFunctionErrors verifies JavaScript function execution errors.

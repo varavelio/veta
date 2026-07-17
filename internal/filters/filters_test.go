@@ -28,7 +28,10 @@ func (failingScriptRunner) Run(Source, any, any) (any, error) {
 func TestLoad(t *testing.T) {
 	runner := &testScriptRunner{}
 	set, err := Load(fstest.MapFS{
-		"filters/markdown.js": {Data: []byte(`export default function() { return "custom"; }`)},
+		"filters/.draft.js":     {Data: []byte(`invalid`)},
+		"filters/bad-name.js":   {Data: []byte(`invalid`)},
+		"filters/markdown.js":   {Data: []byte(`export default function() { return "custom"; }`)},
+		"filters/upper.test.js": {Data: []byte(`invalid`)},
 		"filters/upper.js": {
 			Data: []byte(`export default function(input) { return input.toUpperCase(); }`),
 		},
@@ -103,12 +106,6 @@ func TestLoadErrors(t *testing.T) {
 		WithScriptRunner(&testScriptRunner{}),
 	)
 	require.ErrorIs(t, err, ErrFormatUnsupported)
-
-	_, err = Load(
-		fstest.MapFS{"filters/bad name.js": {Data: []byte("")}},
-		WithScriptRunner(&testScriptRunner{}),
-	)
-	require.ErrorIs(t, err, ErrNameInvalid)
 }
 
 // TestScriptFilterErrors verifies JavaScript filter execution errors.
