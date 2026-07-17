@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -16,6 +17,13 @@ type recordingRenderer struct {
 type renderCall struct {
 	context  map[string]any
 	template string
+}
+
+type templateRendererFunc func(name string, context any) (string, error)
+
+// Render calls the underlying test renderer function.
+func (renderer templateRendererFunc) Render(name string, context any) (string, error) {
+	return renderer(name, context)
 }
 
 func (renderer *recordingRenderer) Render(name string, context any) (string, error) {
@@ -100,6 +108,204 @@ func TestProcessorRenderIgnoresUnregisteredAndProtectedTags(t *testing.T) {
 	got, err := processor.Render(content, nil)
 	require.NoError(t, err)
 	require.Equal(t, content, got)
+}
+
+// TestProcessorRenderArbitraryContent verifies that component expansion remains
+// lexical and preserves unrelated content across common input formats.
+func TestProcessorRenderArbitraryContent(t *testing.T) {
+	processor, err := New(
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+		&recordingRenderer{outputs: map[string]string{
+			"components/card.j2": "<article>rendered</article>",
+		}},
+	)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "plain text",
+			content: "Use any text, including 2 < 3 and symbols {}[]().",
+			want:    "Use any text, including 2 < 3 and symbols {}[]().",
+		},
+		{
+			name:    "plain text component",
+			content: "before <card /> after",
+			want:    "before <article>rendered</article> after",
+		},
+		{
+			name:    "markdown",
+			content: "# Heading\n\nText with **formatting**.\n\n<card />",
+			want:    "# Heading\n\nText with **formatting**.\n\n<article>rendered</article>",
+		},
+		{
+			name:    "json string",
+			content: `{"type":"example","content":"<card />","native":"<span>ok</span>"}`,
+			want:    `{"type":"example","content":"<article>rendered</article>","native":"<span>ok</span>"}`,
+		},
+		{
+			name:    "complex html",
+			content: `<main><section data-kind="native"><card /></section><custom-element>unchanged</custom-element></main>`,
+			want:    `<main><section data-kind="native"><article>rendered</article></section><custom-element>unchanged</custom-element></main>`,
+		},
+		{
+			name:    "malformed unknown tag",
+			content: `<unknown title="<card />"`,
+			want:    `<unknown title="<card />"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := processor.Render(test.content, nil)
+			require.NoError(t, err)
+			require.Equal(t, test.want, got)
+		})
+	}
+}
+
+// TestProcessorRenderPreservesNonTagHTMLContexts verifies that component-like
+// text in HTML metadata and raw-text elements remains byte-for-byte unchanged.
+func TestProcessorRenderPreservesNonTagHTMLContexts(t *testing.T) {
+	processor, err := New(
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+		&recordingRenderer{outputs: map[string]string{
+			"components/card.j2": "<article>rendered</article>",
+		}},
+	)
+	require.NoError(t, err)
+
+	content := strings.Join([]string{
+		`<!-- <card /> -->`,
+		`<div data-example="<card />"><card /></div>`,
+		`<DIV data-example="<card />"><card /></DIV>`,
+		`<script>const sample = "<card />";</script>`,
+		`<style>.sample::before { content: "<card />"; }</style>`,
+		`<code><card /></code>`,
+		`<pre><card /></pre>`,
+		`<textarea><card /></textarea>`,
+		`<title><card /></title>`,
+	}, "\n")
+	want := strings.Replace(
+		content,
+		`<div data-example="<card />"><card /></div>`,
+		`<div data-example="<card />"><article>rendered</article></div>`,
+		1,
+	)
+	want = strings.Replace(
+		want,
+		`<DIV data-example="<card />"><card /></DIV>`,
+		`<DIV data-example="<card />"><article>rendered</article></DIV>`,
+		1,
+	)
+
+	got, err := processor.Render(content, nil)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+// TestProcessorRenderRequiresExactRegisteredTagNames verifies that names which
+// merely start with a registered component name remain unchanged.
+func TestProcessorRenderRequiresExactRegisteredTagNames(t *testing.T) {
+	processor, err := New(
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+		&recordingRenderer{},
+	)
+	require.NoError(t, err)
+
+	content := strings.Join([]string{
+		`<cardinal>text</cardinal>`,
+		`<card:part data-example="<card />">text</card:part>`,
+		`<card.component>text</card.component>`,
+		`<card_name>text</card_name>`,
+		`<card@part>text</card@part>`,
+	}, "\n")
+
+	got, err := processor.Render(content, nil)
+	require.NoError(t, err)
+	require.Equal(t, content, got)
+}
+
+// TestProcessorRenderProtectsMarkdownCode verifies valid inline and fenced code
+// delimiters prevent component expansion.
+func TestProcessorRenderProtectsMarkdownCode(t *testing.T) {
+	processor, err := New(
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+		&recordingRenderer{outputs: map[string]string{
+			"components/card.j2": "rendered",
+		}},
+	)
+	require.NoError(t, err)
+
+	content := strings.Join([]string{
+		"`<card />`",
+		"``<card />``",
+		"````html",
+		"<card />",
+		"```",
+		"<card />",
+		"````",
+		"<card />",
+	}, "\n")
+	want := strings.TrimSuffix(content, "<card />") + "rendered"
+
+	got, err := processor.Render(content, nil)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+// TestProcessorRenderDoesNotRescanOutput verifies component output is a final
+// one-pass replacement rather than a new component source.
+func TestProcessorRenderDoesNotRescanOutput(t *testing.T) {
+	renderer := &recordingRenderer{outputs: map[string]string{
+		"components/card.j2": "<card />",
+	}}
+	processor, err := New(
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+		renderer,
+	)
+	require.NoError(t, err)
+
+	got, err := processor.Render("<card />", nil)
+	require.NoError(t, err)
+	require.Equal(t, "<card />", got)
+	require.Len(t, renderer.calls, 1)
+}
+
+// TestProcessorRenderLimitsRecursion verifies recursive re-entry and deeply
+// nested source fail deterministically instead of exhausting the stack.
+func TestProcessorRenderLimitsRecursion(t *testing.T) {
+	t.Run("renderer re-entry", func(t *testing.T) {
+		var processor *Processor
+		renderer := templateRendererFunc(func(_ string, context any) (string, error) {
+			return processor.Render("<card />", context)
+		})
+		var err error
+		processor, err = New(
+			fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+			renderer,
+		)
+		require.NoError(t, err)
+
+		_, err = processor.Render("<card />", nil)
+		require.ErrorIs(t, err, ErrRenderLimit)
+	})
+
+	t.Run("deep source nesting", func(t *testing.T) {
+		processor, err := New(
+			fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+			&recordingRenderer{},
+		)
+		require.NoError(t, err)
+		content := strings.Repeat("<card>", maxRenderDepth+1) +
+			strings.Repeat("</card>", maxRenderDepth+1)
+
+		_, err = processor.Render(content, nil)
+		require.ErrorIs(t, err, ErrRenderLimit)
+	})
 }
 
 // TestProcessorArbitraryExtensions verifies component discovery does not filter

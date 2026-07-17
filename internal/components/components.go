@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"io/fs"
 	"sort"
+	"sync"
 
 	"github.com/varavelio/veta/internal/functions"
 )
 
 // DirName is the project directory containing component templates.
 const DirName = "components"
+
+const maxRenderDepth = 64
 
 // TemplateRenderer renders a component template by name.
 type TemplateRenderer interface {
@@ -49,6 +52,8 @@ type Processor struct {
 	conflicts    []Conflict
 	functions    functions.Set
 	renderer     TemplateRenderer
+	renderDepth  int
+	renderMu     sync.Mutex
 	slotRenderer SlotRenderer
 }
 
@@ -148,13 +153,36 @@ func (processor *Processor) Render(content string, context any) (string, error) 
 	if processor.renderer == nil {
 		return "", ErrRendererRequired
 	}
+	if !processor.enterRender() {
+		return "", ErrRenderLimit
+	}
+	defer processor.leaveRender()
 
-	output, err := processor.renderSegment(content, context)
+	output, err := processor.renderSegment(content, context, 0)
 	if err != nil {
 		return "", err
 	}
 
 	return output, nil
+}
+
+// enterRender reserves one bounded render call for the processor.
+func (processor *Processor) enterRender() bool {
+	processor.renderMu.Lock()
+	defer processor.renderMu.Unlock()
+	if processor.renderDepth >= maxRenderDepth {
+		return false
+	}
+
+	processor.renderDepth++
+	return true
+}
+
+// leaveRender releases one bounded render call for the processor.
+func (processor *Processor) leaveRender() {
+	processor.renderMu.Lock()
+	defer processor.renderMu.Unlock()
+	processor.renderDepth--
 }
 
 // newProcessorConfig applies options and defaults.

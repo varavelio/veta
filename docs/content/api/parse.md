@@ -85,6 +85,8 @@ const content = parse.renderComponents(
 
 Only registered tags are resolved; other tags remain unchanged. Props, slot content, nested components, Pongo component context, includes, and inheritance work as they do elsewhere. This operation does not render Markdown.
 
+Component-like text remains unchanged inside HTML attributes, comments, raw-text and code elements such as `script`, `style`, `code`, `pre`, `textarea`, and `title`, as well as Markdown inline code and fenced code blocks. Component template output is not scanned again, which keeps rendering a bounded, one-pass transformation. Excessively deep input or recursive calls from component template functions fail with a controlled render-limit error.
+
 The caller controls ordering. For a Markdown file that may contain component tags, the recommended page-generator flow is:
 
 ```js

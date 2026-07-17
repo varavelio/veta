@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/varavelio/veta/internal/components"
 	"github.com/varavelio/veta/internal/tailwindcss"
 	"github.com/varavelio/veta/internal/theme"
 )
@@ -152,6 +153,33 @@ export default function() {
 		`<main><p>Ready</p></main>`,
 		readOutputFile(t, root, "dist/html/index.html"),
 	)
+}
+
+// TestRunRejectsRecursiveComponentRendering verifies component template
+// functions cannot recurse until the process exhausts its stack.
+func TestRunRejectsRecursiveComponentRendering(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", "build:\n  clean: true\n")
+	writeProjectFile(
+		t,
+		root,
+		"components/card.j2",
+		`{{ render_components("<card />")|safe }}`,
+	)
+	writeProjectFile(t, root, "functions/render_components.js", `
+export default function({ parse }, content) {
+  return parse.renderComponents(String(content));
+}
+`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function({ parse }) {
+  return [{ permalink: "/", content: parse.renderComponents("<card />") }];
+}
+`)
+
+	_, err := Run(context.Background(), WithRoot(root))
+	require.Error(t, err)
+	require.ErrorContains(t, err, components.ErrRenderLimit.Error())
 }
 
 func TestRunUsesLocalTheme(t *testing.T) {

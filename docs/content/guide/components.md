@@ -81,7 +81,9 @@ const content = parse.renderComponents(`
 `);
 ```
 
-The resolver handles registered nested tags and leaves unregistered tags unchanged. It preserves component props and slots while recursively rendering nested components.
+The resolver handles registered nested tags present in the supplied source and leaves unregistered tags unchanged. It preserves component props and slots while recursively rendering nested components. Rendered component output is final and is not scanned again for more component tags, preventing templates from accidentally creating recursive expansion loops.
+
+Component examples inside Markdown code spans or fences remain unchanged. The same applies to component-like text inside HTML attributes, comments, scripts, styles, code blocks, preformatted blocks, text areas, and titles.
 
 ## Explicit Ordering
 

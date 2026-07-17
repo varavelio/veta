@@ -14,9 +14,13 @@ type tagToken struct {
 	start       int
 }
 
-// renderSegment expands registered component tags in one unbounded content
+// renderSegment expands registered component tags in one bounded content
 // segment.
-func (processor *Processor) renderSegment(content string, context any) (string, error) {
+func (processor *Processor) renderSegment(content string, context any, depth int) (string, error) {
+	if depth >= maxRenderDepth {
+		return "", ErrRenderLimit
+	}
+
 	ranges := protectedRanges(content)
 	var output strings.Builder
 	position := 0
@@ -50,7 +54,11 @@ func (processor *Processor) renderSegment(content string, context any) (string, 
 			return "", err
 		}
 
-		innerContent, err := processor.renderSegment(content[token.end:closingToken.start], context)
+		innerContent, err := processor.renderSegment(
+			content[token.end:closingToken.start],
+			context,
+			depth+1,
+		)
 		if err != nil {
 			return "", err
 		}
@@ -88,7 +96,11 @@ func (processor *Processor) nextToken(
 			return token, true, nil
 		}
 
-		position = index + 1
+		closeIndex := unregisteredTagCloseIndex(content, index)
+		if closeIndex < 0 {
+			return tagToken{}, false, nil
+		}
+		position = closeIndex + 1
 	}
 
 	return tagToken{}, false, nil
@@ -139,6 +151,9 @@ func (processor *Processor) parseTag(content string, start int) (tagToken, bool,
 	if !ok {
 		return tagToken{}, false, nil
 	}
+	if !isTagNameBoundary(content, nameEnd) {
+		return tagToken{}, false, nil
+	}
 	if _, registered := processor.components[name]; !registered {
 		return tagToken{}, false, nil
 	}
@@ -178,6 +193,20 @@ func (processor *Processor) parseTag(content string, start int) (tagToken, bool,
 		selfClosing: selfClosing,
 		start:       start,
 	}, true, nil
+}
+
+// unregisteredTagCloseIndex returns the end of an HTML-like tag that does not
+// participate in component rendering.
+func unregisteredTagCloseIndex(content string, start int) int {
+	position := start + 1
+	if position < len(content) && content[position] == '/' {
+		position++
+	}
+	if position >= len(content) || !isHTMLMarkupStart(content[position]) {
+		return start
+	}
+
+	return tagCloseIndex(content, position+1)
 }
 
 // readTagName reads an HTML-like tag name after a less-than sign.
@@ -226,6 +255,21 @@ func tagCloseIndex(content string, start int) int {
 	}
 
 	return -1
+}
+
+// isTagNameBoundary reports whether a parsed name ends before valid tag syntax.
+func isTagNameBoundary(content string, position int) bool {
+	if position >= len(content) {
+		return false
+	}
+
+	char := content[position]
+	return char == '>' || char == '/' || strings.ContainsRune(" \t\r\n", rune(char))
+}
+
+// isHTMLMarkupStart reports whether a byte can begin non-component markup.
+func isHTMLMarkupStart(char byte) bool {
+	return 'A' <= char && char <= 'Z' || 'a' <= char && char <= 'z' || char == '!' || char == '?'
 }
 
 // isTagNameStart reports whether a byte can start a component tag name.

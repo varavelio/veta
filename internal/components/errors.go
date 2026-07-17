@@ -24,4 +24,8 @@ var (
 
 	// ErrSyntax indicates that component tags are unbalanced or malformed.
 	ErrSyntax = errors.New("component syntax is invalid")
+
+	// ErrRenderLimit indicates that component rendering exceeded its bounded
+	// recursion or source nesting depth.
+	ErrRenderLimit = errors.New("component render limit exceeded")
 )
