@@ -96,6 +96,42 @@ func TestProcessorRender(t *testing.T) {
 	)
 }
 
+// TestProcessorRenderMultilineTags verifies paired and self-closing component
+// invocations accept HTML-like attributes spread across lines.
+func TestProcessorRenderMultilineTags(t *testing.T) {
+	renderer := &recordingRenderer{outputs: map[string]string{
+		"components/card.j2": "<article>rendered</article>",
+	}}
+	processor, err := New(
+		fstest.MapFS{"components/card.j2": {Data: []byte("card")}},
+		renderer,
+	)
+	require.NoError(t, err)
+	content := strings.Join([]string{
+		"<card",
+		`title="Paired"`,
+		`description="A > B"`,
+		">slot</card>",
+		"<card",
+		`title="Self Closing"`,
+		"/>",
+	}, "\n")
+
+	got, err := processor.Render(content, nil)
+	require.NoError(t, err)
+	require.Equal(t, "<article>rendered</article>\n<article>rendered</article>", got)
+	require.Len(t, renderer.calls, 2)
+	require.Equal(t, "Paired", renderer.calls[0].context["props"].(map[string]any)["title"])
+	require.Equal(t, "A > B", renderer.calls[0].context["props"].(map[string]any)["description"])
+	require.Equal(
+		t,
+		SafeHTML("slot"),
+		renderer.calls[0].context["props"].(map[string]any)["content"],
+	)
+	require.Equal(t, "Self Closing", renderer.calls[1].context["props"].(map[string]any)["title"])
+	require.Equal(t, SafeHTML(""), renderer.calls[1].context["props"].(map[string]any)["content"])
+}
+
 // TestProcessorRenderIgnoresUnregisteredAndProtectedTags verifies that regular
 // HTML and code examples are left untouched.
 func TestProcessorRenderIgnoresUnregisteredAndProtectedTags(t *testing.T) {
@@ -181,6 +217,10 @@ func TestProcessorRenderPreservesNonTagHTMLContexts(t *testing.T) {
 	content := strings.Join([]string{
 		`<!-- <card /> -->`,
 		`<div data-example="<card />"><card /></div>`,
+		`<div data-example="<script>"><card /></div>`,
+		`<div data-example="<pre title='>'>"><card /></div>`,
+		"<div data-example=\"`\"><card /></div> `code`",
+		"<card title=\"`\">slot</card> `code`",
 		`<DIV data-example="<card />"><card /></DIV>`,
 		`<script>const sample = "<card />";</script>`,
 		`<style>.sample::before { content: "<card />"; }</style>`,
@@ -193,6 +233,30 @@ func TestProcessorRenderPreservesNonTagHTMLContexts(t *testing.T) {
 		content,
 		`<div data-example="<card />"><card /></div>`,
 		`<div data-example="<card />"><article>rendered</article></div>`,
+		1,
+	)
+	want = strings.Replace(
+		want,
+		`<div data-example="<script>"><card /></div>`,
+		`<div data-example="<script>"><article>rendered</article></div>`,
+		1,
+	)
+	want = strings.Replace(
+		want,
+		`<div data-example="<pre title='>'>"><card /></div>`,
+		`<div data-example="<pre title='>'>"><article>rendered</article></div>`,
+		1,
+	)
+	want = strings.Replace(
+		want,
+		"<div data-example=\"`\"><card /></div> `code`",
+		"<div data-example=\"`\"><article>rendered</article></div> `code`",
+		1,
+	)
+	want = strings.Replace(
+		want,
+		"<card title=\"`\">slot</card> `code`",
+		"<article>rendered</article> `code`",
 		1,
 	)
 	want = strings.Replace(
@@ -242,9 +306,11 @@ func TestProcessorRenderProtectsMarkdownCode(t *testing.T) {
 
 	content := strings.Join([]string{
 		"`<card />`",
+		"`<script>`",
 		"``<card />``",
 		"````html",
 		"<card />",
+		"<script>",
 		"```",
 		"<card />",
 		"````",

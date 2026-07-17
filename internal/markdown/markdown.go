@@ -6,7 +6,9 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/util"
 )
 
 // Renderer converts Markdown content into HTML.
@@ -19,6 +21,9 @@ func New() *Renderer {
 	return &Renderer{
 		markdown: goldmark.New(
 			goldmark.WithExtensions(extension.GFM),
+			goldmark.WithParserOptions(parser.WithBlockParsers(
+				util.Prioritized(&multilineHTMLBlockParser{}, 850),
+			)),
 			goldmark.WithRendererOptions(html.WithUnsafe()),
 		),
 	}

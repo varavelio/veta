@@ -386,10 +386,22 @@ func TestBuildRendersComponentsFromMultipleContentSources(t *testing.T) {
 		markdownPage,
 		`<span class="deep-badge" data-label="Deep Folder">Deep Folder</span>`,
 	)
+	require.Contains(
+		t,
+		markdownPage,
+		`<section class="component-box" data-title="Multiline Source">`,
+	)
+	require.Contains(t, markdownPage, `Multiline <strong>component</strong> slot.`)
+	require.Contains(
+		t,
+		markdownPage,
+		`<span class="deep-badge" data-label="Multiline Self Closing">Multiline Self Closing</span>`,
+	)
 	require.Contains(t, markdownPage, `Inline Code`)
 	require.Contains(t, markdownPage, `Code Fence`)
 	require.NotContains(t, markdownPage, `data-title="Inline Code"`)
 	require.NotContains(t, markdownPage, `data-title="Code Fence"`)
+	require.NotContains(t, markdownPage, `data-title="Multiline Code Fence"`)
 	require.NotContains(t, markdownPage, `<box title=`)
 	require.NotContains(t, markdownPage, `<stack name=`)
 	require.NotContains(t, markdownPage, `<ui-layout-blocks-deep-badge`)

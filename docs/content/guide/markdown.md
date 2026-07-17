@@ -65,6 +65,8 @@ export default function({ files, parse }) {
 
 Component slot content is not given an additional Markdown pass. See [Components](./components.md) for component behavior and context.
 
+Raw HTML and HTML-like component tags are preserved, including opening tags whose quoted attributes span multiple lines. Both paired tags and self-closing tags therefore remain available to the following component pass. Markdown and HTML files are trusted author input in Veta; this rendering step does not sanitize scripts, event attributes, or other raw HTML.
+
 ## Markdown Files
 
 Veta does not automatically discover Markdown pages. Use JavaScript generators to read files and create pages:

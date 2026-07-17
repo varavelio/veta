@@ -16,8 +16,22 @@ Nested **stack** slot with <ui-layout-blocks-deep-badge label="Deep Folder" />.
 
 </box>
 
+<box
+title="Multiline Source">
+Multiline **component** slot.
+
+<ui-layout-blocks-deep-badge
+label="Multiline Self Closing"
+/>
+
+</box>
+
 `<box title="Inline Code">ignored</box>`
 
 ```html
 <box title="Code Fence">ignored</box>
+
+<box
+title="Multiline Code Fence"
+/>
 ```

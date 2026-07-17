@@ -58,6 +58,28 @@ Component template:
 
 All attribute values are strings.
 
+Component invocations use HTML-like syntax. Opening tags and quoted attributes
+can span lines, and components without slot content can be self-closing:
+
+```html
+<callout
+  kind="warning"
+  title="Check the configuration"
+>
+
+This component has **Markdown slot content** when Markdown is rendered first.
+
+</callout>
+
+<status-badge
+  label="Ready"
+  tone="success"
+/>
+```
+
+Keep attribute values quoted. A `>` inside a quoted value does not close the
+tag.
+
 ## Component Names
 
 Component tags are derived from file paths:
@@ -94,7 +116,7 @@ const { frontmatter, html } = parse.markdown(files.readFile(path));
 const content = parse.renderComponents(html);
 ```
 
-There is no implicit Markdown pass before or after component rendering. The returned string can be assigned to a templated page as final trusted `content` or returned by a template-less page as raw output.
+Markdown preserves multiline HTML-like component tags so the component pass can resolve both paired and self-closing forms. There is no implicit Markdown pass before or after component rendering. Do not pass component template output back through Markdown; the returned string can be assigned to a templated page as final trusted `content` or returned by a template-less page as raw output.
 
 ## Component Context
 

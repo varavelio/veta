@@ -21,7 +21,7 @@ func (processor *Processor) renderSegment(content string, context any, depth int
 		return "", ErrRenderLimit
 	}
 
-	ranges := protectedRanges(content)
+	ranges := protectedRanges(content, processor.components)
 	var output strings.Builder
 	position := 0
 	for {

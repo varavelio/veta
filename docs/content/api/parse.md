@@ -73,6 +73,8 @@ Return shape:
 
 Without frontmatter, `frontmatter` is `{}`, `content` is the full input, and `html` is the full input rendered as Markdown.
 
+Raw HTML is preserved as trusted author content. HTML-like opening tags may span lines and can end with either `>` or `/>`; quoted `>` characters inside attributes do not end the tag. This allows paired and self-closing component invocations to survive until an explicit `parse.renderComponents` call.
+
 ## `parse.renderComponents(text)`
 
 Resolves registered component tags in any supplied string and returns the transformed string:

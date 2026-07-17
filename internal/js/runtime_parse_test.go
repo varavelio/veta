@@ -193,6 +193,48 @@ func TestParseRenderComponents(t *testing.T) {
 	})
 }
 
+// TestParseMarkdownThenRenderComponents verifies multiline paired and
+// self-closing component tags survive Markdown rendering and remain resolvable.
+func TestParseMarkdownThenRenderComponents(t *testing.T) {
+	files := fstest.MapFS{
+		"components/badge.j2": {Data: []byte(`<strong>{{ props.label }}</strong>`)},
+		"components/card.j2":  {Data: []byte(`<article>{{ props.content }}</article>`)},
+	}
+	templateRenderer, err := template.New(files)
+	require.NoError(t, err)
+	componentRenderer, err := components.New(files, templateRenderer)
+	require.NoError(t, err)
+	runner := New(
+		WithMarkdownRenderer(markdown.New()),
+		WithComponentRenderer(componentRenderer),
+	)
+	input := `<card
+title="Multiline"
+>
+
+Content with **Markdown** and a badge:
+
+<badge
+label="Self Closing"
+/>
+
+</card>`
+
+	result, err := runner.Call(Source{
+		Name: "markdown-components.js",
+		Code: `export default function({ parse }, input) {
+			const document = parse.markdown(input);
+			return parse.renderComponents(document.html);
+		}`,
+	}, input)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		"<article>\n<p>Content with <strong>Markdown</strong> and a badge:</p>\n<strong>Self Closing</strong>\n</article>",
+		result.Export(),
+	)
+}
+
 // TestParseRenderComponentsErrors verifies argument, dependency, syntax, and
 // renderer failures are reported through the JavaScript call.
 func TestParseRenderComponentsErrors(t *testing.T) {

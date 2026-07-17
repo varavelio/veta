@@ -11,8 +11,8 @@ func BenchmarkRunnerCallSameSource(b *testing.B) {
 	`}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+
+	for b.Loop() {
 		result, err := runner.Call(source, "hello", "world")
 		if err != nil {
 			b.Fatal(err)
