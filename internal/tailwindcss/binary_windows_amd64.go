@@ -9,6 +9,6 @@ var embeddedBinary []byte
 
 const (
 	embeddedBinaryName        = "tailwindcss-windows-x64.exe"
-	embeddedBinarySHA256      = "dc4fd46acd354d976df2a31b6425fbe865a38229a06bc005a4c59f2b3d24ab4a"
+	embeddedBinarySHA256      = "e0e260ce048014e9268f6237ff18f8ccf02cef521cbd0ae04e82c2cdf7aa3955"
 	embeddedBinaryUnsupported = false
 )

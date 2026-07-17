@@ -21,7 +21,7 @@ const (
 	fileMode     = 0o644
 	execFileMode = 0o755
 	timeout      = 10 * time.Minute
-	version      = "v4.3.1"
+	version      = "v4.3.3"
 )
 
 type asset struct {
@@ -33,41 +33,41 @@ type asset struct {
 var assets = []asset{
 	{
 		Name:   "sha256sums.txt",
-		SHA256: "b44b08f3c490ea50432072a3ba6ef4ec1deda260a30a4f39cda2267a38f2252e",
+		SHA256: "527b4fcd96950f9ae8f83bbbff27c61e4ff3596cb0b2eb760f9b3516de5d3c56",
 	},
 	{
 		Name:       "tailwindcss-linux-arm64",
-		SHA256:     "3d662377a86d71c43b549dc06b90db4586b4acd412bf827a3268e951661e5adf",
+		SHA256:     "55fd0b241214eff3de1e8ee4f22796662f2d2e7a49bcfca7477cfd0bac398195",
 		Executable: true,
 	},
 	{
 		Name:       "tailwindcss-linux-arm64-musl",
-		SHA256:     "7ed72712429166d869dc8472e0cd8c61cd46e565a5bc1ba8810612bedfe61e7b",
+		SHA256:     "71ea4be79c9de9827545682df3e040053fb535d37c71ed2cfdedf9385a0868e0",
 		Executable: true,
 	},
 	{
 		Name:       "tailwindcss-linux-x64",
-		SHA256:     "2526d063ba03b71f9a3ea7d5cee14f0aec147f117f222d5adc97b1d736d45999",
+		SHA256:     "dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a",
 		Executable: true,
 	},
 	{
 		Name:       "tailwindcss-linux-x64-musl",
-		SHA256:     "daeabe94235912b3773273053d5c8a16325af3fa513aa03b7295d6f445093cf2",
+		SHA256:     "a04d34ceacc8f52cbe8920ad846cdeb61d3d0021dba32db0d1f77c9d9fad7a6c",
 		Executable: true,
 	},
 	{
 		Name:       "tailwindcss-macos-arm64",
-		SHA256:     "a27c43626185953ee19bdace1939c7601e55da654e0b2fc4461e3e29957aa739",
+		SHA256:     "cdf646702987a743464dff4d9c60fd4480d1c1e73dd819a9a67f1078815dce9d",
 		Executable: true,
 	},
 	{
 		Name:       "tailwindcss-macos-x64",
-		SHA256:     "e9e830ceb3e70b7e0775a3dd79eee8ec82c6b31270f08f2fa2857d0077045ac3",
+		SHA256:     "7922e0953f2110c05976e3bf58f14e643d90427575e766b7d433f5f80cbee7e1",
 		Executable: true,
 	},
 	{
 		Name:       "tailwindcss-windows-x64.exe",
-		SHA256:     "dc4fd46acd354d976df2a31b6425fbe865a38229a06bc005a4c59f2b3d24ab4a",
+		SHA256:     "e0e260ce048014e9268f6237ff18f8ccf02cef521cbd0ae04e82c2cdf7aa3955",
 		Executable: true,
 	},
 }

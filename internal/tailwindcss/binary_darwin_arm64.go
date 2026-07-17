@@ -9,6 +9,6 @@ var embeddedBinary []byte
 
 const (
 	embeddedBinaryName        = "tailwindcss-macos-arm64"
-	embeddedBinarySHA256      = "a27c43626185953ee19bdace1939c7601e55da654e0b2fc4461e3e29957aa739"
+	embeddedBinarySHA256      = "cdf646702987a743464dff4d9c60fd4480d1c1e73dd819a9a67f1078815dce9d"
 	embeddedBinaryUnsupported = false
 )

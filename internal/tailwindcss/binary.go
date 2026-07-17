@@ -14,7 +14,7 @@ import (
 
 const (
 	// Version is the bundled Tailwind CSS standalone CLI version.
-	Version = "v4.3.1"
+	Version = "v4.3.3"
 
 	execFileMode = 0o755
 	fileMode     = 0o644
