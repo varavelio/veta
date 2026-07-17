@@ -56,19 +56,21 @@ data/github.js -> data.github
 Page generators receive loaded global data:
 
 ```js
-export default function({ data, files, httpClient, env }) {
+export default function({ data, parse }) {
+  const { html } = parse.markdown("# Home");
+
   return [
     {
       permalink: "/",
       template: "base",
       title: data.site.name,
-      content: "# Home",
+      content: html,
     },
   ];
 }
 ```
 
-Return an array of page objects.
+Return an array of page objects. Templated content is passed unchanged and trusted to its template, while template-less content is written unchanged as raw output. Use `parse.markdown(text)` and `parse.renderComponents(text)` explicitly when a generator needs those transformations.
 
 ## `filters/*.js`
 

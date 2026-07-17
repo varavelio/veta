@@ -1,11 +1,11 @@
 ---
 title: "Components"
-description: "Create reusable content components with props, slots, Markdown, and Pongo templates."
+description: "Explicitly render reusable content components with props, slots, and Pongo templates."
 ---
 
 # Components
 
-Components are reusable templates stored in `components/`. Veta discovers them and lets you use them as custom tags inside page content.
+Components are reusable templates stored in `components/`. Veta discovers their custom tags, and JavaScript can resolve those tags explicitly with `parse.renderComponents(text)`. Page content is not scanned for components automatically.
 
 ## Basic Component
 
@@ -17,24 +17,35 @@ Create `components/note.html`:
 </aside>
 ```
 
-Use it in page content:
+Resolve it in a page generator:
 
 ```js
-{
-  permalink: "/",
-  template: "base",
-  content: "<note>This supports **Markdown**.</note>",
+export default function({ parse }) {
+  const { html } = parse.markdown(
+    "Welcome to **Veta**.\n\n<note>Components are explicit.</note>",
+  );
+  const content = parse.renderComponents(html);
+
+  return [
+    {
+      permalink: "/",
+      template: "base",
+      content,
+    },
+  ];
 }
 ```
 
-The component receives the rendered slot as `props.content`.
+The component receives its slot as `props.content`. `parse.renderComponents` does not render Markdown; the example renders Markdown first and then resolves components. Calling it directly with `<note>Use **bold**.</note>` leaves the Markdown markers in the slot unchanged.
 
 ## Props
 
 Attributes become string props:
 
 ```js
-content: "<callout kind=\"warning\">Be careful.</callout>";
+const content = parse.renderComponents(
+  "<callout kind=\"warning\">Be careful.</callout>",
+);
 ```
 
 Component template:
@@ -62,17 +73,30 @@ Valid component tags start with a lowercase letter and can contain lowercase let
 
 Components can be nested in content:
 
-```html
-<card title="Welcome">
-  <note>Nested **Markdown** content.</note>
-</card>
+```js
+const content = parse.renderComponents(`
+  <card title="Welcome">
+    <note>Nested component content.</note>
+  </card>
+`);
 ```
 
-Veta parses registered component tags and renders each component with the current page context.
+The resolver handles registered nested tags and leaves unregistered tags unchanged. It preserves component props and slots while recursively rendering nested components.
+
+## Explicit Ordering
+
+The caller controls the transformation order. For Markdown files that may contain components, use:
+
+```js
+const { frontmatter, html } = parse.markdown(files.readFile(path));
+const content = parse.renderComponents(html);
+```
+
+There is no implicit Markdown pass before or after component rendering. The returned string can be assigned to a templated page as final trusted `content` or returned by a template-less page as raw output.
 
 ## Component Context
 
-Component templates receive:
+Component templates use the same root keys as Pongo templates when those values exist:
 
 ```txt
 data
@@ -81,7 +105,9 @@ page
 props
 ```
 
-`props` contains attributes plus `props.content`.
+`props` contains string attributes from the tag plus slot content in `props.content`.
+
+When a page generator calls `parse.renderComponents`, global `data` is available to component templates. `page` and `pages` are not available yet because the generator is still creating the page list. If a context-bound JavaScript template function calls `parse.renderComponents`, its available runtime `page` and `pages` values flow into component rendering. Each resolved tag still supplies its own `props` and slot content.
 
 ## Component Inheritance
 
@@ -118,6 +144,8 @@ Component templates can include shared Pongo fragments from `includes/`:
 ```
 
 This is useful when the same markup is needed from both page templates and content components. Keep shared markup in `includes/`, then include it from `templates/` or `components/` as needed.
+
+Explicit component resolution does not change Pongo behavior: component inheritance, relative paths, shared includes, and the component template context continue to work normally.
 
 If the markup is only used by one component, keep it inside `components/`. If it is only used by page templates, keep it inside `templates/`. `includes/` is the shared convention and is watched by `veta dev` by default.
 

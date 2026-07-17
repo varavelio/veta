@@ -1,20 +1,27 @@
 ---
 title: "Parse API"
-description: "Parse text into structured data from JavaScript runtime context objects."
+description: "Parse structured text, render Markdown, and explicitly resolve components from JavaScript."
 ---
 
 # Parse API
 
-The parse API is available as `parse` in JavaScript context objects. It converts strings into structured values. File and HTTP APIs return text; use `parse` explicitly when you need data.
+The parse API is available as `parse` in JavaScript context objects. It parses structured text, renders Markdown bodies, and explicitly resolves component tags. File and HTTP APIs return text; call the required operations in the order your output needs.
 
 ```js
 export default function({ files, parse }) {
-  const site = parse.json(files.readFile("data/site.json"));
-  const navigation = parse.yaml(files.readFile("data/navigation.yaml"));
-  const theme = parse.toml(files.readFile("data/theme.toml"));
-  const post = parse.markdown(files.readFile("content/posts/hello.md"));
+  const { frontmatter, html } = parse.markdown(
+    files.readFile("content/posts/hello.md"),
+  );
+  const content = parse.renderComponents(html);
 
-  return { site, navigation, theme, post };
+  return [
+    {
+      permalink: "/posts/hello/",
+      template: "post",
+      title: frontmatter.title,
+      content,
+    },
+  ];
 }
 ```
 
@@ -44,7 +51,7 @@ const theme = parse.toml("name = \"Clean\"\n");
 
 ## `parse.markdown(text)`
 
-Parses optional YAML or TOML frontmatter without rendering Markdown to HTML.
+Parses optional YAML or TOML frontmatter and renders the Markdown body to HTML.
 
 ```js
 const post = parse.markdown(files.readFile("content/posts/hello.md"));
@@ -54,11 +61,48 @@ Return shape:
 
 ```js
 {
+  frontmatter: { title: "Hello" },
   content: "# Hello\n\nPost body.\n",
-  frontmatter: { title: "Hello" }
+  html: "<h1>Hello</h1>\n<p>Post body.</p>\n"
 }
 ```
 
-Use the `markdown` template filter when you want to render Markdown text to HTML.
+- `frontmatter` is the parsed object.
+- `content` is the raw body after frontmatter is removed.
+- `html` is the Markdown-rendered body.
+
+Without frontmatter, `frontmatter` is `{}`, `content` is the full input, and `html` is the full input rendered as Markdown.
+
+## `parse.renderComponents(text)`
+
+Resolves registered component tags in any supplied string and returns the transformed string:
+
+```js
+const content = parse.renderComponents(
+  "<callout kind=\"warning\">Check the configuration.</callout>",
+);
+```
+
+Only registered tags are resolved; other tags remain unchanged. Props, slot content, nested components, Pongo component context, includes, and inheritance work as they do elsewhere. This operation does not render Markdown.
+
+The caller controls ordering. For a Markdown file that may contain component tags, the recommended page-generator flow is:
+
+```js
+const { frontmatter, html } = parse.markdown(files.readFile(path));
+const content = parse.renderComponents(html);
+
+return {
+  permalink: files.toPermalink(path, { stripPrefix: "content" }),
+  template: "post",
+  title: frontmatter.title,
+  content,
+};
+```
+
+When called by a page generator, component templates receive global `data`; `page` and `pages` do not exist yet because the generator is creating the page list. When a context-bound JavaScript template function calls it, available runtime `page` and `pages` values can flow into component rendering. Props come from each tag's attributes and slot content.
+
+## Pongo Filter Distinction
+
+The Pongo `parse_markdown` filter is unchanged: it returns `{ content, frontmatter }` and does not render Markdown. Use Pongo's separate `markdown` filter to render that `content`. JavaScript `parse.markdown(text)` returns the additional `html` field described above.
 
 Parsed values are normalized into JavaScript-compatible values. Dates are exposed as strings.

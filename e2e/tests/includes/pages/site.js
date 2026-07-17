@@ -1,10 +1,12 @@
-export default function() {
+export default function({ parse }) {
+  const { html } = parse.markdown("<panel>Nested **slot** content.</panel>");
+
   return [
     {
       permalink: "/",
       template: "base",
       title: "Includes",
-      content: "<panel>Nested **slot** content.</panel>",
+      content: parse.renderComponents(html),
     },
   ];
 }

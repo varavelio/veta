@@ -130,4 +130,6 @@ Use the file stem as the function name:
 
 The first argument is the JavaScript runtime context. Template functions receive `data`, `pages`, `page`, `props`, `files`, `httpClient`, `parse`, and `env`. `console` is available as a JavaScript global, not as `context.console`.
 
+If a template function calls `parse.renderComponents(text)`, its context-bound `data`, `page`, and `pages` values can flow into component templates. Each component tag still supplies its own attributes and slot content through `props`. This differs from page-generator calls, where `page` and `pages` are not available because the generator is still creating the page list.
+
 Function files are flat. Nested directories under `functions/` are not supported. A custom function can override a built-in function by using the same file stem.

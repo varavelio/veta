@@ -8,64 +8,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testContentProcessor struct{}
-
-func (testContentProcessor) Render(content string, context any) (string, error) {
-	return "processed(" + content + ")", nil
-}
-
-type failingContentProcessor struct{}
-
-func (failingContentProcessor) Render(string, any) (string, error) {
-	return "", errors.New("process failed")
-}
-
-type testMarkdownRenderer struct{}
-
-func (testMarkdownRenderer) Render(content string) (string, error) {
-	return "markdown(" + content + ")", nil
-}
-
-type failingMarkdownRenderer struct{}
-
-func (failingMarkdownRenderer) Render(string) (string, error) {
-	return "", errors.New("markdown failed")
-}
-
 type testTemplateRenderer struct {
 	context  any
 	contexts []any
 	name     string
 }
 
+// Render records the template call and emits its page content unchanged.
 func (renderer *testTemplateRenderer) Render(name string, context any) (string, error) {
 	renderer.name = name
 	renderer.context = context
 	renderer.contexts = append(renderer.contexts, context)
 	contextMap := context.(map[string]any)
 	page := contextMap["page"].(map[string]any)
-	return fmt.Sprintf("%s:%s:%s", name, page["title"], page["content"]), nil
+	return fmt.Sprintf("%s:%v:%s", name, page["title"], page["content"]), nil
 }
 
 type failingTemplateRenderer struct{}
 
+// Render returns a deterministic template failure.
 func (failingTemplateRenderer) Render(string, any) (string, error) {
 	return "", errors.New("template failed")
 }
 
-// TestRenderWithTemplate verifies the full in-memory render sequence.
+// TestRenderWithTemplate verifies that generator-provided content is passed to
+// the template unchanged and trusted.
 func TestRenderWithTemplate(t *testing.T) {
 	templateRenderer := &testTemplateRenderer{}
-	renderer, err := New(
-		WithContentProcessor(testContentProcessor{}),
-		WithMarkdownRenderer(testMarkdownRenderer{}),
-		WithTemplateRenderer(templateRenderer),
-	)
+	renderer, err := New(WithTemplateRenderer(templateRenderer))
 	require.NoError(t, err)
 
 	document, err := renderer.Render(Page{
 		Fields: map[string]any{
-			"content": "hello",
+			"content": "<p>Hello</p>",
 			"date":    "2026-06-26",
 			"kind":    "post",
 			"title":   "Blog",
@@ -75,21 +50,17 @@ func TestRenderWithTemplate(t *testing.T) {
 		Template:   "layouts/base",
 	}, map[string]any{"site": map[string]any{"name": "Veta"}})
 	require.NoError(t, err)
-	require.Equal(
-		t,
-		Document{
-			Content:    []byte("layouts/base:Blog:markdown(processed(hello))"),
-			OutputPath: "blog/index.html",
-			Permalink:  "/blog/",
-		},
-		document,
-	)
+	require.Equal(t, Document{
+		Content:    []byte("layouts/base:Blog:<p>Hello</p>"),
+		OutputPath: "blog/index.html",
+		Permalink:  "/blog/",
+	}, document)
 
 	context := templateRenderer.context.(map[string]any)
 	require.Equal(t, map[string]any{"site": map[string]any{"name": "Veta"}}, context["data"])
 	require.Equal(t, map[string]any{}, context["props"])
 	require.Equal(t, map[string]any{
-		"content":    SafeHTML("markdown(processed(hello))"),
+		"content":    SafeHTML("<p>Hello</p>"),
 		"date":       "2026-06-26",
 		"kind":       "post",
 		"outputPath": "blog/index.html",
@@ -98,7 +69,7 @@ func TestRenderWithTemplate(t *testing.T) {
 		"title":      "Blog",
 	}, context["page"])
 	require.Equal(t, []map[string]any{{
-		"content":    SafeHTML("markdown(processed(hello))"),
+		"content":    SafeHTML("<p>Hello</p>"),
 		"date":       "2026-06-26",
 		"kind":       "post",
 		"outputPath": "blog/index.html",
@@ -108,66 +79,70 @@ func TestRenderWithTemplate(t *testing.T) {
 	}}, context["pages"])
 }
 
-// TestRenderWithTemplateDefaultsOmittedContent verifies that templated pages
-// without content still expose processed safe HTML content to templates.
-func TestRenderWithTemplateDefaultsOmittedContent(t *testing.T) {
-	templateRenderer := &testTemplateRenderer{}
-	renderer, err := New(
-		WithContentProcessor(testContentProcessor{}),
-		WithMarkdownRenderer(testMarkdownRenderer{}),
-		WithTemplateRenderer(templateRenderer),
-	)
-	require.NoError(t, err)
-
-	document, err := renderer.Render(Page{
-		Fields:     map[string]any{"title": "Sitemap"},
-		OutputPath: "sitemap.xml",
-		Permalink:  "/sitemap.xml",
-		Template:   "sitemap",
-	}, nil)
-	require.NoError(t, err)
-	require.Equal(
-		t,
-		Document{
-			Content:    []byte("sitemap:Sitemap:markdown(processed())"),
-			OutputPath: "sitemap.xml",
-			Permalink:  "/sitemap.xml",
+// TestRenderWithTemplatePreservesEveryContentFormat verifies that templated
+// content is never implicitly transformed.
+func TestRenderWithTemplatePreservesEveryContentFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		fields  map[string]any
+		content string
+	}{
+		{
+			name:    "markdown",
+			fields:  map[string]any{"content": "# Heading\n\n**bold**"},
+			content: "# Heading\n\n**bold**",
 		},
-		document,
-	)
+		{
+			name:    "component tag",
+			fields:  map[string]any{"content": `<card title="Raw">Slot</card>`},
+			content: `<card title="Raw">Slot</card>`,
+		},
+		{
+			name:    "rendered html",
+			fields:  map[string]any{"content": "<h1>Heading</h1>"},
+			content: "<h1>Heading</h1>",
+		},
+		{name: "omitted content", fields: map[string]any{}, content: ""},
+	}
 
-	context := templateRenderer.context.(map[string]any)
-	require.Equal(t, map[string]any{
-		"content":    SafeHTML("markdown(processed())"),
-		"outputPath": "sitemap.xml",
-		"permalink":  "/sitemap.xml",
-		"template":   "sitemap",
-		"title":      "Sitemap",
-	}, context["page"])
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			templateRenderer := &testTemplateRenderer{}
+			renderer, err := New(WithTemplateRenderer(templateRenderer))
+			require.NoError(t, err)
+
+			document, err := renderer.Render(Page{
+				Fields:     test.fields,
+				OutputPath: "index.html",
+				Permalink:  "/",
+				Template:   "page",
+			}, nil)
+			require.NoError(t, err)
+			require.Equal(t, "page:<nil>:"+test.content, string(document.Content))
+
+			context := templateRenderer.context.(map[string]any)
+			page := context["page"].(map[string]any)
+			require.Equal(t, SafeHTML(test.content), page["content"])
+		})
+	}
 }
 
 // TestRenderWithoutTemplateReturnsRawContent verifies raw output pages.
 func TestRenderWithoutTemplateReturnsRawContent(t *testing.T) {
-	renderer, err := New(
-		WithContentProcessor(testContentProcessor{}),
-		WithMarkdownRenderer(testMarkdownRenderer{}),
-	)
+	renderer, err := New()
 	require.NoError(t, err)
 
-	document, err := renderer.Render(
-		Page{
-			Fields:     map[string]any{"content": "raw"},
-			OutputPath: "feed.xml",
-			Permalink:  "/feed.xml",
-		},
-		nil,
-	)
+	document, err := renderer.Render(Page{
+		Fields:     map[string]any{"content": "# Raw\n<card />"},
+		OutputPath: "feed.xml",
+		Permalink:  "/feed.xml",
+	}, nil)
 	require.NoError(t, err)
-	require.Equal(
-		t,
-		Document{Content: []byte("raw"), OutputPath: "feed.xml", Permalink: "/feed.xml"},
-		document,
-	)
+	require.Equal(t, Document{
+		Content:    []byte("# Raw\n<card />"),
+		OutputPath: "feed.xml",
+		Permalink:  "/feed.xml",
+	}, document)
 }
 
 // TestRenderWithoutTemplateDefaultsOmittedContent verifies that template-less
@@ -176,22 +151,20 @@ func TestRenderWithoutTemplateDefaultsOmittedContent(t *testing.T) {
 	renderer, err := New()
 	require.NoError(t, err)
 
-	document, err := renderer.Render(
-		Page{
-			OutputPath: "empty.txt",
-			Permalink:  "/empty.txt",
-		},
-		nil,
-	)
+	document, err := renderer.Render(Page{
+		OutputPath: "empty.txt",
+		Permalink:  "/empty.txt",
+	}, nil)
 	require.NoError(t, err)
-	require.Equal(
-		t,
-		Document{Content: []byte(""), OutputPath: "empty.txt", Permalink: "/empty.txt"},
-		document,
-	)
+	require.Equal(t, Document{
+		Content:    []byte(""),
+		OutputPath: "empty.txt",
+		Permalink:  "/empty.txt",
+	}, document)
 }
 
-// TestRenderPages verifies rendering multiple pages.
+// TestRenderPages verifies that every template receives the shared normalized
+// page list without changing page content.
 func TestRenderPages(t *testing.T) {
 	templateRenderer := &testTemplateRenderer{}
 	renderer, err := New(WithTemplateRenderer(templateRenderer))
@@ -228,28 +201,12 @@ func TestRenderPages(t *testing.T) {
 	}, context["pages"])
 }
 
-// TestRenderErrors verifies dependency and render failures.
+// TestRenderErrors verifies dependency and template render failures.
 func TestRenderErrors(t *testing.T) {
 	_, err := (&Renderer{}).Render(Page{Template: "page"}, nil)
 	require.ErrorIs(t, err, ErrTemplateRendererRequired)
 
-	renderer, err := New(
-		WithTemplateRenderer(&testTemplateRenderer{}),
-		WithContentProcessor(failingContentProcessor{}),
-	)
-	require.NoError(t, err)
-	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Template: "page"}, nil)
-	require.ErrorContains(t, err, "process failed")
-
-	renderer, err = New(
-		WithTemplateRenderer(&testTemplateRenderer{}),
-		WithMarkdownRenderer(failingMarkdownRenderer{}),
-	)
-	require.NoError(t, err)
-	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Template: "page"}, nil)
-	require.ErrorContains(t, err, "markdown failed")
-
-	renderer, err = New(WithTemplateRenderer(failingTemplateRenderer{}))
+	renderer, err := New(WithTemplateRenderer(failingTemplateRenderer{}))
 	require.NoError(t, err)
 	_, err = renderer.Render(Page{Fields: map[string]any{"content": "bad"}, Template: "page"}, nil)
 	require.ErrorContains(t, err, "template failed")

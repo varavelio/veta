@@ -34,6 +34,8 @@ Array of all normalized pages.
 
 Each item includes the original page fields plus normalized fields such as `permalink`, `outputPath`, `template`, `generator`, and `index`.
 
+The complete `pages` list exists after page generators have returned. It is not available while a generator is still creating that list.
+
 ## `page`
 
 The current normalized page.
@@ -43,7 +45,7 @@ The current normalized page.
 {{ page.content }}
 ```
 
-For templated pages, `page.content` has already been processed through components and Markdown.
+For templated pages, `page.content` is the generator's unchanged, trusted string. Veta does not automatically render Markdown or resolve components before template rendering.
 
 ## `props`
 
@@ -58,6 +60,8 @@ In component templates, `props` contains tag attributes and `props.content`:
   {{ props.content }}
 </aside>
 ```
+
+Component context depends on where `parse.renderComponents(text)` is called. Page generators provide global `data`, but not `page` or `pages` because those pages are still being created. A context-bound JavaScript template function can pass its available runtime `page` and `pages` values into component rendering. Tag attributes and slot content always supply the rendered component's `props`.
 
 ## Template Helpers
 

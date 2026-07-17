@@ -42,7 +42,7 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	require.Contains(
 		t,
 		readProjectFile(t, projectRoot, "pages/site.js"),
-		"{ data, files, httpClient }",
+		"{ data, files, httpClient, parse }",
 	)
 	require.FileExists(t, filepath.Join(projectRoot, "components", "note.j2"))
 

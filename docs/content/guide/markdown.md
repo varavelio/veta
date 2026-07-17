@@ -1,50 +1,69 @@
 ---
 title: "Markdown"
-description: "Render Markdown content, use frontmatter files, and understand Veta's Markdown pipeline."
+description: "Explicitly render Markdown, parse frontmatter, and combine Markdown with components."
 ---
 
 # Markdown
 
-Veta renders Markdown in templated page content and component slots. It uses GitHub Flavored Markdown features and allows inline HTML.
+Veta provides explicit Markdown parsing through JavaScript and Pongo filters. It uses GitHub Flavored Markdown features and allows inline HTML. Page content is never rendered as Markdown automatically.
 
 ## Markdown In Page Content
 
-When a page object has a `template`, its `content` is rendered as Markdown before the template is rendered:
+Call `parse.markdown(text)` in a page generator and pass its `html` result to the page:
 
 ```js
-{
-  permalink: "/about/",
-  template: "base",
-  title: "About",
-  content: "# About\n\nThis is **Markdown**.",
+export default function({ parse }) {
+  const { html } = parse.markdown("# About\n\nThis is **Markdown**.");
+
+  return [
+    {
+      permalink: "/about/",
+      template: "base",
+      title: "About",
+      content: html,
+    },
+  ];
 }
 ```
 
-Then the template can output the rendered HTML:
+The template outputs that HTML:
 
 ```html
 <main>{{ page.content }}</main>
 ```
 
-`page.content` is marked as trusted HTML after Veta renders it, so Pongo does not escape the generated HTML.
+Templated `page.content` is passed unchanged and trusted to the selected template, so Pongo does not escape it. The generator is responsible for producing the expected final format. Template-less content is also unchanged and is written as raw output, which makes raw Markdown pages possible.
 
-## Markdown In Component Slots
+## Markdown And Components
 
-Component inner content is rendered through the same Markdown renderer:
+Markdown rendering and component resolution are independent operations. Call them explicitly in the order required by the source. The recommended generator flow is:
 
 ```js
-{
-  permalink: "/",
-  template: "base",
-  content: "<note>Use **bold text** inside a component.</note>",
+const { frontmatter, html } = parse.markdown(files.readFile(path));
+const content = parse.renderComponents(html);
+return content;
+```
+
+`parse.renderComponents(text)` resolves registered component tags but does not render Markdown. For example:
+
+```js
+export default function({ files, parse }) {
+  const path = "content/about.md";
+  const { frontmatter, html } = parse.markdown(files.readFile(path));
+  const content = parse.renderComponents(html);
+
+  return [
+    {
+      permalink: "/about/",
+      template: "base",
+      title: frontmatter.title,
+      content,
+    },
+  ];
 }
 ```
 
-Component template:
-
-```html
-<aside>{{ props.content }}</aside>
-```
+Component slot content is not given an additional Markdown pass. See [Components](./components.md) for component behavior and context.
 
 ## Markdown Files
 
@@ -53,13 +72,14 @@ Veta does not automatically discover Markdown pages. Use JavaScript generators t
 ```js
 export default function({ files, parse }) {
   return files.listFiles("content/posts/**/*.md").map((path) => {
-    const post = parse.markdown(files.readFile(path));
+    const { frontmatter, html } = parse.markdown(files.readFile(path));
+    const content = parse.renderComponents(html);
 
     return {
       permalink: files.toPermalink(path, { stripPrefix: "content" }),
       template: "post",
-      title: post.frontmatter.title,
-      content: post.content,
+      title: frontmatter.title,
+      content,
     };
   });
 }
@@ -114,15 +134,27 @@ Returns:
 
 ```js
 {
-  content: "# Hello World\n\nPost body.\n",
   frontmatter: {
     title: "Hello World",
     draft: false,
     tags: ["guide", "intro"]
-  }
+  },
+  content: "# Hello World\n\nPost body.\n",
+  html: "<h1>Hello World</h1>\n<p>Post body.</p>\n"
 }
 ```
 
-If a Markdown file has no frontmatter, `frontmatter` is an empty object and `content` is the full file content.
+`content` is the raw Markdown body and `html` is that body rendered as Markdown. If a Markdown file has no frontmatter, `frontmatter` is an empty object and `content` is the full input.
 
 Frontmatter is detected only at the first line of the file. A `---` or `+++` line later in the document is treated as normal Markdown content.
+
+## Pongo Markdown Filters
+
+The Pongo `parse_markdown` filter keeps its template-specific return shape, `{ content, frontmatter }`, and does not render Markdown. Pipe `content` through the separate `markdown` filter when HTML is required:
+
+```html
+{% set post = load_data("content/post.md")|parse_markdown %}
+{{ post.content|markdown }}
+```
+
+This differs from JavaScript `parse.markdown(text)`, which also returns `html`.

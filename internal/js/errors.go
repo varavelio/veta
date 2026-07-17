@@ -46,4 +46,14 @@ var (
 
 	// ErrHTTPURLUnsupported indicates that a URL is not an absolute HTTP(S) URL.
 	ErrHTTPURLUnsupported = errors.New("http client only supports absolute http and https URLs")
+
+	// ErrMarkdownRendererRequired indicates that parse.markdown was called without
+	// a configured Markdown renderer.
+	ErrMarkdownRendererRequired = errors.New("parse.markdown requires a markdown renderer")
+
+	// ErrComponentRendererRequired indicates that parse.renderComponents was
+	// called without a configured component renderer.
+	ErrComponentRendererRequired = errors.New(
+		"parse.renderComponents requires a component renderer",
+	)
 )

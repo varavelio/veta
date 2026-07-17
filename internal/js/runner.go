@@ -45,15 +45,17 @@ type Option func(*Runner)
 //
 // Runner is safe to reuse because each execution receives a fresh Goja runtime.
 type Runner struct {
-	runtime          Runtime
-	root             string
-	environment      Environment
-	consoleOutput    io.Writer
-	consoleMu        sync.Mutex
-	executionTimeout time.Duration
-	httpTimeout      time.Duration
-	programs         map[programCacheKey]*goja.Program
-	programsMu       sync.RWMutex
+	componentRenderer ComponentRenderer
+	runtime           Runtime
+	root              string
+	environment       Environment
+	consoleOutput     io.Writer
+	consoleMu         sync.Mutex
+	executionTimeout  time.Duration
+	httpTimeout       time.Duration
+	markdownRenderer  MarkdownRenderer
+	programs          map[programCacheKey]*goja.Program
+	programsMu        sync.RWMutex
 }
 
 type programCacheKey struct {

@@ -106,19 +106,24 @@ Data files become available in templates and page generators through the `data` 
 Open `pages/site.js`:
 
 ```js
-export default function({ data, files, httpClient }) {
+export default function({ data, parse }) {
+  const home = parse.markdown(`Welcome to **${data.site.name}**.`).html;
+  const about = parse.markdown(
+    "This page was generated from `pages/site.js`.",
+  ).html;
+
   return [
     {
       permalink: "/",
       template: "base",
       title: "Home",
-      content: "Welcome to **Veta**.",
+      content: home,
     },
     {
       permalink: "/about/",
       template: "base",
       title: "About",
-      content: "This page was generated from `pages/site.js`.",
+      content: about,
     },
   ];
 }
@@ -137,7 +142,7 @@ Each page object needs a `permalink`:
 }
 ```
 
-If `template` is present, Veta processes the page `content` through components and Markdown, then renders the template from `templates/`. If `template` is omitted, Veta writes `content` as raw output.
+If `template` is present, Veta passes `content` unchanged and trusted to the selected file in `templates/`. It does not automatically process Markdown or components, so the generator must produce the final expected format, usually HTML. If `template` is omitted, Veta writes `content` unchanged as raw output.
 
 ## 6. Use A Template
 
@@ -192,15 +197,24 @@ Components are templates stored in `components/`. The starter includes `componen
 Use it inside page content:
 
 ```js
-{
-  permalink: "/",
-  template: "base",
-  title: "Home",
-  content: "<note>This content supports **Markdown**.</note>",
+export default function({ parse }) {
+  const { html } = parse.markdown(
+    "Welcome to **Veta**.\n\n<note>Components are explicit.</note>",
+  );
+  const content = parse.renderComponents(html);
+
+  return [
+    {
+      permalink: "/",
+      template: "base",
+      title: "Home",
+      content,
+    },
+  ];
 }
 ```
 
-The inner content of a paired component tag is rendered as Markdown before it is passed to the component as `props.content`.
+`parse.renderComponents` resolves registered component tags and passes tag attributes and slot content through `props`. It does not render Markdown, which is why this example calls `parse.markdown` first. Components are not resolved unless the generator explicitly calls it.
 
 ## 8. Read Markdown Files
 
@@ -233,13 +247,14 @@ export default function({ files, parse }) {
   const posts = files.listFiles("content/posts/**/*.md");
 
   return posts.map((path) => {
-    const post = parse.markdown(files.readFile(path));
+    const { frontmatter, html } = parse.markdown(files.readFile(path));
+    const content = parse.renderComponents(html);
 
     return {
       permalink: files.toPermalink(path, { stripPrefix: "content" }),
       template: "base",
-      title: post.frontmatter.title,
-      content: post.content,
+      title: frontmatter.title,
+      content,
     };
   });
 }
@@ -249,10 +264,17 @@ export default function({ files, parse }) {
 
 ```js
 {
+  frontmatter: {
+    title: "Hello World",
+    date: "2026-06-30",
+    tags: ["intro"]
+  },
   content: "# Hello World\n\nThis post is stored as Markdown.\n",
-  frontmatter: { title: "Hello World", date: "2026-06-30", tags: ["intro"] }
+  html: "<h1>Hello World</h1>\n<p>This post is stored as Markdown.</p>\n"
 }
 ```
+
+`content` is the raw body, while `html` is the Markdown-rendered body. Without frontmatter, `frontmatter` is `{}` and `content` is the full input.
 
 ## 9. Add Styles With Tailwind CSS
 

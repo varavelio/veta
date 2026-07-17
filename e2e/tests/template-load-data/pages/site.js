@@ -1,9 +1,11 @@
-export default function() {
+export default function({ parse }) {
+  const { html } = parse.markdown("<badge>\n\nComponent **slot**.\n\n</badge>");
+
   return [
     {
       permalink: "/",
       template: "base",
-      content: "<badge>Component **slot**.</badge>",
+      content: parse.renderComponents(html),
     },
   ];
 }

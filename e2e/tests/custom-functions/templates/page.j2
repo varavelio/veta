@@ -18,7 +18,7 @@
     <main>
       <p data-site="{{ loaded_site.name }}">{{ excerpt(page.content, 12) }}</p>
       <p data-badge='{{ badge_label("Loaded") }}'></p>
-      {{ page.content }}
+      {{ render_components(page.content)|safe }}
     </main>
   </body>
 </html>

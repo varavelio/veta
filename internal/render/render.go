@@ -12,17 +12,7 @@ type TemplateRenderer interface {
 	Render(name string, context any) (string, error)
 }
 
-// ContentProcessor transforms page content before Markdown rendering.
-type ContentProcessor interface {
-	Render(content string, context any) (string, error)
-}
-
-// MarkdownRenderer renders Markdown into HTML.
-type MarkdownRenderer interface {
-	Render(content string) (string, error)
-}
-
-// SafeHTML marks rendered content as trusted HTML for downstream template
+// SafeHTML marks generator-provided content as trusted HTML for downstream template
 // adapters that understand this structural interface.
 type SafeHTML string
 
@@ -49,9 +39,7 @@ type Document struct {
 
 // Renderer composes pages with injected renderers.
 type Renderer struct {
-	contentProcessor ContentProcessor
 	functions        functions.Set
-	markdownRenderer MarkdownRenderer
 	templateRenderer TemplateRenderer
 }
 
@@ -71,22 +59,6 @@ func New(options ...Option) (*Renderer, error) {
 	}
 
 	return renderer, nil
-}
-
-// WithContentProcessor configures the pre-Markdown content processor.
-func WithContentProcessor(processor ContentProcessor) Option {
-	return func(renderer *Renderer) error {
-		renderer.contentProcessor = processor
-		return nil
-	}
-}
-
-// WithMarkdownRenderer configures the Markdown renderer.
-func WithMarkdownRenderer(markdownRenderer MarkdownRenderer) Option {
-	return func(renderer *Renderer) error {
-		renderer.markdownRenderer = markdownRenderer
-		return nil
-	}
 }
 
 // WithFunctions configures template functions injected into render contexts.
@@ -125,17 +97,6 @@ func (renderer *Renderer) RenderPages(pages []Page, data any) ([]Document, error
 	}
 
 	pageContexts := pageTemplateContexts(pages)
-	for index, page := range pages {
-		if err := renderer.renderPageContent(
-			page,
-			pageContexts[index],
-			data,
-			pageContexts,
-		); err != nil {
-			return nil, err
-		}
-	}
-
 	documents := make([]Document, 0, len(pages))
 	for index, page := range pages {
 		document, err := renderer.renderPageDocument(page, pageContexts[index], data, pageContexts)
@@ -147,42 +108,6 @@ func (renderer *Renderer) RenderPages(pages []Page, data any) ([]Document, error
 	}
 
 	return documents, nil
-}
-
-// renderPageContent processes the current page content in its shared page context.
-func (renderer *Renderer) renderPageContent(
-	page Page,
-	pageContext map[string]any,
-	data any,
-	pages []map[string]any,
-) error {
-	if page.Template == "" {
-		return nil
-	}
-
-	context := renderer.baseTemplateContext(data, pages, pageContext, map[string]any{})
-	if content, ok := pageStringField(pageContext, "content"); ok {
-		if renderer.contentProcessor != nil {
-			processedContent, err := renderer.contentProcessor.Render(content, context)
-			if err != nil {
-				return fmt.Errorf("process page content %s: %w", page.OutputPath, err)
-			}
-
-			content = processedContent
-		}
-		if renderer.markdownRenderer != nil {
-			renderedContent, err := renderer.markdownRenderer.Render(content)
-			if err != nil {
-				return fmt.Errorf("render page markdown %s: %w", page.OutputPath, err)
-			}
-
-			content = renderedContent
-		}
-
-		pageContext["content"] = SafeHTML(content)
-	}
-
-	return nil
 }
 
 // renderPageDocument renders the current page template or raw content.
@@ -222,6 +147,9 @@ func pageTemplateContext(page Page) map[string]any {
 	maps.Copy(context, page.Fields)
 	if _, exists := context["content"]; !exists {
 		context["content"] = ""
+	}
+	if content, ok := context["content"].(string); ok && page.Template != "" {
+		context["content"] = SafeHTML(content)
 	}
 	context["outputPath"] = page.OutputPath
 	context["permalink"] = page.Permalink

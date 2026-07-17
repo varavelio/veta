@@ -8,15 +8,21 @@ description: "Use Pongo templates, template inheritance, filters, and the Veta t
 Templates live in `templates/` and are rendered with Pongo. A page object uses a template by setting `template`:
 
 ```js
-{
-  permalink: "/",
-  template: "base",
-  title: "Home",
-  content: "# Welcome",
+export default function({ parse }) {
+  const { html } = parse.markdown("# Welcome");
+
+  return [
+    {
+      permalink: "/",
+      template: "base",
+      title: "Home",
+      content: html,
+    },
+  ];
 }
 ```
 
-Veta resolves the name relative to `templates/`.
+Veta resolves the name relative to `templates/`. It passes the generator's `content` string unchanged and trusted to the template; Markdown rendering and component resolution are explicit generator operations.
 
 ## Template Names
 
@@ -111,7 +117,7 @@ Shared Pongo fragments live in `includes/`. Templates can include them by projec
 
 Includes receive the current template context, including `data`, `pages`, `page`, and `props`.
 
-Use `includes/` for reusable markup shared between templates and components, such as buttons, badges, tables, and navigation fragments. Markup used only by page templates can stay in `templates/`. Use `components/` when you need a custom tag inside page content.
+Use `includes/` for reusable markup shared between templates and components, such as buttons, badges, tables, and navigation fragments. Markup used only by page templates can stay in `templates/`. Use `components/` for custom tags that JavaScript explicitly resolves with `parse.renderComponents(text)`; unresolved component tags remain unchanged, and component resolution does not render Markdown.
 
 Pongo can include files from other project directories, but `includes/` is Veta's standard convention and is watched by `veta dev` by default.
 

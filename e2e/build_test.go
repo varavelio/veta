@@ -82,7 +82,8 @@ func TestBuildSupportsLoadDataInPongo(t *testing.T) {
 	require.Contains(t, index, `<a href="/docs/">Docs</a>`)
 	require.Contains(t, index, `<p data-snippet="include">Plain text from load_data.`)
 	require.Contains(t, index, `<aside data-badge="blue">`)
-	require.Contains(t, index, `Loaded Badge: <p>Component <strong>slot</strong>.</p>`)
+	require.Contains(t, index, `Loaded Badge:`)
+	require.Contains(t, index, `<p>Component <strong>slot</strong>.</p>`)
 }
 
 // TestBuildSupportsTemplateHelpers verifies portable URLs, regex replacement,
@@ -317,7 +318,8 @@ func TestBuildComposesLocalThemeWithProjectOverrides(t *testing.T) {
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, "Theme brand: Base Theme")
 	require.Contains(t, index, "Project: Theme Override Site")
-	require.Contains(t, index, `<div class="project-badge"><p>Project component</p>`)
+	require.Contains(t, index, `<div class="project-badge">`)
+	require.Contains(t, index, `<p>Project component</p>`)
 	require.NotContains(t, index, "theme-badge")
 
 	themeOnly := readProjectFile(t, projectRoot, "dist/theme-only/index.html")
@@ -353,15 +355,15 @@ func TestBuildSupportsTemplateAndComponentInheritance(t *testing.T) {
 	require.Contains(t, index, `base-footer / child-footer`)
 }
 
-// TestBuildRendersComponentsFromMultipleContentSources verifies component expansion
-// across Markdown files, raw file content, inline generator strings, nesting, and
-// nested component directories.
+// TestBuildRendersComponentsFromMultipleContentSources verifies explicit
+// Markdown and component rendering across multiple content sources while
+// templated content without explicit calls remains unchanged.
 func TestBuildRendersComponentsFromMultipleContentSources(t *testing.T) {
 	projectRoot := copyTestProject(t, "component-pipeline")
 
 	result := runVeta(t, projectRoot, "build")
 	result.requireSuccess(t)
-	require.Contains(t, result.stdout, "Veta built 3 pages to dist in ")
+	require.Contains(t, result.stdout, "Veta built 4 pages to dist in ")
 
 	markdownPage := readProjectFile(t, projectRoot, "dist/markdown/index.html")
 	require.Contains(t, markdownPage, `<title>Markdown Components</title>`)
@@ -419,4 +421,16 @@ func TestBuildRendersComponentsFromMultipleContentSources(t *testing.T) {
 	require.NotContains(t, inlinePage, `<box title=`)
 	require.NotContains(t, inlinePage, `<stack name=`)
 	require.NotContains(t, inlinePage, `<ui-layout-blocks-deep-badge`)
+
+	automaticPage := readProjectFile(t, projectRoot, "dist/automatic/index.html")
+	require.Contains(
+		t,
+		automaticPage,
+		`<body data-source="unchanged" data-permalink="/automatic/">`,
+	)
+	require.Contains(t, automaticPage, "# Unprocessed")
+	require.Contains(t, automaticPage, `<box title="Automatic">Still **raw**.</box>`)
+	require.Contains(t, automaticPage, `<p>Ready HTML</p>`)
+	require.NotContains(t, automaticPage, `class="component-box"`)
+	require.NotContains(t, automaticPage, `<h1>Unprocessed</h1>`)
 }

@@ -5,7 +5,7 @@ description: "Parse YAML and TOML frontmatter with parse.markdown and parse_mark
 
 # Markdown Frontmatter
 
-`parse.markdown(text)` in JavaScript and `parse_markdown` in Pongo templates support optional frontmatter at the start of a Markdown string.
+`parse.markdown(text)` in JavaScript and `parse_markdown` in Pongo templates support optional frontmatter at the start of a Markdown string. Their return shapes differ: JavaScript also renders the body into an `html` field, while the Pongo filter keeps `{ content, frontmatter }`.
 
 Supported delimiters:
 
@@ -57,16 +57,13 @@ const post = parse.markdown(files.readFile("content/posts/hello.md"));
 
 ```js
 {
+  frontmatter: { title: "Hello", draft: false, tags: ["guide", "intro"] },
   content: "# Hello\n\nBody.\n",
-  frontmatter: {
-    title: "Hello",
-    draft: false,
-    tags: ["guide", "intro"]
-  }
+  html: "<h1>Hello</h1>\n<p>Body.</p>\n"
 }
 ```
 
-One blank line immediately after the closing delimiter is removed from `content`.
+`content` is the raw body, and `html` is the Markdown-rendered body. One blank line immediately after the closing delimiter is removed from `content` before `html` is rendered.
 
 ## Files Without Frontmatter
 
@@ -80,10 +77,24 @@ Returns:
 
 ```js
 {
+  frontmatter: {},
   content: "# Plain Markdown\n\nNo frontmatter.\n",
-  frontmatter: {}
+  html: "<h1>Plain Markdown</h1>\n<p>No frontmatter.</p>\n"
 }
 ```
+
+Without frontmatter, `content` is the full input.
+
+## Pongo `parse_markdown`
+
+The Pongo filter remains a frontmatter parser only:
+
+```html
+{% set post = load_data("content/posts/hello.md")|parse_markdown %}
+{{ post.content|markdown }}
+```
+
+It returns `{ content, frontmatter }`; use the separate `markdown` filter to produce HTML.
 
 ## Validation
 

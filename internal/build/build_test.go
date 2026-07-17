@@ -54,13 +54,14 @@ export default function(context, input) {
 		`<sitemap>{{ page.content }}{% for item in pages %}<url>{{ item.permalink }}</url>{% endfor %}</sitemap>`,
 	)
 	writeProjectFile(t, root, "pages/site.js", `
-export default function({ data }) {
+export default function({ data, parse }) {
+  const { html } = parse.markdown("<card>**Hello**</card>");
   return [
     {
       permalink: "/",
       template: "base",
       title: data.site.title,
-      content: "<card>**Hello**</card>"
+      content: parse.renderComponents(html)
     },
     {
       permalink: "/raw/",
@@ -115,6 +116,44 @@ export default function({ data }) {
 	require.Equal(t, `body { color: black; }`, asset)
 }
 
+// TestRunLeavesTemplatedContentUnchanged verifies that selecting a template no
+// longer triggers implicit Markdown or component rendering.
+func TestRunLeavesTemplatedContentUnchanged(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", "build:\n  clean: true\n")
+	writeProjectFile(t, root, "components/card.j2", `<article>{{ props.content }}</article>`)
+	writeProjectFile(t, root, "templates/page.j2", `<main>{{ page.content }}</main>`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [
+    { permalink: "/", template: "page" },
+    { permalink: "/markdown/", template: "page", content: "# Heading\n\nBody" },
+    { permalink: "/component/", template: "page", content: "<card>Slot</card>" },
+    { permalink: "/html/", template: "page", content: "<p>Ready</p>" }
+  ];
+}
+`)
+
+	_, err := Run(context.Background(), WithRoot(root))
+	require.NoError(t, err)
+	require.Equal(t, `<main></main>`, readOutputFile(t, root, "dist/index.html"))
+	require.Equal(
+		t,
+		"<main># Heading\n\nBody</main>",
+		readOutputFile(t, root, "dist/markdown/index.html"),
+	)
+	require.Equal(
+		t,
+		`<main><card>Slot</card></main>`,
+		readOutputFile(t, root, "dist/component/index.html"),
+	)
+	require.Equal(
+		t,
+		`<main><p>Ready</p></main>`,
+		readOutputFile(t, root, "dist/html/index.html"),
+	)
+}
+
 func TestRunUsesLocalTheme(t *testing.T) {
 	root := t.TempDir()
 	writeProjectFile(t, root, "veta.yaml", `
@@ -143,7 +182,8 @@ export default function() {
 	_, err := Run(context.Background(), WithRoot(root))
 	require.NoError(t, err)
 	index := readOutputFile(t, root, "dist/index.html")
-	require.Contains(t, index, "<p>Hello</p>")
+	require.Contains(t, index, "Hello")
+	require.NotContains(t, index, "<p>Hello</p>")
 	require.Contains(t, index, "Project data")
 	require.Contains(t, index, "Theme brand")
 	require.Equal(t, "theme", readOutputFile(t, root, "dist/theme.css"))

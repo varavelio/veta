@@ -11,8 +11,26 @@ import (
 
 const runtimeObjectName = "context"
 
+// ComponentRenderer expands registered component tags with a runtime context.
+type ComponentRenderer interface {
+	Render(content string, context any) (string, error)
+}
+
+// MarkdownRenderer converts Markdown content into HTML.
+type MarkdownRenderer interface {
+	Render(content string) (string, error)
+}
+
 // Runtime contains values exposed through the default export context argument.
 type Runtime map[string]any
+
+// WithComponentRenderer configures component rendering for
+// context.parse.renderComponents.
+func WithComponentRenderer(renderer ComponentRenderer) Option {
+	return func(runner *Runner) {
+		runner.componentRenderer = renderer
+	}
+}
 
 // WithRuntime configures additional values exposed through the default export
 // context argument.
@@ -60,6 +78,13 @@ func WithHTTPTimeout(timeout time.Duration) Option {
 	}
 }
 
+// WithMarkdownRenderer configures Markdown rendering for context.parse.markdown.
+func WithMarkdownRenderer(renderer MarkdownRenderer) Option {
+	return func(runner *Runner) {
+		runner.markdownRenderer = renderer
+	}
+}
+
 // defaultRuntime returns the built-in JavaScript runtime API.
 func defaultRuntime() Runtime {
 	return Runtime{}
@@ -87,7 +112,8 @@ func (r *Runner) newVM(runtime Runtime) (*goja.Runtime, *goja.Object, error) {
 // newRuntimeObject converts the configured Go runtime API into a Goja object.
 func (r *Runner) newRuntimeObject(vm *goja.Runtime, runtime Runtime) (*goja.Object, error) {
 	runtimeValue := vm.NewObject()
-	for name, value := range r.runtimeSnapshotWith(runtime) {
+	runtimeSnapshot := r.runtimeSnapshotWith(runtime)
+	for name, value := range runtimeSnapshot {
 		if err := runtimeValue.Set(name, value); err != nil {
 			return nil, fmt.Errorf("set %s.%s: %w", runtimeObjectName, name, err)
 		}
@@ -117,7 +143,7 @@ func (r *Runner) newRuntimeObject(vm *goja.Runtime, runtime Runtime) (*goja.Obje
 		return nil, fmt.Errorf("set %s.httpClient: %w", runtimeObjectName, err)
 	}
 
-	parseAPI, err := r.newParseAPI(vm)
+	parseAPI, err := r.newParseAPI(vm, runtimeSnapshot)
 	if err != nil {
 		return nil, err
 	}

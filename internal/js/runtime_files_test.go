@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/varavelio/veta/internal/markdown"
 )
 
 func TestRunnerFileAndParseAPIs(t *testing.T) {
@@ -33,7 +34,10 @@ func TestRunnerFileAndParseAPIs(t *testing.T) {
 		0o644,
 	))
 
-	result, err := New(WithRoot(root)).ExecuteString("site.js", `
+	result, err := New(
+		WithRoot(root),
+		WithMarkdownRenderer(markdown.New()),
+	).ExecuteString("site.js", `
 		export default function({ files, parse }) {
 			const site = parse.json(files.readFile("data/site.json"));
 			const navigation = parse.yaml(files.readFile("data/navigation.yaml"));
@@ -45,6 +49,7 @@ func TestRunnerFileAndParseAPIs(t *testing.T) {
 				label: navigation.items[0].label,
 				permalink: files.toPermalink("content/post.md", { stripPrefix: "content" }),
 				postBody: post.content,
+				postHTML: post.html,
 				postTitle: post.frontmatter.title,
 				theme: theme.name,
 			};
@@ -60,6 +65,7 @@ func TestRunnerFileAndParseAPIs(t *testing.T) {
 		"label":     "Docs",
 		"permalink": "/post/",
 		"postBody":  "# Body\n",
+		"postHTML":  "<h1>Body</h1>\n",
 		"postTitle": "Hello",
 		"theme":     "Clean",
 	}, got)

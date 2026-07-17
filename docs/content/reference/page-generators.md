@@ -8,13 +8,15 @@ description: "Complete contract for objects returned by JavaScript page generato
 Page generators return arrays of page objects:
 
 ```js
-export default function() {
+export default function({ parse }) {
+  const { html } = parse.markdown("# Home");
+
   return [
     {
       permalink: "/",
       template: "base",
       title: "Home",
-      content: "# Home",
+      content: html,
     },
   ];
 }
@@ -64,9 +66,23 @@ Type: string
 
 Defaults to an empty string.
 
-For templated pages, content is processed through components and Markdown before the template is rendered.
+For templated pages, content is passed unchanged and trusted to the selected template. Veta does not automatically render Markdown or resolve component tags. The generator must return the final format expected by the template, usually HTML. Use `parse.markdown(text)` and `parse.renderComponents(text)` explicitly when needed.
 
-For raw pages, content is written directly.
+For template-less pages, content is written unchanged as raw output. It can contain HTML, Markdown, JSON, XML, text, or any other generated format.
+
+A common content-file flow is:
+
+```js
+const { frontmatter, html } = parse.markdown(files.readFile(path));
+const content = parse.renderComponents(html);
+
+return {
+  permalink: files.toPermalink(path, { stripPrefix: "content" }),
+  template: "post",
+  title: frontmatter.title,
+  content,
+};
+```
 
 ## Extra Fields
 
@@ -79,7 +95,7 @@ Any extra fields are preserved and exposed as `page` in templates:
   title: "Hello",
   date: "2026-06-30",
   tags: ["guide"],
-  content: "# Hello",
+  content: "<h1>Hello</h1>",
 }
 ```
 

@@ -29,18 +29,21 @@
         ],
         "title": "Hello"
       },
+      "html": "\u003ch1\u003eHello\u003c/h1\u003e\n\u003cp\u003eFirst post.\u003c/p\u003e\n",
       "path": "content/blog/hello.md",
       "permalink": "/blog/hello/"
     },
     {
       "content": "# Deep\n\nNested post.\n",
       "frontmatter": {},
+      "html": "\u003ch1\u003eDeep\u003c/h1\u003e\n\u003cp\u003eNested post.\u003c/p\u003e\n",
       "path": "content/blog/nested/deep.md",
       "permalink": "/blog/nested/deep/"
     },
     {
       "content": "# Home\n\nWelcome to Veta.\n",
       "frontmatter": {},
+      "html": "\u003ch1\u003eHome\u003c/h1\u003e\n\u003cp\u003eWelcome to Veta.\u003c/p\u003e\n",
       "path": "content/index.md",
       "permalink": "/"
     }

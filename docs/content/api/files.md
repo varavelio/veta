@@ -32,10 +32,13 @@ Reads a file as a UTF-8 string.
 ```js
 const robots = files.readFile("public/robots.txt");
 const site = parse.json(files.readFile("data/site.json"));
-const post = parse.markdown(files.readFile("content/posts/hello.md"));
+const { frontmatter, html } = parse.markdown(
+  files.readFile("content/posts/hello.md"),
+);
+const content = parse.renderComponents(html);
 ```
 
-See [Parse API](./parse.md) and [Frontmatter](./frontmatter.md) for parsing structured content.
+`files.readFile` performs no parsing or rendering. In this example, `frontmatter` contains metadata, `html` is the rendered Markdown body, and `content` is the result of explicitly resolving registered components. See [Parse API](./parse.md) and [Frontmatter](./frontmatter.md) for details.
 
 ## `files.toPermalink(path, options)`
 

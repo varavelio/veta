@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/varavelio/veta/internal/markdown"
 )
 
 // TestRunnerExecute verifies direct in-memory JavaScript execution.
@@ -814,7 +815,10 @@ func TestRunnerExecuteGoldenFiles(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			options := []Option{WithRuntime(test.runtime)}
+			options := []Option{
+				WithRuntime(test.runtime),
+				WithMarkdownRenderer(markdown.New()),
+			}
 			if test.root != "" {
 				options = append(options, WithRoot(test.root))
 			}

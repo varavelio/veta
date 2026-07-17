@@ -67,6 +67,20 @@ type functionScriptRunner struct {
 	runner *js.Runner
 }
 
+type componentRendererAdapter struct {
+	processor *components.Processor
+}
+
+// Render delegates component expansion after build composition has initialized
+// the component processor.
+func (renderer *componentRendererAdapter) Render(content string, context any) (string, error) {
+	if renderer == nil || renderer.processor == nil {
+		return "", js.ErrComponentRendererRequired
+	}
+
+	return renderer.processor.Render(content, context)
+}
+
 // WithRoot configures the directory where config discovery starts.
 func WithRoot(root string) Option {
 	return func(config *runConfig) error {
@@ -189,7 +203,11 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	markdownRenderer := markdown.New()
 	siteData, err := data.LoadLayers(
 		[]fs.FS{site.Theme, site.Project},
-		data.WithJSOptions(baseJSOptions(runConfig, nil)...),
+		data.WithJSOptions(baseJSOptions(
+			runConfig,
+			nil,
+			js.WithMarkdownRenderer(markdownRenderer),
+		)...),
 	)
 	if err != nil {
 		return Result{}, fmt.Errorf("load data: %w", err)
@@ -197,22 +215,13 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	dataContext := map[string]any(siteData)
 	runtime := js.Runtime{"data": dataContext}
 
-	manifest, err := pages.Load(
-		site.Files,
-		pages.WithJSOptions(baseJSOptions(runConfig, runtime)...),
-	)
-	if err != nil {
-		return Result{}, fmt.Errorf("load pages: %w", err)
-	}
-	if err := checkContext(ctx); err != nil {
-		return Result{}, err
-	}
-
+	componentRenderer := &componentRendererAdapter{}
 	templateRenderer, functionSet, err := newTemplateRenderer(
 		site.Files,
 		markdownRenderer,
 		runConfig,
 		runtime,
+		componentRenderer,
 	)
 	if err != nil {
 		return Result{}, err
@@ -221,17 +230,30 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 		site.Files,
 		templateRenderer,
 		components.WithFunctions(functionSet),
-		components.WithSlotRenderer(func(content string, _ any) (string, error) {
-			return markdownRenderer.Render(content)
-		}),
 	)
 	if err != nil {
 		return Result{}, fmt.Errorf("load components: %w", err)
 	}
+	componentRenderer.processor = componentProcessor
+
+	manifest, err := pages.Load(
+		site.Files,
+		pages.WithJSOptions(baseJSOptions(
+			runConfig,
+			runtime,
+			js.WithMarkdownRenderer(markdownRenderer),
+			js.WithComponentRenderer(componentRenderer),
+		)...),
+	)
+	if err != nil {
+		return Result{}, fmt.Errorf("load pages: %w", err)
+	}
+	if err := checkContext(ctx); err != nil {
+		return Result{}, err
+	}
+
 	documentRenderer, err := render.New(
-		render.WithContentProcessor(componentProcessor),
 		render.WithFunctions(functionSet),
-		render.WithMarkdownRenderer(markdownRenderer),
 		render.WithTemplateRenderer(pageTemplateRenderer{renderer: templateRenderer}),
 	)
 	if err != nil {
@@ -489,11 +511,12 @@ func normalizeRoot(root string) (string, error) {
 }
 
 // baseJSOptions returns JavaScript runtime options shared by build loaders.
-func baseJSOptions(config runConfig, runtime js.Runtime) []js.Option {
+func baseJSOptions(config runConfig, runtime js.Runtime, additional ...js.Option) []js.Option {
 	options := []js.Option{js.WithRoot(config.root), js.WithConsoleOutput(config.consoleOutput)}
 	if runtime != nil {
 		options = append(options, js.WithRuntime(runtime))
 	}
+	options = append(options, additional...)
 
 	return options
 }
@@ -504,8 +527,14 @@ func newTemplateRenderer(
 	markdownRenderer *markdown.Renderer,
 	config runConfig,
 	runtime js.Runtime,
+	componentRenderer js.ComponentRenderer,
 ) (*template.Renderer, functions.Set, error) {
-	filterRunner := filterScriptRunner{runner: js.New(baseJSOptions(config, runtime)...)}
+	filterRunner := filterScriptRunner{runner: js.New(baseJSOptions(
+		config,
+		runtime,
+		js.WithMarkdownRenderer(markdownRenderer),
+		js.WithComponentRenderer(componentRenderer),
+	)...)}
 	filterSet, err := filters.Load(
 		files,
 		filters.WithMarkdownRenderer(markdownRenderer),
@@ -519,7 +548,12 @@ func newTemplateRenderer(
 	if err != nil {
 		return nil, functions.Set{}, fmt.Errorf("create load_data loader: %w", err)
 	}
-	functionRunner := functionScriptRunner{runner: js.New(baseJSOptions(config, nil)...)}
+	functionRunner := functionScriptRunner{runner: js.New(baseJSOptions(
+		config,
+		nil,
+		js.WithMarkdownRenderer(markdownRenderer),
+		js.WithComponentRenderer(componentRenderer),
+	)...)}
 	functionSet, err := functions.Load(
 		files,
 		functions.WithLoadData(func(request functions.LoadDataRequest) (any, error) {

@@ -11,7 +11,7 @@ Use `veta build` to create a production static site:
 veta build
 ```
 
-Veta discovers the config file, derives the project root, loads data and pages, renders documents, writes generated files, copies public assets, and optionally runs Tailwind CSS.
+Veta discovers the config file, derives the project root, loads data, and runs page generators. Generators explicitly parse Markdown or resolve components when needed. Veta then passes templated `content` unchanged to its selected template, keeps template-less `content` as raw output, writes generated files, copies public assets, and optionally runs Tailwind CSS.
 
 ## Output Directory
 
@@ -85,7 +85,7 @@ tailwindcss:
   minify: true
 ```
 
-This allows Tailwind to scan the generated output and include classes used by templates, components, and page content.
+This allows Tailwind to scan the final generated output and include classes used by templates, raw or explicitly parsed page content, and components explicitly resolved with `parse.renderComponents(text)`.
 
 ## Explicit Config File
 

@@ -11,6 +11,7 @@ export default function({ files, parse }) {
       return {
         content: file.content,
         frontmatter: file.frontmatter,
+        html: file.html,
         path,
         permalink: files.toPermalink(path, { stripPrefix: "content" }),
       };

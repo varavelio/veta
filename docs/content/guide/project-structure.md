@@ -68,7 +68,7 @@ components/note.j2       -> <note>
 components/ui/card.j2    -> <ui-card>
 ```
 
-Components are used inside page content and receive attributes through `props`.
+Components can be placed inside page content and explicitly resolved with `parse.renderComponents(text)`. They receive tag attributes and slot content through `props`. Component resolution does not render Markdown.
 
 ## `data/`
 

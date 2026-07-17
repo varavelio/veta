@@ -58,7 +58,7 @@ Parse filters convert strings into structured template values:
 {% set post = load_data("content/post.md") | parse_markdown %}
 ```
 
-`parse_markdown` parses YAML or TOML frontmatter and returns `{ content, frontmatter }`. It does not render Markdown to HTML; use `markdown` for rendering.
+`parse_markdown` parses YAML or TOML frontmatter and returns `{ content, frontmatter }`. It does not render Markdown to HTML; use `markdown` for rendering. This Pongo API is distinct from JavaScript `parse.markdown(text)`, which returns `{ frontmatter, content, html }` with the rendered body in `html`.
 
 ## Custom JavaScript Filters
 
