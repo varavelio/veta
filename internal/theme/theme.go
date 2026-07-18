@@ -35,6 +35,7 @@ var allowedThemeDirs = []string{
 	"templates",
 	"components",
 	"filters",
+	"functions",
 	"public",
 }
 

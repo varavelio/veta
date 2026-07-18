@@ -16,11 +16,11 @@ import (
 var watchedDirectories = []string{
 	"pages",
 	"includes",
-	"functions",
 	"data",
 	"templates",
 	"components",
 	"filters",
+	"functions",
 	"public",
 }
 
