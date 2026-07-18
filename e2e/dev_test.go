@@ -77,14 +77,21 @@ dev:
 	updatedBody := requireHTTPBodyContains(t, baseURL, "Updated")
 	require.Contains(t, updatedBody, "new EventSource('/_veta/live')")
 	requirePathMissing(t, filepath.Join(projectRoot, "dist"))
+
+	started := time.Now()
+	process.stop(t)
+	require.Less(t, time.Since(started), 3*time.Second)
+	stream.requireClosed(t)
+	require.NotContains(t, process.stderr.String(), "context deadline exceeded")
 }
 
 type devProcess struct {
 	cancel  context.CancelFunc
 	command *exec.Cmd
-	done    chan error
+	done    chan struct{}
 	stderr  *lineLog
 	stdout  *lineLog
+	waitErr error
 }
 
 // startDevProcess starts veta dev in a temporary project.
@@ -108,13 +115,14 @@ func startDevProcess(t *testing.T, projectRoot string) *devProcess {
 	process := &devProcess{
 		cancel:  cancel,
 		command: command,
-		done:    make(chan error, 1),
+		done:    make(chan struct{}),
 		stderr:  newLineLog(stderr),
 		stdout:  newLineLog(stdout),
 	}
 	require.NoError(t, command.Start())
 	go func() {
-		process.done <- command.Wait()
+		defer close(process.done)
+		process.waitErr = command.Wait()
 	}()
 
 	return process
@@ -138,10 +146,10 @@ func (process *devProcess) requireStarted(t *testing.T, baseURL string) {
 			if strings.Contains(line, "Serving at "+baseURL) {
 				return
 			}
-		case err := <-process.done:
+		case <-process.done:
 			t.Fatalf(
 				"veta dev exited before startup: %v\nstdout:\n%s\nstderr:\n%s",
-				err,
+				process.waitErr,
 				process.stdout.String(),
 				process.stderr.String(),
 			)
@@ -162,6 +170,15 @@ func (process *devProcess) stop(t *testing.T) {
 	select {
 	case <-process.done:
 		process.cancel()
+		if runtime.GOOS != "windows" {
+			require.NoError(
+				t,
+				process.waitErr,
+				"stdout:\n%s\nstderr:\n%s",
+				process.stdout.String(),
+				process.stderr.String(),
+			)
+		}
 		return
 	default:
 	}
@@ -180,17 +197,26 @@ func (process *devProcess) stop(t *testing.T) {
 	select {
 	case <-process.done:
 		process.cancel()
-	case <-time.After(5 * time.Second):
-		process.cancel()
-		select {
-		case <-process.done:
-		case <-time.After(5 * time.Second):
-			t.Fatalf(
-				"veta dev did not stop\nstdout:\n%s\nstderr:\n%s",
+		if runtime.GOOS != "windows" {
+			require.NoError(
+				t,
+				process.waitErr,
+				"stdout:\n%s\nstderr:\n%s",
 				process.stdout.String(),
 				process.stderr.String(),
 			)
 		}
+	case <-time.After(3 * time.Second):
+		process.cancel()
+		select {
+		case <-process.done:
+		case <-time.After(5 * time.Second):
+		}
+		t.Fatalf(
+			"veta dev did not stop within 3 seconds\nstdout:\n%s\nstderr:\n%s",
+			process.stdout.String(),
+			process.stderr.String(),
+		)
 	}
 }
 
@@ -235,6 +261,23 @@ func (stream *devEventStream) requireLine(t *testing.T, want string) {
 			}
 		case <-deadline:
 			t.Fatalf("timed out waiting for SSE line %q; saw:\n%s", want, stream.lines.String())
+		}
+	}
+}
+
+// requireClosed waits for the development server to close the SSE stream.
+func (stream *devEventStream) requireClosed(t *testing.T) {
+	t.Helper()
+
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case _, ok := <-stream.lines.lines:
+			if !ok {
+				return
+			}
+		case <-deadline:
+			t.Fatal("SSE stream remained open after dev server shutdown")
 		}
 	}
 }

@@ -104,10 +104,10 @@ func (server server) run(ctx context.Context) (err error) {
 	}
 
 	generatedHTML := newGeneratedHTMLFiles(result.GeneratedFiles)
-	httpServer := &http.Server{
-		Handler:           newHandler(server.outputDir, server.broadcaster, generatedHTML),
-		ReadHeaderTimeout: 5 * time.Second,
-	}
+	httpServer, cancelRequests := newHTTPServer(
+		ctx,
+		newHandler(server.outputDir, server.broadcaster, generatedHTML),
+	)
 	serverErrors := make(chan error, 1)
 	go func() {
 		serveErr := httpServer.Serve(listener)
@@ -117,6 +117,7 @@ func (server server) run(ctx context.Context) (err error) {
 		serverErrors <- serveErr
 	}()
 	defer func() {
+		cancelRequests()
 		if shutdownErr := shutdownHTTPServer(httpServer); err == nil && shutdownErr != nil {
 			err = shutdownErr
 		}
@@ -183,6 +184,19 @@ func (server server) run(ctx context.Context) (err error) {
 			server.broadcaster.broadcastReload()
 		}
 	}
+}
+
+// newHTTPServer creates a development HTTP server whose requests share one
+// cancelable lifecycle.
+func newHTTPServer(ctx context.Context, handler http.Handler) (*http.Server, context.CancelFunc) {
+	requestCtx, cancelRequests := context.WithCancel(ctx)
+	return &http.Server{
+		BaseContext: func(net.Listener) context.Context {
+			return requestCtx
+		},
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+	}, cancelRequests
 }
 
 // printStartup writes the dev server startup summary.
@@ -304,6 +318,14 @@ func shutdownHTTPServer(server *http.Server) error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			if closeErr := server.Close(); closeErr == nil ||
+				errors.Is(closeErr, http.ErrServerClosed) {
+				return nil
+			} else {
+				return fmt.Errorf("close dev server after shutdown timeout: %w", closeErr)
+			}
+		}
 		return fmt.Errorf("shut down dev server: %w", err)
 	}
 
