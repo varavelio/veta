@@ -1,4 +1,6 @@
+{% import "templates/ui.j2" shared_label %}
 <section class="component-panel">
-  {% include "includes/shared.j2" %}
+  {{ shared_label("Component macro", "component") }}
+  {% include "templates/shared.j2" %}
   <div class="component-slot">{{ props.content }}</div>
 </section>

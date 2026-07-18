@@ -2,6 +2,8 @@
 <html lang="en">
   <body>
     <header>Theme brand: {{ data.brand.name }}</header>
+    <p>{{ theme_label(data.brand.name) }}</p>
+    <p>{{ shared_label() }}</p>
     <main>{{ page.content }}</main>
     <footer>Project: {{ data.site.title }}</footer>
   </body>

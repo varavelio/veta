@@ -15,7 +15,6 @@ import (
 // watchedDirectories are the directories watched by default by the dev server.
 var watchedDirectories = []string{
 	"pages",
-	"includes",
 	"data",
 	"templates",
 	"components",

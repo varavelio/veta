@@ -61,7 +61,6 @@ veta.yml
 pages/
 data/
 templates/
-includes/
 components/
 filters/
 functions/

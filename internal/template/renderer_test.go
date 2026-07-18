@@ -96,6 +96,67 @@ func TestRendererLayoutsAndIncludes(t *testing.T) {
 	)
 }
 
+// TestRendererIncludeContext verifies includes can receive explicit isolated
+// values through Pongo's with and only syntax.
+func TestRendererIncludeContext(t *testing.T) {
+	files := fstest.MapFS{
+		"templates/card.j2": {
+			Data: []byte(
+				`<article>{{ title }}:{% if data %}inherited{% else %}isolated{% endif %}</article>`,
+			),
+		},
+		"templates/page.j2": {
+			Data: []byte(`{% include "templates/card.j2" with title=page.title only %}`),
+		},
+	}
+	renderer, err := New(files)
+	require.NoError(t, err)
+
+	got, err := renderer.Render("templates/page", Context{
+		"data": map[string]any{"site": "Veta"},
+		"page": map[string]any{"title": "Home"},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "<article>Home:isolated</article>", got)
+}
+
+// TestRendererMacros verifies local macros plus exported extensionless imports
+// and aliases use the normal template loader.
+func TestRendererMacros(t *testing.T) {
+	files := fstest.MapFS{
+		"templates/local.j2": {
+			Data: []byte(
+				`{% macro greeting(name="World") %}Hello {{ name }}{% endmacro %}{{ greeting() }}`,
+			),
+		},
+		"templates/page.j2": {
+			Data: []byte(
+				`{% import "templates/ui" button, badge as status %}{{ button("Save", "/save") }}{{ status("Ready") }}`,
+			),
+		},
+		"templates/ui.j2": {
+			Data: []byte(strings.Join([]string{
+				`{% macro button(text, href, tone="primary") export %}<a href="{{ href }}" class="{{ tone }}">{{ text }}</a>{% endmacro %}`,
+				`{% macro badge(label) export %}<span>{{ label }}</span>{% endmacro %}`,
+			}, "")),
+		},
+	}
+	renderer, err := New(files)
+	require.NoError(t, err)
+
+	t.Run("local macro", func(t *testing.T) {
+		got, err := renderer.Render("templates/local", nil)
+		require.NoError(t, err)
+		require.Equal(t, "Hello World", got)
+	})
+
+	t.Run("imported macros", func(t *testing.T) {
+		got, err := renderer.Render("templates/page", nil)
+		require.NoError(t, err)
+		require.Equal(t, `<a href="/save" class="primary">Save</a><span>Ready</span>`, got)
+	})
+}
+
 func TestRendererFilters(t *testing.T) {
 	files := fstest.MapFS{
 		"page.j2": {Data: []byte(`{{ page.title|surround:"!" }} {{ page.content|trusted }}`)},

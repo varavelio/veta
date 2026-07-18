@@ -142,11 +142,11 @@ func TestParseRenderComponents(t *testing.T) {
 		},
 		"components/card.j2": {
 			Data: []byte(
-				`{% include "includes/context.j2" %}<article data-title="{{ props.title }}">{{ props.content }}</article>`,
+				`{% include "templates/context.j2" %}<article data-title="{{ props.title }}">{{ props.content }}</article>`,
 			),
 		},
 		"components/outer.j2": {Data: []byte(`<section>{{ props.content }}</section>`)},
-		"includes/context.j2": {
+		"templates/context.j2": {
 			Data: []byte(
 				`<span data-context="{{ data.site.name }}:{{ page.title }}">{% for item in pages %}{{ item.title }};{% endfor %}</span>`,
 			),

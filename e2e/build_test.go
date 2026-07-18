@@ -51,9 +51,9 @@ func TestBuildsRichProjectFixture(t *testing.T) {
 	require.Greater(t, len(adminStyles), 100)
 }
 
-// TestBuildSupportsIncludesFromTemplatesAndComponents verifies shared Pongo
-// fragments can be included from both page templates and component templates.
-func TestBuildSupportsIncludesFromTemplatesAndComponents(t *testing.T) {
+// TestBuildSupportsPongoReuseFromTemplatesAndComponents verifies shared Pongo
+// fragments and imported macros work in page and component templates.
+func TestBuildSupportsPongoReuseFromTemplatesAndComponents(t *testing.T) {
 	projectRoot := copyTestProject(t, "includes")
 
 	result := runVeta(t, projectRoot, "build")
@@ -66,10 +66,13 @@ func TestBuildSupportsIncludesFromTemplatesAndComponents(t *testing.T) {
 	require.Equal(t, 2, strings.Count(index, `class="shared-include"`))
 	require.Equal(t, 2, strings.Count(index, `class="nested-include"`))
 	require.Equal(t, 2, strings.Count(index, `Include Fixture`))
+	require.Equal(t, 2, strings.Count(index, `class="shared-macro"`))
+	require.Contains(t, index, `data-source="template"`)
+	require.Contains(t, index, `data-source="component"`)
 }
 
-// TestBuildSupportsLoadDataInPongo verifies templates, includes and components
-// can load local structured and text data directly from Pongo.
+// TestBuildSupportsLoadDataInPongo verifies Pongo templates and components can
+// load local structured and text data directly.
 func TestBuildSupportsLoadDataInPongo(t *testing.T) {
 	projectRoot := copyTestProject(t, "template-load-data")
 
@@ -317,6 +320,9 @@ func TestBuildComposesLocalThemeWithProjectOverrides(t *testing.T) {
 
 	index := readProjectFile(t, projectRoot, "dist/index.html")
 	require.Contains(t, index, "Theme brand: Base Theme")
+	require.Contains(t, index, "Theme function: Base Theme")
+	require.Contains(t, index, "project shared function")
+	require.NotContains(t, index, "theme shared function")
 	require.Contains(t, index, "Project: Theme Override Site")
 	require.Contains(t, index, `<div class="project-badge">`)
 	require.Contains(t, index, `<p>Project component</p>`)

@@ -1,11 +1,11 @@
 ---
 title: "Templates"
-description: "Use Pongo templates, template inheritance, filters, and the Veta template context."
+description: "Use Pongo templates, inheritance, includes, macros, filters, and the Veta template context."
 ---
 
 # Templates
 
-Templates live in `templates/` and are rendered with Pongo. A page object uses a template by setting `template`:
+Pongo page templates and supporting files live in `templates/`. Veta does not prescribe subdirectories inside it, so each project can organize layouts, fragments, and macro libraries as needed. A page object uses a template by setting `template`:
 
 ```js
 export default function({ parse }) {
@@ -26,11 +26,11 @@ Veta resolves the name relative to `templates/`. It passes the generator's `cont
 
 ## Template Names
 
-Veta supports any template extension, but `.j2` is the recommended convention for templates, includes, and components. Pongo uses Jinja-style syntax, and many editors and formatters already recognize `.j2` files well.
+Veta supports any template extension, but `.j2` is the recommended convention for Pongo templates and components. Pongo uses Jinja-style syntax, and many editors and formatters already recognize `.j2` files well.
 
 ```txt
 templates/base.j2
-includes/nav.j2
+templates/navigation.j2
 components/card.j2
 ```
 
@@ -109,21 +109,45 @@ Use `./` or `../` for relative paths in `extends` and `include` statements.
 
 ## Includes
 
-Shared Pongo fragments live in `includes/`. Templates can include them by project-relative path:
+Pongo templates can include other files by project-relative path:
 
 ```html
-{% include "includes/brand.html" %}
+{% include "templates/brand.html" %}
 ```
 
 Includes receive the current template context, including `data`, `pages`, `page`, and `props`.
 
-Use `includes/` for reusable markup shared between templates and components, such as buttons, badges, tables, and navigation fragments. Markup used only by page templates can stay in `templates/`. Use `components/` for custom tags that JavaScript explicitly resolves with `parse.renderComponents(text)`; unresolved component tags remain unchanged, and component resolution does not render Markdown.
+Use `with` to provide values explicitly and `only` to isolate an included file from the current context:
 
-Pongo can include files from other project directories, but `includes/` is Veta's standard convention and is watched by `veta dev` by default.
+```html
+{% include "templates/user-card.j2" with user=page.author only %}
+```
+
+Page templates and components use the same loader, so both can reuse files under `templates/`.
+
+## Macros And Imports
+
+Macros define callable template fragments. Add `export` when a macro must be imported from another file:
+
+```html
+{# templates/ui.j2 #}
+{% macro button(text, href, tone="primary") export %}
+  <a class="button button-{{ tone }}" href="{{ href }}">{{ text }}</a>
+{% endmacro %}
+```
+
+Import the exported names that the caller needs. Imports can use aliases:
+
+```html
+{% import "templates/ui.j2" button as action %}
+{{ action("Read the guide", "/guide/") }}
+```
+
+Macros can also be defined and called in the same file without `export`. Macro files use the normal template loader, including extensionless names and project-over-theme overrides.
 
 ## Loading Data
 
-Templates, includes, and components can load local or remote data with `load_data`:
+Pongo templates and components can load local or remote data with `load_data`:
 
 ```html
 {% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
@@ -134,7 +158,7 @@ Use `load_data` for template-specific data. Use global `data/` files for data sh
 
 ## Functions
 
-Templates, includes, and components can call built-in functions such as `url`, `regex_replace`, and `load_data`. Projects can add custom JavaScript functions in `functions/`:
+Pongo templates and components can call built-in functions such as `url`, `regex_replace`, and `load_data`. Projects can add custom JavaScript functions in `functions/`:
 
 ```js
 // functions/excerpt.js

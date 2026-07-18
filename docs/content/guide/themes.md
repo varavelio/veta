@@ -5,7 +5,7 @@ description: "Compose local or remote Veta themes with project files and project
 
 # Themes
 
-Themes let you share templates, components, filters, data, and public assets across projects.
+Themes let you share templates, components, filters, functions, data, and public assets across projects.
 
 Configure a theme with `theme.source`:
 
@@ -22,11 +22,14 @@ A theme can contain these top-level directories:
 templates/
 components/
 filters/
+functions/
 data/
 public/
 ```
 
 Other top-level directories are ignored by the theme overlay.
+
+JavaScript files under `filters/`, `functions/`, and `data/` are trusted build code. Review remote themes before using them and prefer immutable tags or commit references for reproducible builds.
 
 ## Project Files Override Theme Files
 

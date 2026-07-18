@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+{% import "templates/ui.j2" shared_label %}
 <html lang="en">
   <body>
     <main>
       <h1>{{ page.title }}</h1>
-      {% include "includes/shared.j2" %}
+      {{ shared_label("Template macro", "template") }}
+      {% include "templates/shared.j2" %}
       {{ page.content }}
     </main>
   </body>

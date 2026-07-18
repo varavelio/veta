@@ -93,7 +93,7 @@ export default function({ page, data, files, parse }, value, length) {
 }
 ```
 
-Use the file stem as a function in templates, includes, and components:
+Use the file stem as a function in Pongo templates and components:
 
 ```html
 {{ excerpt(page.content, 120) }}

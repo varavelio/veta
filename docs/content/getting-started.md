@@ -35,8 +35,6 @@ my-site/
     note.html
   data/
     site.json
-  includes/
-    brand.html
   pages/
     site.js
   public/
@@ -160,7 +158,7 @@ Open `templates/base.html`:
   </head>
   <body>
     <nav>
-      {% include "includes/brand.html" %}
+      <strong>{{ data.site.name }}</strong>
       {% for item in pages %}
         <a href="{{ item.permalink }}">{{ item.title }}</a>
       {% endfor %}
@@ -173,8 +171,6 @@ Open `templates/base.html`:
   </body>
 </html>
 ```
-
-Shared fragments live in `includes/` and can be included from templates and components. Use `includes/` for markup shared by both; keep template-only markup in `templates/` and component-only markup in `components/`.
 
 Templates receive four root values:
 
@@ -189,7 +185,6 @@ Components are templates stored in `components/`. The starter includes `componen
 
 ```html
 <aside class="rounded border border-zinc-200 bg-zinc-50 p-4">
-  <p>{% include "includes/brand.html" %}</p>
   {{ props.content }}
 </aside>
 ```

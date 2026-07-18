@@ -128,7 +128,7 @@ theme:
   source: "./themes/clean"
 ```
 
-Themes can provide `templates/`, `components/`, `filters/`, `data/`, and `public/`. Project files override theme files.
+Themes can provide `templates/`, `components/`, `filters/`, `functions/`, `data/`, and `public/`. Project files override theme files.
 
 ## Unknown Fields
 

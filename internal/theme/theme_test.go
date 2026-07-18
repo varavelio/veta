@@ -36,6 +36,8 @@ func TestResolveLocalTheme(t *testing.T) {
 	root := t.TempDir()
 	writeThemeFile(t, root, "themes/basic/templates/base.j2", "theme base")
 	writeThemeFile(t, root, "themes/basic/templates/theme-only.j2", "theme only")
+	writeThemeFile(t, root, "themes/basic/functions/theme-only.js", "theme function")
+	writeThemeFile(t, root, "themes/basic/functions/shared.js", "theme shared")
 	writeThemeFile(
 		t,
 		root,
@@ -45,6 +47,7 @@ func TestResolveLocalTheme(t *testing.T) {
 	writeThemeFile(t, root, "themes/basic/private/secret.txt", "secret")
 
 	projectFiles := fstest.MapFS{
+		"functions/shared.js":       {Data: []byte("project shared")},
 		"templates/base.j2":         {Data: []byte("project base")},
 		"templates/project-only.j2": {Data: []byte("project only")},
 	}
@@ -66,6 +69,14 @@ func TestResolveLocalTheme(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "project only", string(content))
 
+	content, err = fs.ReadFile(site.Files, "functions/theme-only.js")
+	require.NoError(t, err)
+	require.Equal(t, "theme function", string(content))
+
+	content, err = fs.ReadFile(site.Files, "functions/shared.js")
+	require.NoError(t, err)
+	require.Equal(t, "project shared", string(content))
+
 	_, err = fs.ReadFile(site.Files, "pages/ignored.js")
 	require.True(t, errors.Is(err, fs.ErrNotExist))
 
@@ -76,6 +87,7 @@ func TestResolveLocalTheme(t *testing.T) {
 func TestResolveRemoteTheme(t *testing.T) {
 	var requests atomic.Int64
 	archive := themeArchive(t, map[string]string{
+		"veta-theme-basic-main/functions/theme-only.js": "theme function",
 		"veta-theme-basic-main/templates/base.j2":       "theme base",
 		"veta-theme-basic-main/templates/theme-only.j2": "theme only",
 		"veta-theme-basic-main/pages/ignored.js":        "ignored",
@@ -116,6 +128,10 @@ func TestResolveRemoteTheme(t *testing.T) {
 	content, err = fs.ReadFile(site.Files, "templates/theme-only.j2")
 	require.NoError(t, err)
 	require.Equal(t, "theme only", string(content))
+
+	content, err = fs.ReadFile(site.Files, "functions/theme-only.js")
+	require.NoError(t, err)
+	require.Equal(t, "theme function", string(content))
 
 	_, err = fs.ReadFile(site.Files, "pages/ignored.js")
 	require.True(t, errors.Is(err, fs.ErrNotExist))

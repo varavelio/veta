@@ -38,12 +38,12 @@ dev:
     - content
 `)
 	writeProjectFile(t, projectRoot, "content/message.txt", "Initial")
-	writeProjectFile(t, projectRoot, "includes/status.html", "Initial Include")
+	writeProjectFile(t, projectRoot, "templates/status.html", "Initial Include")
 	writeProjectFile(
 		t,
 		projectRoot,
 		"templates/base.html",
-		`<html><body><main>{{ page.content }}</main>{% include "includes/status.html" %}</body></html>`,
+		`<html><body><main>{{ page.content }}</main>{% include "templates/status.html" %}</body></html>`,
 	)
 	writeProjectFile(t, projectRoot, "pages/site.js", devPageSource())
 
@@ -62,7 +62,7 @@ dev:
 	defer stream.close()
 	stream.requireLine(t, ": connected")
 
-	writeProjectFile(t, projectRoot, "includes/status.html", "Updated Include")
+	writeProjectFile(t, projectRoot, "templates/status.html", "Updated Include")
 	stream.requireLine(t, "event: reload")
 	stream.requireLine(t, "data: reload")
 

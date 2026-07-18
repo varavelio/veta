@@ -1,11 +1,11 @@
 ---
 title: "Template Functions"
-description: "Use built-in and custom functions from Pongo templates, includes, and components."
+description: "Use built-in and custom functions from Pongo templates and components."
 ---
 
 # Template Functions
 
-Veta registers template functions for Pongo templates, includes, and components.
+Veta registers template functions for Pongo templates and components.
 
 Built-in functions are always available:
 

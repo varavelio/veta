@@ -21,7 +21,6 @@ func TestInitBuildsStarterProject(t *testing.T) {
 	projectRoot := filepath.Join(workspace, "site")
 	require.FileExists(t, filepath.Join(projectRoot, "veta.yaml"))
 	require.FileExists(t, filepath.Join(projectRoot, "templates", "base.j2"))
-	require.FileExists(t, filepath.Join(projectRoot, "includes", "brand.j2"))
 	require.FileExists(t, filepath.Join(projectRoot, "public", "styles.css"))
 	config := readProjectFile(t, projectRoot, "veta.yaml")
 	require.Contains(t, config, "# Veta configuration file.")

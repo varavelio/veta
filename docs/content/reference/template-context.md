@@ -65,7 +65,7 @@ Component context depends on where `parse.renderComponents(text)` is called. Pag
 
 ## Template Helpers
 
-Templates, includes, and components can call built-in and custom template functions. `load_data` reads local or remote data:
+Pongo templates and components can call built-in and custom template functions. `load_data` reads local or remote data:
 
 ```html
 {% set navigation = load_data("data/navigation.yaml")|parse_yaml %}
