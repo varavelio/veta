@@ -28,7 +28,15 @@ const (
 	remoteTimeout     = 60 * time.Second
 )
 
-var allowedThemeDirs = []string{"templates", "components", "filters", "data", "public"}
+// allowedThemeDirs are the directories that are merged from the theme with the
+// project ones.
+var allowedThemeDirs = []string{
+	"data",
+	"templates",
+	"components",
+	"filters",
+	"public",
+}
 
 // HTTPClient performs HTTP requests for remote theme downloads.
 type HTTPClient interface {

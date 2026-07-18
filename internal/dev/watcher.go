@@ -12,14 +12,15 @@ import (
 	"github.com/varavelio/veta/internal/config"
 )
 
+// watchedDirectories are the directories watched by default by the dev server.
 var watchedDirectories = []string{
 	"pages",
+	"includes",
+	"functions",
 	"data",
 	"templates",
-	"includes",
 	"components",
 	"filters",
-	"functions",
 	"public",
 }
 
