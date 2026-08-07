@@ -62,7 +62,8 @@ You MUST follow the following instructions:
 
 ## Documentation
 
-- User-facing documentation lives under `docs/content/`. Every page should use frontmatter with `title` and `description`.
+- User-facing documentation lives under `docs/content/`. Every page should use frontmatter with `title`, `description`, `weight`, and `icon`.
+- `docs/` is itself a Veta project: it uses the `varavelio/veta-theme-vara` theme, page generators in `docs/pages/`, site settings in `docs/data/site.yaml`, and builds with `veta build` from inside `docs/`. Keep the project runnable as its own site.
 
 ## Operational Commands
 
