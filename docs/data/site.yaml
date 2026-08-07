@@ -1,0 +1,9 @@
+title: "Veta"
+description: "A static site generator that combines JavaScript page generators, templates, data, components, filters, Markdown, themes, and embedded Tailwind CSS."
+site_url: "https://veta.varavel.com"
+favicon: "https://cdn.jsdelivr.net/gh/varavelio/veta@v0.1.0/assets/icon.svg"
+logo_light: "https://cdn.jsdelivr.net/gh/varavelio/veta@v0.1.0/assets/logo-black.svg"
+logo_dark: "https://cdn.jsdelivr.net/gh/varavelio/veta@v0.1.0/assets/logo-white.svg"
+
+docs_show_title: false
+docs_github_repo: "varavelio/veta"
