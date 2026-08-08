@@ -37,7 +37,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: >-
             pages deploy ./docs/dist
-            --project-name=varavel-vara
+            --project-name=varavel-veta
             --branch="${{ github.head_ref || github.ref_name }}"
             --commit-hash="${{ github.event.pull_request.head.sha || github.sha }}"
             --commit-message="${{ github.event.head_commit.message || github.event.pull_request.title }}"
