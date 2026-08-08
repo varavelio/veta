@@ -1,5 +1,5 @@
 ---
-title: "Veta Documentation"
+title: "Documentation"
 description: "A short introduction to Veta and a starting point for learning the static site generator."
 icon: "book-open"
 weight: 0

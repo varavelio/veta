@@ -7,3 +7,8 @@ logo_dark: "https://cdn.jsdelivr.net/gh/varavelio/veta@v0.1.0/assets/logo-white.
 
 docs_show_title: false
 docs_github_repo: "varavelio/veta"
+docs_header_links:
+  - title: "Pongo documentation"
+    href: "https://pongo2.dev/docs"
+    new_tab: true
+    icon: "notebook"
