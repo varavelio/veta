@@ -35,6 +35,11 @@ tasks:
     desc: Build the project locally
     cmd: go build -o ./dist/veta ./cmd/veta/.
 
+  build:docs:
+    desc: Build the project documentation website
+    dir: ./docs
+    cmd: veta-prev build
+
   release:
     desc: Build all production release artifacts
     cmds:
