@@ -1,6 +1,8 @@
 ---
 title: "Themes"
 description: "Compose local or remote Veta themes with project files and project-level overrides."
+icon: "palette"
+weight: 100
 ---
 
 # Themes

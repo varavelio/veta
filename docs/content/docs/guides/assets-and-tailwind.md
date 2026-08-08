@@ -1,6 +1,8 @@
 ---
 title: "Assets And Tailwind CSS"
 description: "Use public assets and Veta's embedded Tailwind CSS standalone integration."
+icon: "image"
+weight: 90
 ---
 
 # Assets And Tailwind CSS

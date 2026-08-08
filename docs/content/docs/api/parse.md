@@ -1,6 +1,8 @@
 ---
 title: "Parse API"
 description: "Parse structured text, render Markdown, and explicitly resolve components from JavaScript."
+icon: "braces"
+weight: 40
 ---
 
 # Parse API

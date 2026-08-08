@@ -1,6 +1,8 @@
 ---
 title: "Project Structure"
 description: "Learn what each Veta project directory does and which files are required."
+icon: "folder-tree"
+weight: 10
 ---
 
 # Project Structure

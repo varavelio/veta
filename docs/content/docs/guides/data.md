@@ -1,6 +1,8 @@
 ---
 title: "Data"
 description: "Load global JSON, YAML, TOML, and JavaScript data into Veta templates and generators."
+icon: "database"
+weight: 40
 ---
 
 # Data
@@ -54,7 +56,7 @@ brand:
 
 This convention is optional, but it gives projects and themes a predictable place for site-wide settings.
 
-Reusable themes should put configurable defaults in `data/site_defaults.yaml` instead of `data/site.yaml`. Projects can then provide `data/site.yaml` with only the values they want to customize. See [Themes](./themes.md) for the recommended theme defaults pattern.
+Reusable themes should put configurable defaults in `data/site_defaults.yaml` instead of `data/site.yaml`. Projects can then provide `data/site.yaml` with only the values they want to customize. See [Themes](/docs/guides/themes/) for the recommended theme defaults pattern.
 
 ## JSON Data
 

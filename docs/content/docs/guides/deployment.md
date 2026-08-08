@@ -1,6 +1,8 @@
 ---
 title: "Deployment"
 description: "Deploy Veta's static output to any static hosting provider."
+icon: "cloud"
+weight: 130
 ---
 
 # Deployment

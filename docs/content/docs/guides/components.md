@@ -1,6 +1,8 @@
 ---
 title: "Components"
 description: "Explicitly render reusable content components with props, slots, and Pongo templates."
+icon: "blocks"
+weight: 70
 ---
 
 # Components

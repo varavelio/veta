@@ -1,6 +1,8 @@
 ---
 title: "Page Generators Reference"
 description: "Complete contract for objects returned by JavaScript page generators."
+icon: "file-code"
+weight: 30
 ---
 
 # Page Generators Reference

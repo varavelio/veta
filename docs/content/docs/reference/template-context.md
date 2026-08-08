@@ -1,6 +1,8 @@
 ---
 title: "Template Context Reference"
 description: "Reference for data, pages, page, and props in Veta templates and components."
+icon: "braces"
+weight: 40
 ---
 
 # Template Context Reference
@@ -72,7 +74,7 @@ Pongo templates and components can call built-in and custom template functions. 
 {% set site = load_data("data/site.json")|parse_json %}
 ```
 
-See [Template Functions](../api/template-functions.md) for details.
+See [Template Functions](/docs/api/template-functions/) for details.
 
 They can also call `url` to generate current-page-relative links:
 

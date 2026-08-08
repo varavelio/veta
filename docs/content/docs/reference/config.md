@@ -1,6 +1,8 @@
 ---
 title: "Config Reference"
 description: "Complete reference for veta.yaml configuration fields."
+icon: "sliders-horizontal"
+weight: 20
 ---
 
 # Config Reference

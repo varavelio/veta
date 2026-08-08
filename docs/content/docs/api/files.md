@@ -1,6 +1,8 @@
 ---
 title: "File API"
 description: "Read project files as text, list files, and create permalinks from JavaScript."
+icon: "files"
+weight: 20
 ---
 
 # File API
@@ -38,7 +40,7 @@ const { frontmatter, html } = parse.markdown(
 const content = parse.renderComponents(html);
 ```
 
-`files.readFile` performs no parsing or rendering. In this example, `frontmatter` contains metadata, `html` is the rendered Markdown body, and `content` is the result of explicitly resolving registered components. See [Parse API](./parse.md) and [Frontmatter](./frontmatter.md) for details.
+`files.readFile` performs no parsing or rendering. In this example, `frontmatter` contains metadata, `html` is the rendered Markdown body, and `content` is the result of explicitly resolving registered components. See [Parse API](/docs/api/parse/) and [Frontmatter](/docs/api/frontmatter/) for details.
 
 ## `files.toPermalink(path, options)`
 

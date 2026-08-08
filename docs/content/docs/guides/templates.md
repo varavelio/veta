@@ -1,6 +1,8 @@
 ---
 title: "Templates"
 description: "Use Pongo templates, inheritance, includes, macros, filters, and the Veta template context."
+icon: "layout-template"
+weight: 60
 ---
 
 # Templates
@@ -140,7 +142,7 @@ Import the exported names that the caller needs. Imports can use aliases:
 
 ```html
 {% import "templates/ui.j2" button as action %}
-{{ action("Read the guide", "/guide/") }}
+{{ action("Read the guide", "/guides/") }}
 ```
 
 Macros can also be defined and called in the same file without `export`. Macro files use the normal template loader, including extensionless names and project-over-theme overrides.
@@ -154,7 +156,7 @@ Pongo templates and components can load local or remote data with `load_data`:
 {% set site = load_data("data/site.json")|parse_json %}
 ```
 
-Use `load_data` for template-specific data. Use global `data/` files for data shared across the whole site. See [Template Functions](../api/template-functions.md) for the full API.
+Use `load_data` for template-specific data. Use global `data/` files for data shared across the whole site. See [Template Functions](/docs/api/template-functions/) for the full API.
 
 ## Functions
 
@@ -171,7 +173,7 @@ export default function({ page }, value, length) {
 {{ excerpt(page.content, 120) }}
 ```
 
-See [Template Functions](../api/template-functions.md) for details.
+See [Template Functions](/docs/api/template-functions/) for details.
 
 ## Filters
 
@@ -185,7 +187,7 @@ Veta registers built-in filters and custom filters:
 {{ page.summary|markdown }}
 ```
 
-Custom JavaScript filters live in `filters/` and are documented in [Filters](./filters.md).
+Custom JavaScript filters live in `filters/` and are documented in [Filters](/docs/guides/filters/).
 
 ## Ignored Template Files
 

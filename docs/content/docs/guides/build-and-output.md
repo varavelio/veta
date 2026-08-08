@@ -1,6 +1,8 @@
 ---
 title: "Build And Output"
 description: "Understand production builds, output paths, cleaning, generated HTML minification, and public assets."
+icon: "package"
+weight: 120
 ---
 
 # Build And Output

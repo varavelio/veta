@@ -1,6 +1,8 @@
 ---
 title: "CLI Reference"
 description: "Reference for every Veta command and command-line flag."
+icon: "terminal"
+weight: 10
 ---
 
 # CLI Reference

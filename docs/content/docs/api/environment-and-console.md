@@ -1,6 +1,8 @@
 ---
 title: "Environment And Console"
 description: "Use environment variables and JavaScript console output in Veta runtime contexts."
+icon: "terminal"
+weight: 60
 ---
 
 # Environment And Console

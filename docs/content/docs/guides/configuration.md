@@ -1,6 +1,8 @@
 ---
 title: "Configuration"
 description: "Understand veta.yaml, config discovery, build settings, HTML minification, Tailwind CSS, and themes."
+icon: "settings"
+weight: 20
 ---
 
 # Configuration

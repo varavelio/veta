@@ -1,6 +1,8 @@
 ---
 title: "Getting Started"
 description: "Build your first Veta site from an empty folder to a production-ready static output."
+icon: "rocket"
+weight: 10
 ---
 
 # Getting Started
@@ -9,7 +11,7 @@ This guide builds a small Veta site from scratch. By the end, you will understan
 
 ## 1. Install Veta
 
-Install Veta with any of the methods documented in [Installation](./installation.md).
+Install Veta with any of the methods documented in [Installation](../installation/).
 
 Verify the CLI is available:
 
@@ -61,13 +63,13 @@ build:
   output: dist
   clean: true
 
-html:
-  minify: true
-
 dev:
   host: 127.0.0.1
   port: 3000
   watch: []
+
+html:
+  minify: true
 
 tailwindcss:
   stylesheets:
@@ -79,10 +81,10 @@ The important defaults are:
 
 - `build.output` is the directory written by `veta build`.
 - `build.clean` removes the output directory before writing a new build.
-- `html.minify` minifies generated `.html` files.
 - `dev.host` configures the local development server host.
 - `dev.port` configures the local development server port.
 - `dev.watch` is an array of additional directories for the development server to watch, beyond Veta's own files and directories.
+- `html.minify` minifies generated `.html` files.
 - `tailwindcss.stylesheets` points to Tailwind CSS entrypoints under `public/`.
 - `tailwindcss.minify` minifies the generated stylesheet.
 
@@ -303,8 +305,8 @@ You can deploy `dist/` to any static host.
 
 Read these next:
 
-- [Project Structure](./guide/project-structure.md)
-- [Pages](./guide/pages.md)
-- [Templates](./guide/templates.md)
-- [JavaScript API](./api/javascript.md)
-- [Build And Output](./guide/build-and-output.md)
+- [Project Structure](../guides/project-structure/)
+- [Pages](../guides/pages/)
+- [Templates](../guides/templates/)
+- [JavaScript API](../api/javascript/)
+- [Build And Output](../guides/build-and-output/)

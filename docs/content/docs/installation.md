@@ -1,6 +1,8 @@
 ---
 title: "Installation"
 description: "Install the Veta CLI with shell installers, Homebrew, npm, Docker, or manual binaries."
+icon: "download"
+weight: 20
 ---
 
 # Installation

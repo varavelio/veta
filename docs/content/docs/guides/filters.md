@@ -1,6 +1,8 @@
 ---
 title: "Filters"
 description: "Use built-in template filters and add custom JavaScript filters."
+icon: "list-filter"
+weight: 80
 ---
 
 # Filters

@@ -1,6 +1,8 @@
 ---
 title: "Development Server"
 description: "Use veta dev for local development with temporary output and SSE live reload."
+icon: "server"
+weight: 110
 ---
 
 # Development Server

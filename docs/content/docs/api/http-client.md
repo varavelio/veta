@@ -1,6 +1,8 @@
 ---
 title: "HTTP Client"
 description: "Fetch remote data synchronously from Veta JavaScript files."
+icon: "globe"
+weight: 30
 ---
 
 # HTTP Client

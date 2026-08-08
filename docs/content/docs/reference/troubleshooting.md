@@ -1,6 +1,8 @@
 ---
 title: "Troubleshooting"
 description: "Common Veta errors and how to fix them."
+icon: "wrench"
+weight: 50
 ---
 
 # Troubleshooting

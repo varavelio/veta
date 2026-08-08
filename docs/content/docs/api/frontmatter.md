@@ -1,6 +1,8 @@
 ---
 title: "Markdown Frontmatter"
 description: "Parse YAML and TOML frontmatter with parse.markdown and parse_markdown."
+icon: "align-start-vertical"
+weight: 70
 ---
 
 # Markdown Frontmatter

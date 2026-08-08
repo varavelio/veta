@@ -1,6 +1,8 @@
 ---
 title: "Template Functions"
 description: "Use built-in and custom functions from Pongo templates and components."
+icon: "square-function"
+weight: 50
 ---
 
 # Template Functions

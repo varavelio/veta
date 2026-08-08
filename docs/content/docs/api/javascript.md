@@ -1,6 +1,8 @@
 ---
 title: "JavaScript API"
 description: "Understand where JavaScript runs in Veta and which context APIs are available."
+icon: "code"
+weight: 10
 ---
 
 # JavaScript API
@@ -151,8 +153,8 @@ export default async function() {
 
 ## API Pages
 
-- [File API](./files.md)
-- [HTTP Client](./http-client.md)
-- [Parse API](./parse.md)
-- [Environment And Console](./environment-and-console.md)
-- [Frontmatter](./frontmatter.md)
+- [File API](/docs/api/files/)
+- [HTTP Client](/docs/api/http-client/)
+- [Parse API](/docs/api/parse/)
+- [Environment And Console](/docs/api/environment-and-console/)
+- [Frontmatter](/docs/api/frontmatter/)

@@ -1,6 +1,8 @@
 ---
 title: "Pages"
 description: "Generate static pages with flat JavaScript files and page objects."
+icon: "file-code"
+weight: 30
 ---
 
 # Pages
