@@ -3,6 +3,7 @@ package js
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"time"
 
@@ -53,6 +54,16 @@ func WithEnvironment(environment Environment) Option {
 func WithRoot(root string) Option {
 	return func(runner *Runner) {
 		runner.root = root
+	}
+}
+
+// WithFiles configures the filesystem exposed through JavaScript file APIs.
+// When set, file reads and listings operate on this filesystem instead of the
+// physical root directory, letting composed overlay filesystems serve theme
+// files alongside project files.
+func WithFiles(files fs.FS) Option {
+	return func(runner *Runner) {
+		runner.files = files
 	}
 }
 

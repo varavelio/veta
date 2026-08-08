@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
 	"github.com/varavelio/veta/internal/markdown"
@@ -68,6 +69,39 @@ func TestRunnerFileAndParseAPIs(t *testing.T) {
 		"postHTML":  "<h1>Body</h1>\n",
 		"postTitle": "Hello",
 		"theme":     "Clean",
+	}, got)
+}
+
+func TestRunnerFileAPIsWithFiles(t *testing.T) {
+	files := fstest.MapFS{
+		"content/index.md":                &fstest.MapFile{Data: []byte("# Home\n")},
+		"templates/vara/icons/check.svg":  &fstest.MapFile{Data: []byte("<svg>check</svg>")},
+		"templates/vara/icons/github.svg": &fstest.MapFile{Data: []byte("<svg>github</svg>")},
+		"templates/vara/icons/icons.json": &fstest.MapFile{
+			Data: []byte(`{"icons":[{"name":"check"}]}`),
+		},
+	}
+
+	result, err := New(
+		WithFiles(files),
+		WithMarkdownRenderer(markdown.New()),
+	).ExecuteString("overlay.js", `
+		export default function({ files }) {
+			return {
+				content: files.readFile("content/index.md"),
+				icons: files.listFiles("templates/vara/icons/*.svg"),
+				json: files.readFile("templates/vara/icons/icons.json"),
+			};
+		}
+	`)
+	require.NoError(t, err)
+
+	var got map[string]any
+	require.NoError(t, result.ExportTo(&got))
+	require.Equal(t, map[string]any{
+		"content": "# Home\n",
+		"icons":   []string{"templates/vara/icons/check.svg", "templates/vara/icons/github.svg"},
+		"json":    `{"icons":[{"name":"check"}]}`,
 	}, got)
 }
 

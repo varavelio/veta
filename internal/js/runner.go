@@ -3,6 +3,7 @@ package js
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,6 +47,7 @@ type Option func(*Runner)
 // Runner is safe to reuse because each execution receives a fresh Goja runtime.
 type Runner struct {
 	componentRenderer ComponentRenderer
+	files             fs.FS
 	runtime           Runtime
 	root              string
 	environment       Environment

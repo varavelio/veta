@@ -217,6 +217,69 @@ export default function() {
 	require.Equal(t, "theme", readOutputFile(t, root, "dist/theme.css"))
 }
 
+// TestRunThemeFilesReadableFromFunctions verifies that JavaScript template
+// functions can read theme-provided files (such as icon sets) through the
+// composed overlay filesystem.
+func TestRunThemeFilesReadableFromFunctions(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  clean: true
+theme:
+  source: "./theme"
+`)
+	writeProjectFile(t, root, "theme/templates/vara/icons/check.svg", `<svg>check</svg>`)
+	writeProjectFile(t, root, "theme/functions/read_icon.js", `
+export default function({ files }) {
+  return files.readFile("templates/vara/icons/check.svg");
+}
+`)
+	writeProjectFile(t, root, "templates/page.j2", `<main>{{ read_icon()|safe }}</main>`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [{ permalink: "/", template: "page", content: "Hello" }];
+}
+`)
+
+	_, err := Run(context.Background(), WithRoot(root))
+	require.NoError(t, err)
+	require.Equal(t, `<main><svg>check</svg></main>`, readOutputFile(t, root, "dist/index.html"))
+}
+
+// TestRunThemeIconListingFromFunctions verifies that theme-provided icon
+// directories are discoverable through files.listFiles inside a JavaScript
+// template function.
+func TestRunThemeIconListingFromFunctions(t *testing.T) {
+	root := t.TempDir()
+	writeProjectFile(t, root, "veta.yaml", `
+build:
+  clean: true
+theme:
+  source: "./theme"
+`)
+	writeProjectFile(t, root, "theme/templates/vara/icons/check.svg", `<svg>check</svg>`)
+	writeProjectFile(t, root, "theme/templates/vara/icons/github.svg", `<svg>github</svg>`)
+	writeProjectFile(t, root, "theme/functions/list_icons.js", `
+export default function({ files }) {
+  return files.listFiles("templates/vara/icons/*.svg").join(",");
+}
+`)
+	writeProjectFile(t, root, "templates/page.j2", `<main>{{ list_icons() }}</main>`)
+	writeProjectFile(t, root, "pages/site.js", `
+export default function() {
+  return [{ permalink: "/", template: "page", content: "Hello" }];
+}
+`)
+
+	_, err := Run(context.Background(), WithRoot(root))
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		`<main>templates/vara/icons/check.svg,templates/vara/icons/github.svg</main>`,
+		readOutputFile(t, root, "dist/index.html"),
+	)
+}
+
 func TestRunDiscoversConfigFromAncestors(t *testing.T) {
 	root := t.TempDir()
 	child := filepath.Join(root, "content", "docs")

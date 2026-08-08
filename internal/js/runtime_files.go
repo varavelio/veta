@@ -3,6 +3,7 @@ package js
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,12 +26,17 @@ var (
 
 // newFileAPI returns the synchronous file APIs exposed through context.files.
 func (r *Runner) newFileAPI(vm *goja.Runtime) (*goja.Object, error) {
-	root, err := r.rootDir()
-	if err != nil {
-		return nil, err
+	api := &fileAPI{vm: vm}
+	if r.files != nil {
+		api.files = r.files
+	} else {
+		root, err := r.rootDir()
+		if err != nil {
+			return nil, err
+		}
+		api.root = root
 	}
 
-	api := &fileAPI{root: root, vm: vm}
 	files := vm.NewObject()
 	fileMethods := Runtime{
 		"listFiles":   api.listFiles,
@@ -72,8 +78,9 @@ func (r *Runner) rootDir() (string, error) {
 
 // fileAPI owns synchronous file callbacks exposed to JavaScript.
 type fileAPI struct {
-	root string
-	vm   *goja.Runtime
+	files fs.FS
+	root  string
+	vm    *goja.Runtime
 }
 
 // listFiles returns sorted files matching a glob pattern inside the root.
@@ -144,9 +151,29 @@ func (api *fileAPI) readProjectFile(rawPath string) (string, []byte, error) {
 		return "", nil, err
 	}
 
-	root, err := api.openRoot()
+	content, err := api.readCleanFile(filePath)
 	if err != nil {
 		return "", nil, err
+	}
+
+	return filePath, content, nil
+}
+
+// readCleanFile reads one cleaned file from the configured filesystem or
+// physical root.
+func (api *fileAPI) readCleanFile(filePath string) ([]byte, error) {
+	if api.files != nil {
+		content, err := fs.ReadFile(api.files, filePath)
+		if err != nil {
+			return nil, fmt.Errorf("read file %s: %w", filePath, err)
+		}
+
+		return content, nil
+	}
+
+	root, err := api.openRoot()
+	if err != nil {
+		return nil, err
 	}
 	defer func() {
 		_ = root.Close()
@@ -154,10 +181,10 @@ func (api *fileAPI) readProjectFile(rawPath string) (string, []byte, error) {
 
 	content, err := root.ReadFile(filepath.FromSlash(filePath))
 	if err != nil {
-		return "", nil, fmt.Errorf("read file %s: %w", filePath, err)
+		return nil, fmt.Errorf("read file %s: %w", filePath, err)
 	}
 
-	return filePath, content, nil
+	return content, nil
 }
 
 // matchFiles returns sorted file matches for a sanitized glob pattern.
@@ -167,16 +194,20 @@ func (api *fileAPI) matchFiles(pattern string) ([]string, error) {
 		return nil, err
 	}
 
-	root, err := api.openRoot()
-	if err != nil {
-		return nil, err
+	files := api.files
+	if files == nil {
+		root, err := api.openRoot()
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			_ = root.Close()
+		}()
+		files = root.FS()
 	}
-	defer func() {
-		_ = root.Close()
-	}()
 
 	matches, err := doublestar.Glob(
-		root.FS(),
+		files,
 		cleanPattern,
 		doublestar.WithFilesOnly(),
 		doublestar.WithFailOnIOErrors(),

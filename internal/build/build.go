@@ -52,6 +52,7 @@ type runConfig struct {
 	configFile      string
 	consoleOutput   io.Writer
 	cleanOverride   *bool
+	files           fs.FS
 	outputDir       string
 	outputDirSet    bool
 	root            string
@@ -199,6 +200,7 @@ func Run(ctx context.Context, options ...Option) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("resolve theme: %w", err)
 	}
+	runConfig.files = site.Files
 
 	markdownRenderer := markdown.New()
 	siteData, err := data.LoadLayers(
@@ -513,6 +515,9 @@ func normalizeRoot(root string) (string, error) {
 // baseJSOptions returns JavaScript runtime options shared by build loaders.
 func baseJSOptions(config runConfig, runtime js.Runtime, additional ...js.Option) []js.Option {
 	options := []js.Option{js.WithRoot(config.root), js.WithConsoleOutput(config.consoleOutput)}
+	if config.files != nil {
+		options = append(options, js.WithFiles(config.files))
+	}
 	if runtime != nil {
 		options = append(options, js.WithRuntime(runtime))
 	}
