@@ -14,21 +14,32 @@ func TestInjectLiveReload(t *testing.T) {
 	t.Run("inserts before body close", func(t *testing.T) {
 		content := []byte("<html><body><main>Hello</main></body></html>")
 
-		injected := string(injectLiveReload(content))
+		injected := string(injectLiveReload(content, 7))
 
-		require.Contains(t, injected, "new EventSource('/_veta/live')")
-		require.Less(t, indexOf(t, injected, "new EventSource"), indexOf(t, injected, "</body>"))
+		require.Contains(t, injected, "fetch('/_veta/live'")
+		require.Contains(t, injected, "var last = 7;")
+		require.Contains(t, injected, "new AbortController()")
+		require.Contains(t, injected, "setInterval(poll, 1000)")
+		require.Less(
+			t,
+			indexOf(t, injected, "fetch('/_veta/live'"),
+			indexOf(t, injected, "</body>"),
+		)
 		require.Contains(t, injected, "<main>Hello</main>")
 	})
 
 	t.Run("appends when body close is missing", func(t *testing.T) {
 		content := []byte("<main>Hello</main>")
 
-		injected := string(injectLiveReload(content))
+		injected := string(injectLiveReload(content, 0))
 
 		require.Contains(t, injected, "<main>Hello</main>")
-		require.Contains(t, injected, "new EventSource('/_veta/live')")
-		require.Greater(t, indexOf(t, injected, "new EventSource"), indexOf(t, injected, "</main>"))
+		require.Contains(t, injected, "fetch('/_veta/live'")
+		require.Greater(
+			t,
+			indexOf(t, injected, "fetch('/_veta/live'"),
+			indexOf(t, injected, "</main>"),
+		)
 	})
 }
 
@@ -38,12 +49,12 @@ func TestInjectHTMLHandlerOnlyInjectsHTMLResponses(t *testing.T) {
 	writeDevTestFile(t, root, "styles.css", "body { color: red; }")
 	handler := injectHTMLHandler(http.FileServer(http.Dir(root)), func(*http.Request) bool {
 		return true
-	})
+	}, newRevision())
 
 	html := httptest.NewRecorder()
 	handler.ServeHTTP(html, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 	require.Equal(t, http.StatusOK, html.Code)
-	require.Contains(t, html.Body.String(), "new EventSource('/_veta/live')")
+	require.Contains(t, html.Body.String(), "fetch('/_veta/live'")
 	require.NotContains(t, readDevTestFile(t, root, "index.html"), "_veta/live")
 
 	css := httptest.NewRecorder()
@@ -61,7 +72,7 @@ func TestInjectHTMLHandlerSkipsHeadRequests(t *testing.T) {
 	writeDevTestFile(t, root, "index.html", "<html><body>Hello</body></html>")
 	handler := injectHTMLHandler(http.FileServer(http.Dir(root)), func(*http.Request) bool {
 		return true
-	})
+	}, newRevision())
 
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(
@@ -80,6 +91,7 @@ func TestInjectHTMLHandlerRequiresGeneratedHTMLMatch(t *testing.T) {
 	handler := injectHTMLHandler(
 		http.FileServer(http.Dir(root)),
 		newGeneratedHTMLFiles([]string{"index.html"}).matchesRequest,
+		newRevision(),
 	)
 
 	generated := httptest.NewRecorder()

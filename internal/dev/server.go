@@ -2,41 +2,100 @@ package dev
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"path"
 	"strings"
 	"sync"
+	"time"
 )
 
-const liveEndpoint = "/_veta/live"
+const (
+	liveEndpoint       = "/_veta/live"
+	liveReloadInterval = time.Second
+)
 
-var liveReloadScript = []byte(`
-<script>
-(function () {
-  var source = new EventSource('/_veta/live');
-  source.addEventListener('reload', function () {
-    window.location.reload();
-  });
-})();
-</script>
-`)
+// liveReloadScript returns the polling live-reload script. The revision at
+// serve time seeds the baseline so a page served just before a completed build
+// is still refreshed by the first poll. Polls time out and never overlap, so a
+// temporarily unreachable server is retried instead of breaking the page.
+func liveReloadScript(revision uint64) []byte {
+	return fmt.Appendf(nil, `
+		<script>
+			(function () {
+				var last = %[3]d;
+				var inFlight = false;
+				function poll() {
+					if (inFlight) {
+						return;
+					}
+					inFlight = true;
+					var controller = new AbortController();
+					var timeout = setTimeout(function () { controller.abort(); }, 5000);
+					fetch('%[1]s', { cache: 'no-store', signal: controller.signal })
+						.then(function (response) {
+							if (!response.ok) {
+								throw new Error('live reload unavailable');
+							}
+							return response.json();
+						})
+						.then(function (data) {
+							if (typeof data.revision !== 'number') {
+								return;
+							}
+							if (data.revision !== last) {
+								window.location.reload();
+								return;
+							}
+							last = data.revision;
+						})
+						.catch(function () {})
+						.finally(function () {
+							clearTimeout(timeout);
+							inFlight = false;
+						});
+				}
+				poll();
+				setInterval(poll, %[2]d);
+			})();
+		</script>
+	`, liveEndpoint, liveReloadInterval/time.Millisecond, revision)
+}
 
 // newHandler returns the HTTP handler used by the development server.
 func newHandler(
-	outputDir string,
-	broadcaster *broadcaster,
+	outputRoot *outputRoot,
+	revision *revision,
 	generatedHTML *generatedHTMLFiles,
 ) http.Handler {
-	files := http.FileServer(http.Dir(outputDir))
 	mux := http.NewServeMux()
-	mux.Handle(liveEndpoint, broadcaster)
-	mux.Handle("/", injectHTMLHandler(files, generatedHTML.matchesRequest))
+	mux.Handle(liveEndpoint, revision)
+	mux.Handle("/", injectHTMLHandler(
+		dirFileHandler{outputRoot: outputRoot},
+		generatedHTML.matchesRequest,
+		revision,
+	))
 
 	return mux
 }
 
+// dirFileHandler serves static files from the current build output directory.
+// The directory is resolved per request so completed builds swap atomically.
+type dirFileHandler struct {
+	outputRoot *outputRoot
+}
+
+// ServeHTTP serves one request from the current build output directory.
+func (handler dirFileHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	http.FileServer(http.Dir(handler.outputRoot.get())).ServeHTTP(writer, request)
+}
+
 // injectHTMLHandler injects live reload into successful HTML file responses.
-func injectHTMLHandler(next http.Handler, matchesRequest func(*http.Request) bool) http.Handler {
+func injectHTMLHandler(
+	next http.Handler,
+	matchesRequest func(*http.Request) bool,
+	revision *revision,
+) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		buffer := newBufferedResponseWriter()
 		next.ServeHTTP(buffer, request)
@@ -49,7 +108,7 @@ func injectHTMLHandler(next http.Handler, matchesRequest func(*http.Request) boo
 
 		body := buffer.body.Bytes()
 		if shouldInjectLiveReload(request, buffer, matchesRequest) {
-			body = injectLiveReload(body)
+			body = injectLiveReload(body, revision.current())
 			writer.Header().Del("Content-Length")
 		}
 
@@ -79,19 +138,20 @@ func shouldInjectLiveReload(
 }
 
 // injectLiveReload inserts the dev live-reload script into an HTML document.
-func injectLiveReload(content []byte) []byte {
+func injectLiveReload(content []byte, revision uint64) []byte {
+	script := liveReloadScript(revision)
 	bodyClose := []byte("</body>")
 	index := bytes.LastIndex(bytes.ToLower(content), bodyClose)
 	if index == -1 {
-		injected := make([]byte, 0, len(content)+len(liveReloadScript))
+		injected := make([]byte, 0, len(content)+len(script))
 		injected = append(injected, content...)
-		injected = append(injected, liveReloadScript...)
+		injected = append(injected, script...)
 		return injected
 	}
 
-	injected := make([]byte, 0, len(content)+len(liveReloadScript))
+	injected := make([]byte, 0, len(content)+len(script))
 	injected = append(injected, content[:index]...)
-	injected = append(injected, liveReloadScript...)
+	injected = append(injected, script...)
 	injected = append(injected, content[index:]...)
 	return injected
 }
@@ -137,6 +197,30 @@ func (writer *bufferedResponseWriter) statusCode() int {
 	}
 
 	return writer.statusCodeValue
+}
+
+// outputRoot holds the current build output directory served to browsers.
+type outputRoot struct {
+	mutex sync.RWMutex
+	dir   string
+}
+
+// get returns the current build output directory.
+func (root *outputRoot) get() string {
+	root.mutex.RLock()
+	defer root.mutex.RUnlock()
+
+	return root.dir
+}
+
+// set replaces the build output directory and returns the previous one.
+func (root *outputRoot) set(dir string) string {
+	root.mutex.Lock()
+	defer root.mutex.Unlock()
+
+	previous := root.dir
+	root.dir = dir
+	return previous
 }
 
 type generatedHTMLFiles struct {

@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -55,33 +56,28 @@ dev:
 
 	body := requireHTTPBodyContains(t, baseURL, "Initial")
 	require.Contains(t, body, "Initial Include")
-	require.Contains(t, body, "new EventSource('/_veta/live')")
+	require.Contains(t, body, "fetch('/_veta/live'")
 	requirePathMissing(t, filepath.Join(projectRoot, "dist"))
 
-	stream := openDevEventStream(t, baseURL+"_veta/live")
-	defer stream.close()
-	stream.requireLine(t, ": connected")
+	revision := requireLiveRevision(t, baseURL+"_veta/live")
 
 	writeProjectFile(t, projectRoot, "templates/status.html", "Updated Include")
-	stream.requireLine(t, "event: reload")
-	stream.requireLine(t, "data: reload")
+	revision = requireLiveRevisionChanged(t, baseURL+"_veta/live", revision)
 
 	includeBody := requireHTTPBodyContains(t, baseURL, "Updated Include")
 	require.Contains(t, includeBody, "Initial")
-	require.Contains(t, includeBody, "new EventSource('/_veta/live')")
+	require.Contains(t, includeBody, "fetch('/_veta/live'")
 
 	writeProjectFile(t, projectRoot, "content/message.txt", "Updated")
-	stream.requireLine(t, "event: reload")
-	stream.requireLine(t, "data: reload")
+	revision = requireLiveRevisionChanged(t, baseURL+"_veta/live", revision)
 
 	updatedBody := requireHTTPBodyContains(t, baseURL, "Updated")
-	require.Contains(t, updatedBody, "new EventSource('/_veta/live')")
+	require.Contains(t, updatedBody, "fetch('/_veta/live'")
 	requirePathMissing(t, filepath.Join(projectRoot, "dist"))
 
 	started := time.Now()
 	process.stop(t)
 	require.Less(t, time.Since(started), 3*time.Second)
-	stream.requireClosed(t)
 	require.NotContains(t, process.stderr.String(), "context deadline exceeded")
 }
 
@@ -220,72 +216,39 @@ func (process *devProcess) stop(t *testing.T) {
 	}
 }
 
-type devEventStream struct {
-	cancel context.CancelFunc
-	lines  *lineLog
-	body   io.Closer
-}
-
-// openDevEventStream opens the dev server SSE endpoint.
-func openDevEventStream(t *testing.T, endpoint string) *devEventStream {
+// requireLiveRevision reads the current build revision from the live endpoint.
+func requireLiveRevision(t *testing.T, endpoint string) uint64 {
 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	require.NoError(t, err)
-	response, err := http.DefaultClient.Do(request)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, response.StatusCode)
-	require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
-
-	return &devEventStream{cancel: cancel, lines: newLineLog(response.Body), body: response.Body}
-}
-
-// requireLine waits until the SSE stream emits a specific line.
-func (stream *devEventStream) requireLine(t *testing.T, want string) {
-	t.Helper()
-
-	deadline := time.After(10 * time.Second)
-	for {
-		select {
-		case line, ok := <-stream.lines.lines:
-			if !ok {
-				t.Fatalf(
-					"SSE stream closed while waiting for %q; saw:\n%s",
-					want,
-					stream.lines.String(),
-				)
-			}
-			if line == want {
-				return
-			}
-		case <-deadline:
-			t.Fatalf("timed out waiting for SSE line %q; saw:\n%s", want, stream.lines.String())
-		}
+	body := requireHTTPBodyContains(t, endpoint, "revision")
+	var payload struct {
+		Revision uint64 `json:"revision"`
 	}
+	require.NoError(t, json.Unmarshal([]byte(body), &payload))
+	return payload.Revision
 }
 
-// requireClosed waits for the development server to close the SSE stream.
-func (stream *devEventStream) requireClosed(t *testing.T) {
+// requireLiveRevisionChanged polls the live endpoint until its revision
+// advances past previous, returning the new revision.
+func requireLiveRevisionChanged(t *testing.T, endpoint string, previous uint64) uint64 {
 	t.Helper()
 
-	deadline := time.After(2 * time.Second)
-	for {
-		select {
-		case _, ok := <-stream.lines.lines:
-			if !ok {
-				return
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		body, err := getHTTPBody(t, endpoint)
+		if err == nil {
+			var payload struct {
+				Revision uint64 `json:"revision"`
 			}
-		case <-deadline:
-			t.Fatal("SSE stream remained open after dev server shutdown")
+			if json.Unmarshal([]byte(body), &payload) == nil && payload.Revision != previous {
+				return payload.Revision
+			}
 		}
+		time.Sleep(50 * time.Millisecond)
 	}
-}
 
-// close closes the SSE stream.
-func (stream *devEventStream) close() {
-	stream.cancel()
-	_ = stream.body.Close()
+	t.Fatalf("timed out waiting for live revision to advance past %d", previous)
+	return 0
 }
 
 type lineLog struct {

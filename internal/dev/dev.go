@@ -40,9 +40,9 @@ type Config struct {
 }
 
 type server struct {
-	broadcaster *broadcaster
-	config      Config
-	outputDir   string
+	outputRoot *outputRoot
+	revision   *revision
+	config     Config
 }
 
 // Run starts the development workflow until ctx is canceled or the server fails.
@@ -56,23 +56,17 @@ func Run(ctx context.Context, config Config) (err error) {
 		return err
 	}
 
-	outputDir, err := os.MkdirTemp("", "veta-dev-*")
-	if err != nil {
-		return fmt.Errorf("create dev output directory: %w", err)
-	}
-	defer func() {
-		if removeErr := os.RemoveAll(outputDir); err == nil && removeErr != nil {
-			err = fmt.Errorf("remove dev output directory %s: %w", outputDir, removeErr)
-		}
-	}()
-
 	server := server{
-		broadcaster: newBroadcaster(),
-		config:      config,
-		outputDir:   outputDir,
+		outputRoot: &outputRoot{},
+		revision:   newRevision(),
+		config:     config,
 	}
 
-	return server.run(ctx)
+	err = server.run(ctx)
+	if current := server.outputRoot.get(); current != "" {
+		_ = os.RemoveAll(current)
+	}
+	return err
 }
 
 // normalizeConfig applies defaults and validates user-facing dev settings.
@@ -95,6 +89,7 @@ func (server server) run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	server.outputRoot.set(result.OutputDir)
 	devConfig := result.Config.Dev
 
 	listenConfig := net.ListenConfig{}
@@ -106,7 +101,7 @@ func (server server) run(ctx context.Context) (err error) {
 	generatedHTML := newGeneratedHTMLFiles(result.GeneratedFiles)
 	httpServer, cancelRequests := newHTTPServer(
 		ctx,
-		newHandler(server.outputDir, server.broadcaster, generatedHTML),
+		newHandler(server.outputRoot, server.revision, generatedHTML),
 	)
 	serverErrors := make(chan error, 1)
 	go func() {
@@ -137,19 +132,90 @@ func (server server) run(ctx context.Context) (err error) {
 		return err
 	}
 
+	if err := runRebuilds(
+		ctx,
+		changes,
+		serverErrors,
+		watcherErrors,
+		func(buildCtx context.Context) (build.Result, error) {
+			return server.rebuild(buildCtx, "Rebuilding site")
+		},
+		func(result build.Result) {
+			generatedHTML.update(result.GeneratedFiles)
+			previous := server.outputRoot.set(result.OutputDir)
+			if previous != "" && previous != result.OutputDir {
+				_ = os.RemoveAll(previous)
+			}
+			server.revision.bump()
+		},
+		func(buildErr error) {
+			if _, writeErr := fmt.Fprintf(
+				server.config.Stderr,
+				"Rebuild failed: %s\n",
+				buildErr,
+			); writeErr != nil {
+				return
+			}
+		},
+	); err != nil {
+		return err
+	}
+
+	if _, err := fmt.Fprintln(server.config.Stdout, "Stopping dev server..."); err != nil {
+		return err
+	}
+	return nil
+}
+
+// buildOutcome carries one build result from its goroutine to the rebuild loop.
+type buildOutcome struct {
+	result build.Result
+	err    error
+}
+
+// runRebuilds coordinates sequential cancelable builds with the watcher, HTTP
+// server, and shutdown lifecycle. A change arriving while a build runs cancels
+// that build and queues one fresh rebuild; builds always read the latest
+// filesystem state, so coalesced changes never lose updates. It returns nil
+// when ctx is done or the HTTP server closes normally, and any fatal server or
+// watcher error otherwise.
+func runRebuilds(
+	ctx context.Context,
+	changes <-chan struct{},
+	serverErrors <-chan error,
+	watcherErrors <-chan error,
+	build func(context.Context) (build.Result, error),
+	onBuilt func(build.Result),
+	onError func(error),
+) error {
+	results := make(chan buildOutcome, 1)
+	var cancelBuild context.CancelFunc
+	running := false
+	pending := false
+
+	startBuild := func() {
+		buildCtx, cancel := context.WithCancel(ctx)
+		cancelBuild = cancel
+		running = true
+		pending = false
+		go func() {
+			result, err := build(buildCtx)
+			results <- buildOutcome{result: result, err: err}
+		}()
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
-			if _, err := fmt.Fprintln(server.config.Stdout, "Stopping dev server..."); err != nil {
-				return err
+			if cancelBuild != nil {
+				cancelBuild()
 			}
 			return nil
 		case serveErr := <-serverErrors:
 			if serveErr == nil {
 				return nil
 			}
-
-			return fmt.Errorf("serve dev server: %w", serveErr)
+			return serveErr
 		case watcherErr, ok := <-watcherErrors:
 			if !ok {
 				watcherErrors = nil
@@ -163,25 +229,28 @@ func (server server) run(ctx context.Context) (err error) {
 				changes = nil
 				continue
 			}
-
-			rebuildResult, err := server.rebuild(ctx, "Rebuilding site")
-			if err != nil {
-				if ctx.Err() != nil {
-					return nil
-				}
-				rebuildErr := err
-				if _, writeErr := fmt.Fprintf(
-					server.config.Stderr,
-					"Rebuild failed: %s\n",
-					rebuildErr,
-				); writeErr != nil {
-					return writeErr
-				}
+			if running {
+				cancelBuild()
+				pending = true
 				continue
 			}
-
-			generatedHTML.update(rebuildResult.GeneratedFiles)
-			server.broadcaster.broadcastReload()
+			startBuild()
+		case outcome := <-results:
+			running = false
+			cancelBuild = nil
+			if outcome.err != nil {
+				if ctx.Err() == nil && !pending {
+					onError(outcome.err)
+				}
+			} else {
+				onBuilt(outcome.result)
+			}
+			if pending {
+				pending = false
+				if ctx.Err() == nil {
+					startBuild()
+				}
+			}
 		}
 	}
 }
@@ -211,7 +280,7 @@ func (server server) printStartup(address net.Addr) error {
 	if _, err := fmt.Fprintf(
 		server.config.Stdout,
 		"Development output: %s\n",
-		server.outputDir,
+		server.outputRoot.get(),
 	); err != nil {
 		return err
 	}
@@ -225,14 +294,23 @@ func (server server) printStartup(address net.Addr) error {
 	return nil
 }
 
-// rebuild runs a full clean build into the development output directory.
+// rebuild runs a full clean build into a fresh temporary output directory. The
+// caller swaps the returned directory into place so browsers never observe a
+// partially written build.
 func (server server) rebuild(ctx context.Context, label string) (build.Result, error) {
 	if _, err := fmt.Fprintf(server.config.Stdout, "%s...\n", label); err != nil {
 		return build.Result{}, err
 	}
-	startedAt := time.Now()
-	result, err := build.Run(ctx, server.buildOptions()...)
+
+	outputDir, err := os.MkdirTemp("", "veta-build-*")
 	if err != nil {
+		return build.Result{}, fmt.Errorf("create build output directory: %w", err)
+	}
+
+	startedAt := time.Now()
+	result, err := build.Run(ctx, server.buildOptions(outputDir)...)
+	if err != nil {
+		_ = os.RemoveAll(outputDir)
 		return build.Result{}, err
 	}
 
@@ -249,11 +327,11 @@ func (server server) rebuild(ctx context.Context, label string) (build.Result, e
 }
 
 // buildOptions returns the full-build options used by the dev workflow.
-func (server server) buildOptions() []build.Option {
+func (server server) buildOptions(outputDir string) []build.Option {
 	return []build.Option{
 		build.WithConfigFile(server.config.ConfigFile),
 		build.WithConsoleOutput(server.config.Stderr),
-		build.WithOutputDir(server.outputDir),
+		build.WithOutputDir(outputDir),
 		build.WithClean(true),
 	}
 }
