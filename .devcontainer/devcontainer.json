@@ -1,11 +1,9 @@
 {
-  "image": "ghcr.io/varavelio/veta-dev:sha-3b39a7140b20",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "target": "devcontainer"
+  },
   "remoteUser": "root",
-  "mounts": [
-    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.config/opencode,target=/root/.config/opencode,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.local/share/opencode,target=/root/.local/share/opencode,type=bind,consistency=cached"
-  ],
   "postCreateCommand": "bash ./.devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
