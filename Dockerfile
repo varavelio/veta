@@ -9,7 +9,7 @@ FROM golang:1.27.2-trixie as tools
 COPY --from=node:26.11.1-trixie-slim /usr/local /usr/local
 
 # Install golangci-lint
-COPY --from=golangci/golangci-lint:v2.12.2 /usr/bin/golangci-lint /usr/local/bin/golangci-lint
+COPY --from=golangci/golangci-lint:v2.14.0 /usr/bin/golangci-lint /usr/local/bin/golangci-lint
 
 # Install dprint
 COPY --from=ghcr.io/varavelio/container-tools/dprint:0.63.0 /usr/local/bin/dprint /usr/local/bin/dprint
