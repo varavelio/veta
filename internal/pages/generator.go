@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/dop251/goja"
+
 	"github.com/varavelio/veta/internal/js"
 )
 

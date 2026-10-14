@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/varavelio/veta/internal/markdown"
 )
 

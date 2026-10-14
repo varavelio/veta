@@ -11,8 +11,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/dop251/goja"
-	"github.com/varavelio/veta/internal/js"
 	"gopkg.in/yaml.v3"
+
+	"github.com/varavelio/veta/internal/js"
 )
 
 // loadDataFile reads, parses, and normalizes one data file.

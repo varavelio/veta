@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dop251/goja"
+
 	"github.com/varavelio/veta/internal/parsecontent"
 )
 

@@ -6,6 +6,7 @@ import (
 	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/varavelio/veta/internal/js"
 )
 

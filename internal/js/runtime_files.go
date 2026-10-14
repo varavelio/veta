@@ -13,6 +13,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/dop251/goja"
+
 	"github.com/varavelio/veta/internal/permalink"
 )
 

@@ -9,22 +9,34 @@
 
 <p align="center">
   <a href="https://github.com/varavelio/veta/actions">
-    <img src="https://github.com/varavelio/veta/actions/workflows/ci.yaml/badge.svg" alt="CI status"/>
+    <img
+      src="https://github.com/varavelio/veta/actions/workflows/ci.yaml/badge.svg"
+      alt="CI status"
+    />
   </a>
   <a href="https://github.com/varavelio/veta/releases/latest">
-    <img src="https://img.shields.io/github/release/varavelio/veta.svg" alt="Release Version"/>
+    <img
+      src="https://img.shields.io/github/release/varavelio/veta.svg"
+      alt="Release Version"
+    />
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/varavelio/veta.svg" alt="License"/>
+    <img
+      src="https://img.shields.io/github/license/varavelio/veta.svg"
+      alt="License"
+    />
   </a>
   <a href="https://github.com/varavelio/veta">
-    <img src="https://img.shields.io/github/stars/varavelio/veta?style=flat&label=github+stars"/>
+    <img src="https://img.shields.io/github/stars/varavelio/veta?style=flat&label=github+stars" />
   </a>
 </p>
 
 <p align="center">
   <a href="https://varavel.com">
-    <img src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/project.svg" alt="A Varavel project"/>
+    <img
+      src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/project.svg"
+      alt="A Varavel project"
+    />
   </a>
 </p>
 

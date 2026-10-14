@@ -10,6 +10,7 @@ import (
 
 	"github.com/alexflint/go-arg"
 	"github.com/varavelio/tinta"
+
 	"github.com/varavelio/veta/internal/build"
 	"github.com/varavelio/veta/internal/components"
 	"github.com/varavelio/veta/internal/config"

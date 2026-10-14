@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/varavelio/veta/internal/build"
 	"github.com/varavelio/veta/internal/config"
 	"github.com/varavelio/veta/internal/scaffold"
