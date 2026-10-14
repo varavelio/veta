@@ -296,8 +296,7 @@ Run ` + "`veta init`" + ` to create a project, run ` + "`veta build`" + ` or ` +
 		return "Component processing failed. Check component filenames and component tags in your content.\n\nDetails: " + err.Error()
 	}
 
-	var existingFiles scaffold.ExistingFilesError
-	if errors.As(err, &existingFiles) {
+	if existingFiles, ok := errors.AsType[scaffold.ExistingFilesError](err); ok {
 		return existingFilesMessage(existingFiles)
 	}
 
